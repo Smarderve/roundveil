@@ -1,0 +1,1 @@
+Visual style reference screenshots ONLY from user-liked Felix and Overwatch HTML designs. They are NOT approved navigation/gameplay/UX. Do not ship these screenshot files inside production builds; keep as development assets. Two screenshots of removed Mystery module were excluded. Original commercial game assets must not be copied.

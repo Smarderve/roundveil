@@ -1,0 +1,9 @@
+ROUNDVEIL DOCUMENTATION STARTER
+
+Extract ZIP contents at the root of the repo you already cloned. It will add AGENTS.md, README.md, PLANS.md, docs/ and assets/design_references/.
+
+Before extraction inspect the repo for any already-existing same-named files; DO NOT blindly overwrite the user's work.
+
+Read AGENTS.md and docs/00_DOCS_INDEX.md.
+
+This is DOCUMENTATION ONLY, not a Flutter project scaffold. No Flutter builds were run. UX is still pending approval; please do not direct Codex to recreate the original HTML flows.

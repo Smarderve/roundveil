@@ -1,0 +1,282 @@
+[
+  {
+    "file": "felix_desktop_01_lobby.png",
+    "sha256": "ba9f70a81bfb529356eb5983dc0cf15f9d9daa127f24329df7bce53e950768d4",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_02_builder_players.png",
+    "sha256": "c9f3f504560fe466e9a8e48a1c453f912f7f6ca8391af310de5e32b243772b5b",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_03_builder_game_types.png",
+    "sha256": "b8cabf14b8c6e1ec2c7826dbfa36f13e8f105f939f95bb9167d0927c4e6b8c36",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_04_builder_categories.png",
+    "sha256": "dbbdaabe16453f1cac74b582b5d1ea61507f97a98fb823fb3e492ba9038315ca",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_05_builder_rounds.png",
+    "sha256": "9d3c0335625fe0934d832db0850ebfdf406ee241df2939a41bb7dee1d80f0821",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_06_builder_rules.png",
+    "sha256": "3a48d2559271f9e8f8758ff0ec988bd130ada9533b3ca9e6ffd8544e10d17685",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_07_builder_review.png",
+    "sha256": "72083cbe36277fc6970d37f02bc7f44903f58384848591ad39c59c7ac2a7f476",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_game_character.png",
+    "sha256": "1c126f98e23ff8c82adedc75c5565b1b44b67b859c5b926d397ed198258e0e99",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_game_character_reveal.png",
+    "sha256": "19c809a5c1d808ac60ff2741c5f2b4573b9b4a7f5d8244213f1e0062a46e5984",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_game_quiz.png",
+    "sha256": "84873b108c85ee7d2acbe83391cde7ee11fa8b98c1a32cce2ef073f22fe14d8f",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_game_win_countdown.png",
+    "sha256": "fd400a1780ff6b1d02b77b4fa0367e2c6b7d63424a5b808c48cb1a6434afa92c",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_desktop_game_word.png",
+    "sha256": "ae14d0ed56c217af7899d34a73cb269d0335a6faeb90e685ebda1bfa8bc69ac8",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_01_lobby.png",
+    "sha256": "c942ad520a8cf6ad479029797a9b38ffb611ef0793384c12cb22a80bee0eb86e",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_02_builder_players.png",
+    "sha256": "42e0bee047b3c3a66cc290c0e6418f78696b6bd32da853760b86af8cc5fa3905",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_03_builder_game_types.png",
+    "sha256": "a03b6bb1b9e493e10fe2223b0ac2325e111cd7dcd3cb5905b267e0519c182a45",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_04_builder_categories.png",
+    "sha256": "97d886bd7405ab752a066c17ba08893c51c077fb217e6b95663a3efdda974612",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_game_character.png",
+    "sha256": "2b882399c95a6ff97dccc0041f59f7c60e6b5bca4681f0ddc40a18085eb8c1ce",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_game_character_reveal.png",
+    "sha256": "8541240fa0689973f209d9585de533d1a773070deb7e12f41504356eb136065b",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_game_quiz.png",
+    "sha256": "ebd36f838047123771ead6e60a58fea1b3c8ee79c94bc87d87e29f5c96492ed9",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "felix_mobile_game_win_countdown.png",
+    "sha256": "779625b2d3d47274c60cbd4704fa17e3366558210ed7b81bcb222854b66776b2",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_01_lobby.png",
+    "sha256": "180f5e0bc1abdd4e6492b0bc7c96695140cb43dcc61b5a14bf624d73190a91df",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_02_builder_players.png",
+    "sha256": "8636341d629488ce087bb0381fe1b46fbe13d4427162795399d1273677ec1363",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_03_builder_game_types.png",
+    "sha256": "bf331fc502fb1ecd44de4888f25cf34b4731e06592d5815ea4db3514b33b68c3",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_04_builder_categories.png",
+    "sha256": "29ac32802959e0fe8650b2a170dddac23438a925267b908ee1d2f3fe97bc5c1a",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_05_builder_rounds.png",
+    "sha256": "1f0ddd65ce0e682a894962d0b8632232b7dacbbcdb5efcf6a58c5093fc0e0ce8",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_06_builder_rules.png",
+    "sha256": "849fe0ec11789bff88492df16f383dd3a8ff92d58d69e19b02231c76793d7f39",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_07_builder_review.png",
+    "sha256": "66c3b960627411b2e42caf8783b2b2d71ab120c14458928d6dea5f80291e974f",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_game_character.png",
+    "sha256": "5548060e2e1b89dfe70e08eed02b948331ec2befc77272b5e942f948264f7c6b",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_game_character_reveal.png",
+    "sha256": "c0f9f7b34afbcff9f342ae87c0536557e44cdf42f6f4ad91042c949a0c90403d",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_game_quiz.png",
+    "sha256": "cc1b14d37bcc1c9f5675f2f81ebc88e240ba17428fdbd9d630d6be90a3c72c3c",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_game_win_countdown.png",
+    "sha256": "4ca659c5c4b88e8b600258d6dd5c24f1738d0f32e5812c2d2394be1b3a68bff0",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_desktop_game_word.png",
+    "sha256": "75218eb37d372f41ca200cd82248c3e8e21144cd374e4fea7bf77eac2130d66e",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_01_lobby.png",
+    "sha256": "a66f89ad52049e0288863ec7d806d1e08c5003ddad3e19d811c5c65662311ca2",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_02_builder_players.png",
+    "sha256": "d64b7a1ec5d55cb1320aa9a9c734910c61b4cc0ea28d8e08915e695d506a415b",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_03_builder_game_types.png",
+    "sha256": "2a985568642868b795f0e1e7425276f3005854658030b471d5ac375acb2b0bc6",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_04_builder_categories.png",
+    "sha256": "dfe42a88521b664eaa1f2a46ce1fe6f72db5cbdada2e637bd1854d30fb4f4d18",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_game_character.png",
+    "sha256": "f51fb3536cdac422d2b3695f2c87e1ca92bd201722bec8d76ea9b3396e47e680",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_game_character_reveal.png",
+    "sha256": "20da05cd94c97ba4e608760909ceae6fab812adaf2f4e074c502e43b728f62a7",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_game_quiz.png",
+    "sha256": "f7b1f1dadf3ac8496b552844d17271e2e25a879aeb0712fac6815a902012c695",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  },
+  {
+    "file": "overwatch_mobile_game_win_countdown.png",
+    "sha256": "1cc8d9a04a9402a5135123dedba411164310fc3c24fcbdf19443ce8ca0ba653e",
+    "purpose": "VISUAL_STYLE_ONLY",
+    "source": "Prior approved-visual HTML screenshot reference pack",
+    "warning": "SCREEN LAYOUT, NAVIGATION AND GAMEPLAY UNAPPROVED"
+  }
+]
