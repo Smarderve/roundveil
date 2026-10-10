@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/legacy.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
+import 'package:roundveil/features/guess_country/domain/player_avatar_appearance.dart';
 import 'package:roundveil/features/guess_country/presentation/hero_arena_components.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 
 final guessCountryControllerProvider =
     ChangeNotifierProvider<GuessCountryController>(
@@ -143,27 +145,7 @@ class _Preparation extends StatelessWidget {
                         state: state,
                         compact: compact,
                       ),
-                      SizedBox(height: compact ? 26 : 34),
-                      _MatchBrief(state: state),
-                      const SizedBox(height: 14),
-                      Align(
-                        alignment: compact
-                            ? Alignment.center
-                            : Alignment.centerLeft,
-                        child: ArenaButton(
-                          label: 'MATCH RULES',
-                          onPressed: () => _showMatchRules(context, controller),
-                          secondary: true,
-                        ),
-                      ),
-                      if (state.notice != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          state.notice!,
-                          style: const TextStyle(color: Color(0xFFB13634)),
-                        ),
-                      ],
-                      SizedBox(height: compact ? 28 : 40),
+                      SizedBox(height: compact ? 22 : 26),
                       Center(
                         child: Column(
                           children: [
@@ -173,10 +155,10 @@ class _Preparation extends StatelessWidget {
                                   ? controller.prepareSession
                                   : null,
                             ),
-                            const SizedBox(height: 10),
+                            const SizedBox(height: 9),
                             Text(
                               ready
-                                  ? 'MATCH READY  •  ${state.players.length} ${state.players.length == 1 ? 'PLAYER' : 'PLAYERS'}  /  ${state.setup.roundCount} ${state.setup.roundCount == 1 ? 'ROUND' : 'ROUNDS'}'
+                                  ? 'SQUAD READY  •  ${state.players.length} ${state.players.length == 1 ? 'PLAYER' : 'PLAYERS'}'
                                   : _readinessPrompt(state, issue),
                               textAlign: TextAlign.center,
                               maxLines: 2,
@@ -185,14 +167,43 @@ class _Preparation extends StatelessWidget {
                                 color: ready
                                     ? const Color(0xFF2879BA)
                                     : const Color(0xFF50647D),
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w900,
-                                letterSpacing: .6,
+                                letterSpacing: .7,
                               ),
                             ),
                           ],
                         ),
                       ),
+                      SizedBox(height: compact ? 22 : 28),
+                      _MatchBrief(state: state),
+                      const SizedBox(height: 6),
+                      Align(
+                        alignment: compact
+                            ? Alignment.center
+                            : Alignment.centerLeft,
+                        child: TextButton.icon(
+                          onPressed: () => _showMatchRules(context, controller),
+                          icon: const Icon(Icons.tune_rounded, size: 18),
+                          label: const Text('MATCH RULES'),
+                          style: TextButton.styleFrom(
+                            foregroundColor: const Color(0xFF2879BA),
+                            minimumSize: const Size(48, 48),
+                            textStyle: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: .7,
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (state.notice != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          state.notice!,
+                          style: const TextStyle(color: Color(0xFFB13634)),
+                        ),
+                      ],
+                      SizedBox(height: compact ? 18 : 24),
                     ],
                   ),
                 ),
@@ -307,17 +318,17 @@ class _PlayerLineup extends StatelessWidget {
         children: [
           const Expanded(
             child: Text(
-              'YOUR LINEUP',
+              'SQUAD ASSEMBLY',
               style: TextStyle(
                 color: Color(0xFF263449),
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
-                letterSpacing: 1.4,
+                letterSpacing: 1.8,
               ),
             ),
           ),
           Text(
-            '${state.players.length} ${state.players.length == 1 ? 'PLAYER' : 'PLAYERS'}',
+            '${state.players.length} / ${state.players.isEmpty ? 'BUILD YOUR SQUAD' : 'IN THE ARENA'}',
             style: const TextStyle(
               color: Color(0xFF50647D),
               fontSize: 11,
@@ -327,160 +338,826 @@ class _PlayerLineup extends StatelessWidget {
           ),
         ],
       ),
-      const SizedBox(height: 13),
+      const SizedBox(height: 7),
       Wrap(
         alignment: compact ? WrapAlignment.center : WrapAlignment.start,
-        spacing: 12,
-        runSpacing: 12,
+        crossAxisAlignment: WrapCrossAlignment.end,
+        spacing: compact ? 2 : 15,
+        runSpacing: 0,
         children: [
           for (var index = 0; index < state.players.length; index++)
-            _PlayerStand(
+            _AvatarSquadMember(
               index: index + 1,
+              playerId: state.players[index].id,
               name: state.players[index].displayName,
-              onRemove: () => controller.removePlayer(),
+              compact: compact,
+              appearance:
+                  state.avatarAppearances[state.players[index].id] ??
+                  PlayerAvatarAppearance.forPlayer(index + 1),
+              onEdit: () => _editAvatar(
+                context,
+                controller,
+                state.players[index].id,
+                state.players[index].displayName,
+                state.avatarAppearances[state.players[index].id] ??
+                    PlayerAvatarAppearance.forPlayer(index + 1),
+              ),
+              onRemove: () => controller.removePlayer(state.players[index].id),
             ),
-          _AddPlayerStand(onPressed: controller.addPlayer),
+          _AddAvatarSlot(compact: compact, onPressed: controller.addPlayer),
         ],
       ),
-      if (state.players.isEmpty)
-        const Padding(
-          padding: EdgeInsets.only(top: 8),
-          child: Text(
-            'Add your first player to build the lineup.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF50647D), fontSize: 12),
-          ),
-        ),
     ],
   );
+
+  void _editAvatar(
+    BuildContext context,
+    GuessCountryController controller,
+    String playerId,
+    String playerName,
+    PlayerAvatarAppearance appearance,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => _AvatarEditorDialog(
+        controller: controller,
+        playerId: playerId,
+        playerName: playerName,
+        initial: appearance,
+      ),
+    );
+  }
 }
 
-class _PlayerStand extends StatelessWidget {
-  const _PlayerStand({
+class _AvatarSquadMember extends StatelessWidget {
+  const _AvatarSquadMember({
     required this.index,
+    required this.playerId,
     required this.name,
+    required this.compact,
+    required this.appearance,
+    required this.onEdit,
     required this.onRemove,
   });
   final int index;
+  final String playerId;
   final String name;
+  final bool compact;
+  final PlayerAvatarAppearance appearance;
+  final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   @override
-  Widget build(BuildContext context) => SizedBox(
-    width: 190,
-    height: 128,
-    child: ClipPath(
-      clipper: _LobbyCut(),
-      child: Stack(
+  Widget build(BuildContext context) {
+    final figureWidth = compact ? 94.0 : 151.0;
+    final figureHeight = compact ? 138.0 : 222.0;
+    return SizedBox(
+      width: compact ? 114 : 184,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned.fill(child: ColoredBox(color: const Color(0xFF263449))),
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            child: Container(width: 7, color: const Color(0xFFF4A62C)),
-          ),
-          Positioned(
-            right: 4,
-            top: 4,
-            child: IconButton(
-              tooltip: 'Remove $name',
-              onPressed: onRemove,
-              icon: const Icon(Icons.close, color: Color(0xFFDBE7F3), size: 19),
-              visualDensity: VisualDensity.compact,
+          SizedBox(
+            height: figureHeight + 25,
+            child: Stack(
+              alignment: Alignment.bottomCenter,
+              children: [
+                Positioned(
+                  bottom: 7,
+                  child: CustomPaint(
+                    size: Size(compact ? 120 : 158, 45),
+                    painter: _AvatarSpotlight(appearance.accentColor),
+                  ),
+                ),
+                Positioned(
+                  bottom: 0,
+                  child: PlayerAvatarFigure(
+                    appearance: appearance,
+                    width: figureWidth,
+                    height: figureHeight,
+                  ),
+                ),
+                Positioned(
+                  right: 0,
+                  top: 1,
+                  child: IconButton.filledTonal(
+                    tooltip: 'Remove $name',
+                    onPressed: onRemove,
+                    style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xDDF3F7FC),
+                      foregroundColor: const Color(0xFF263449),
+                      minimumSize: const Size(42, 42),
+                    ),
+                    icon: const Icon(Icons.close_rounded, size: 19),
+                  ),
+                ),
+              ],
             ),
           ),
-          Positioned(
-            left: 19,
-            top: 17,
-            child: Text(
-              'PLAYER ${index.toString().padLeft(2, '0')}',
-              style: const TextStyle(
-                color: Color(0xFF8ABCE5),
-                fontSize: 10,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 1.5,
+          Text(
+            'PLAYER ${index.toString().padLeft(2, '0')}',
+            style: TextStyle(
+              color: const Color(0xFF2879BA),
+              fontSize: compact ? 10 : 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.5,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            name.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: const Color(0xFF263449),
+              fontSize: compact ? 13 : 15,
+              fontWeight: FontWeight.w900,
+              letterSpacing: .6,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.circle, size: 7, color: Color(appearance.accentColor)),
+              const SizedBox(width: 5),
+              const Text(
+                'READY',
+                style: TextStyle(
+                  color: Color(0xFF50647D),
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.3,
+                ),
+              ),
+            ],
+          ),
+          if (compact)
+            TextButton(
+              key: ValueKey('edit-avatar-$playerId'),
+              onPressed: onEdit,
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF263449),
+                minimumSize: const Size(48, 42),
+                textStyle: const TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .35,
+                ),
+              ),
+              child: const Text('EDIT LOOK'),
+            )
+          else
+            TextButton.icon(
+              key: ValueKey('edit-avatar-$playerId'),
+              onPressed: onEdit,
+              icon: const Icon(Icons.face_retouching_natural_rounded, size: 17),
+              label: const Text('CUSTOMIZE'),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFF263449),
+                minimumSize: const Size(48, 42),
+                textStyle: const TextStyle(
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: .8,
+                ),
               ),
             ),
-          ),
-          Positioned(
-            left: 18,
-            top: 37,
-            child: Text(
-              index.toString().padLeft(2, '0'),
-              style: const TextStyle(
-                color: Color(0xFFF4A62C),
-                fontSize: 48,
-                height: 1,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-          ),
-          Positioned(
-            left: 74,
-            bottom: 18,
-            right: 12,
-            child: Text(
-              name.toUpperCase(),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 15,
-                fontWeight: FontWeight.w900,
-                letterSpacing: .7,
-              ),
-            ),
-          ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }
 
-class _AddPlayerStand extends StatelessWidget {
-  const _AddPlayerStand({required this.onPressed});
+class _AvatarSpotlight extends CustomPainter {
+  const _AvatarSpotlight(this.color);
+  final int color;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final c = Color(color);
+    canvas.drawOval(
+      Offset.zero & size,
+      Paint()
+        ..shader = RadialGradient(
+          colors: [c.withValues(alpha: .28), c.withValues(alpha: 0)],
+        ).createShader(Offset.zero & size),
+    );
+    final path = Path()
+      ..moveTo(size.width * .23, size.height * .78)
+      ..lineTo(size.width * .5, size.height * .08)
+      ..lineTo(size.width * .77, size.height * .78)
+      ..close();
+    canvas.drawPath(path, Paint()..color = c.withValues(alpha: .08));
+  }
+
+  @override
+  bool shouldRepaint(covariant _AvatarSpotlight oldDelegate) =>
+      oldDelegate.color != color;
+}
+
+class _AddAvatarSlot extends StatelessWidget {
+  const _AddAvatarSlot({required this.compact, required this.onPressed});
+  final bool compact;
   final VoidCallback onPressed;
 
   @override
   Widget build(BuildContext context) => SizedBox(
-    width: 190,
-    height: 128,
-    child: OutlinedButton(
-      onPressed: onPressed,
-      style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF263449),
-        side: const BorderSide(color: Color(0xFF2879BA), width: 2),
-        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
-        backgroundColor: const Color(0x4479A6D2),
-      ),
-      child: const Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add_circle_outline, size: 29, color: Color(0xFF2879BA)),
-          SizedBox(height: 6),
-          Text(
-            'ADD PLAYER',
-            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1),
+    width: compact ? 114 : 184,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        SizedBox(
+          height: (compact ? 138.0 : 222.0) + 25,
+          child: Center(
+            child: Semantics(
+              button: true,
+              label: 'Add player to squad',
+              child: InkWell(
+                onTap: onPressed,
+                customBorder: const CircleBorder(),
+                child: SizedBox(
+                  width: compact ? 94 : 140,
+                  height: compact ? 138 : 200,
+                  child: CustomPaint(
+                    painter: const _EmptyAvatarPainter(),
+                    child: const Center(
+                      child: Icon(
+                        Icons.add_rounded,
+                        size: 42,
+                        color: Color(0xFF2879BA),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        ],
-      ),
+        ),
+        const Text(
+          'OPEN SLOT',
+          style: TextStyle(
+            color: Color(0xFF50647D),
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.4,
+          ),
+        ),
+        const SizedBox(height: 25),
+        TextButton.icon(
+          onPressed: onPressed,
+          icon: const Icon(Icons.person_add_alt_1_rounded, size: 17),
+          label: const Text('ADD PLAYER'),
+          style: TextButton.styleFrom(
+            foregroundColor: const Color(0xFF2879BA),
+            minimumSize: const Size(48, 42),
+            textStyle: const TextStyle(
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: .35,
+            ),
+          ),
+        ),
+      ],
     ),
   );
 }
 
-class _LobbyCut extends CustomClipper<Path> {
+class _EmptyAvatarPainter extends CustomPainter {
+  const _EmptyAvatarPainter();
   @override
-  Path getClip(Size size) => Path()
-    ..moveTo(0, 0)
-    ..lineTo(size.width - 18, 0)
-    ..lineTo(size.width, 18)
-    ..lineTo(size.width, size.height)
-    ..lineTo(0, size.height)
-    ..close();
+  void paint(Canvas canvas, Size size) {
+    final c = const Color(0xFF2879BA);
+    final center = Offset(size.width / 2, size.height * .38);
+    canvas.drawCircle(
+      center,
+      size.width * .22,
+      Paint()
+        ..color = c.withValues(alpha: .08)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawCircle(
+      center,
+      size.width * .22,
+      Paint()
+        ..color = c.withValues(alpha: .45)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .5, size.height * .61)
+        ..cubicTo(
+          size.width * .15,
+          size.height * .62,
+          size.width * .12,
+          size.height * .87,
+          size.width * .11,
+          size.height * .94,
+        )
+        ..lineTo(size.width * .89, size.height * .94)
+        ..cubicTo(
+          size.width * .88,
+          size.height * .87,
+          size.width * .85,
+          size.height * .62,
+          size.width * .5,
+          size.height * .61,
+        )
+        ..close(),
+      Paint()
+        ..color = c.withValues(alpha: .07)
+        ..style = PaintingStyle.fill,
+    );
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * .5, size.height * .61)
+        ..cubicTo(
+          size.width * .15,
+          size.height * .62,
+          size.width * .12,
+          size.height * .87,
+          size.width * .11,
+          size.height * .94,
+        )
+        ..lineTo(size.width * .89, size.height * .94)
+        ..cubicTo(
+          size.width * .88,
+          size.height * .87,
+          size.width * .85,
+          size.height * .62,
+          size.width * .5,
+          size.height * .61,
+        ),
+      Paint()
+        ..color = c.withValues(alpha: .38)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 2,
+    );
+  }
 
   @override
-  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+  bool shouldRepaint(covariant _EmptyAvatarPainter oldDelegate) => false;
+}
+
+class _AvatarEditorDialog extends StatefulWidget {
+  const _AvatarEditorDialog({
+    required this.controller,
+    required this.playerId,
+    required this.playerName,
+    required this.initial,
+  });
+  final GuessCountryController controller;
+  final String playerId;
+  final String playerName;
+  final PlayerAvatarAppearance initial;
+
+  @override
+  State<_AvatarEditorDialog> createState() => _AvatarEditorDialogState();
+}
+
+class _AvatarEditorDialogState extends State<_AvatarEditorDialog> {
+  late PlayerAvatarAppearance appearance = widget.initial;
+
+  void _update(PlayerAvatarAppearance next) {
+    setState(() => appearance = next);
+    widget.controller.updateAvatarAppearance(widget.playerId, next);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 620;
+    return Dialog.fullscreen(
+      backgroundColor: const Color(0xFFF3F7FC),
+      child: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(
+                horizontal: compact ? 14 : 26,
+                vertical: 12,
+              ),
+              decoration: const BoxDecoration(
+                color: Color(0xFF263449),
+                border: Border(
+                  bottom: BorderSide(color: Color(0xFFF4A62C), width: 3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    tooltip: 'Close avatar editor',
+                    onPressed: () => Navigator.pop(context),
+                    color: Colors.white,
+                    icon: const Icon(Icons.arrow_back_rounded),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'SQUAD ARMORY',
+                          style: TextStyle(
+                            color: Color(0xFFF4A62C),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        Text(
+                          widget.playerName.toUpperCase(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: .8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('DONE'),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final stageWidth = compact ? constraints.maxWidth : 300.0;
+                  final editor = _AvatarEditorControls(
+                    appearance: appearance,
+                    onChanged: _update,
+                  );
+                  return compact
+                      ? Column(
+                          children: [
+                            SizedBox(
+                              height: 226,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  CustomPaint(
+                                    size: Size(stageWidth, 226),
+                                    painter: _EditorStagePainter(
+                                      appearance.accentColor,
+                                    ),
+                                  ),
+                                  PlayerAvatarFigure(
+                                    appearance: appearance,
+                                    width: 140,
+                                    height: 205,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(
+                                  20,
+                                  8,
+                                  20,
+                                  24,
+                                ),
+                                child: editor,
+                              ),
+                            ),
+                          ],
+                        )
+                      : Row(
+                          children: [
+                            SizedBox(
+                              width: stageWidth,
+                              child: Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  Positioned.fill(
+                                    child: CustomPaint(
+                                      painter: _EditorStagePainter(
+                                        appearance.accentColor,
+                                      ),
+                                    ),
+                                  ),
+                                  PlayerAvatarFigure(
+                                    appearance: appearance,
+                                    width: 210,
+                                    height: 310,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: SingleChildScrollView(
+                                padding: const EdgeInsets.all(26),
+                                child: editor,
+                              ),
+                            ),
+                          ],
+                        );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _EditorStagePainter extends CustomPainter {
+  const _EditorStagePainter(this.accent);
+  final int accent;
+  @override
+  void paint(Canvas canvas, Size size) {
+    final color = Color(accent);
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()..color = const Color(0xFFE3EBF4),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, size.width * .18, size.height),
+      Paint()..color = color.withValues(alpha: .12),
+    );
+    final beam = Path()
+      ..moveTo(size.width * .32, 0)
+      ..lineTo(size.width * .68, 0)
+      ..lineTo(size.width * .89, size.height)
+      ..lineTo(size.width * .11, size.height)
+      ..close();
+    canvas.drawPath(beam, Paint()..color = color.withValues(alpha: .09));
+    canvas.drawLine(
+      Offset(0, size.height - 28),
+      Offset(size.width, size.height - 28),
+      Paint()
+        ..color = color.withValues(alpha: .45)
+        ..strokeWidth = 2,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _EditorStagePainter oldDelegate) =>
+      oldDelegate.accent != accent;
+}
+
+class _AvatarEditorControls extends StatelessWidget {
+  const _AvatarEditorControls({
+    required this.appearance,
+    required this.onChanged,
+  });
+  final PlayerAvatarAppearance appearance;
+  final ValueChanged<PlayerAvatarAppearance> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    const skinTones = [
+      0xFFF4D1B5,
+      0xFFE7B99A,
+      0xFFC98B69,
+      0xFF9E654F,
+      0xFF684637,
+    ];
+    const hairColors = [
+      0xFF263449,
+      0xFF6B4634,
+      0xFFB97A38,
+      0xFFCFD5DE,
+      0xFF40254E,
+    ];
+    const outfitColors = [
+      0xFF2879BA,
+      0xFF7357A5,
+      0xFFB84D48,
+      0xFF26796F,
+      0xFF263449,
+    ];
+    const accents = [0xFFF4A62C, 0xFF55C4B2, 0xFFFF865D, 0xFFB6D9F5];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'BUILD YOUR LOOK',
+          style: TextStyle(
+            color: Color(0xFF263449),
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
+            letterSpacing: .4,
+          ),
+        ),
+        const SizedBox(height: 14),
+        _EditorChoiceGroup<AvatarFaceStyle>(
+          title: 'FACE',
+          values: AvatarFaceStyle.values,
+          selected: appearance.faceStyle,
+          label: (value) => switch (value) {
+            AvatarFaceStyle.soft => 'Soft',
+            AvatarFaceStyle.focused => 'Focused',
+            AvatarFaceStyle.bold => 'Bold',
+          },
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(faceStyle: value)),
+        ),
+        _EditorColorGroup(
+          title: 'SKIN TONE',
+          colors: skinTones,
+          selected: appearance.skinTone,
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(skinTone: value)),
+        ),
+        _EditorChoiceGroup<AvatarHairStyle>(
+          title: 'HAIR STYLE',
+          values: AvatarHairStyle.values,
+          selected: appearance.hairStyle,
+          label: (value) => switch (value) {
+            AvatarHairStyle.cropped => 'Cropped',
+            AvatarHairStyle.swept => 'Swept',
+            AvatarHairStyle.curls => 'Curls',
+            AvatarHairStyle.long => 'Long',
+          },
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(hairStyle: value)),
+        ),
+        _EditorColorGroup(
+          title: 'HAIR COLOR',
+          colors: hairColors,
+          selected: appearance.hairColor,
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(hairColor: value)),
+        ),
+        _EditorChoiceGroup<AvatarOutfitStyle>(
+          title: 'OUTFIT',
+          values: AvatarOutfitStyle.values,
+          selected: appearance.outfitStyle,
+          label: (value) => switch (value) {
+            AvatarOutfitStyle.striker => 'Striker',
+            AvatarOutfitStyle.scout => 'Scout',
+            AvatarOutfitStyle.vanguard => 'Vanguard',
+          },
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(outfitStyle: value)),
+        ),
+        _EditorColorGroup(
+          title: 'OUTFIT COLOR',
+          colors: outfitColors,
+          selected: appearance.outfitColor,
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(outfitColor: value)),
+        ),
+        _EditorColorGroup(
+          title: 'ACCENT',
+          colors: accents,
+          selected: appearance.accentColor,
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(accentColor: value)),
+        ),
+        _EditorChoiceGroup<AvatarAccessory>(
+          title: 'ACCESSORY',
+          values: AvatarAccessory.values,
+          selected: appearance.accessory,
+          label: (value) => switch (value) {
+            AvatarAccessory.none => 'None',
+            AvatarAccessory.visor => 'Visor',
+            AvatarAccessory.headband => 'Headband',
+            AvatarAccessory.comms => 'Comms',
+          },
+          onSelected: (value) =>
+              onChanged(appearance.copyWith(accessory: value)),
+        ),
+      ],
+    );
+  }
+}
+
+class _EditorChoiceGroup<T> extends StatelessWidget {
+  const _EditorChoiceGroup({
+    required this.title,
+    required this.values,
+    required this.selected,
+    required this.label,
+    required this.onSelected,
+  });
+  final String title;
+  final List<T> values;
+  final T selected;
+  final String Function(T) label;
+  final ValueChanged<T> onSelected;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF50647D),
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Wrap(
+          spacing: 7,
+          runSpacing: 6,
+          children: [
+            for (final value in values)
+              ChoiceChip(
+                label: Text(label(value)),
+                selected: value == selected,
+                onSelected: (_) => onSelected(value),
+                selectedColor: const Color(0xFFDCEBFA),
+                side: BorderSide(
+                  color: value == selected
+                      ? const Color(0xFF2879BA)
+                      : const Color(0xFFA3B5C6),
+                  width: value == selected ? 2 : 1,
+                ),
+                labelStyle: const TextStyle(
+                  color: Color(0xFF263449),
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+class _EditorColorGroup extends StatelessWidget {
+  const _EditorColorGroup({
+    required this.title,
+    required this.colors,
+    required this.selected,
+    required this.onSelected,
+  });
+  final String title;
+  final List<int> colors;
+  final int selected;
+  final ValueChanged<int> onSelected;
+  @override
+  Widget build(BuildContext context) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF50647D),
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Wrap(
+          spacing: 10,
+          children: [
+            for (final color in colors)
+              Semantics(
+                button: true,
+                selected: color == selected,
+                label: '$title color',
+                child: InkWell(
+                  onTap: () => onSelected(color),
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 37,
+                    height: 37,
+                    decoration: BoxDecoration(
+                      color: Color(color),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: color == selected
+                            ? const Color(0xFF263449)
+                            : Colors.white,
+                        width: color == selected ? 3 : 2,
+                      ),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x22000000),
+                          blurRadius: 3,
+                          offset: Offset(0, 1),
+                        ),
+                      ],
+                    ),
+                    child: color == selected
+                        ? const Icon(
+                            Icons.check_rounded,
+                            size: 18,
+                            color: Colors.white,
+                          )
+                        : null,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
 }
 
 class _MatchBrief extends StatelessWidget {

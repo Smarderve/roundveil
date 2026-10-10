@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
+import 'package:roundveil/features/guess_country/domain/player_avatar_appearance.dart';
 
 enum ArenaScreen {
   opening,
@@ -129,6 +130,8 @@ class GuessCountryState {
     this.hintVisible = false,
     this.scores = const <String, int>{},
     this.notice,
+    this.avatarAppearances = const <String, PlayerAvatarAppearance>{},
+    this.nextPlayerNumber = 1,
   });
 
   final ArenaScreen screen;
@@ -141,6 +144,8 @@ class GuessCountryState {
   final bool hintVisible;
   final Map<String, int> scores;
   final String? notice;
+  final Map<String, PlayerAvatarAppearance> avatarAppearances;
+  final int nextPlayerNumber;
 
   PlayerConfiguration get activePlayer => players[playerIndex];
   bool get isReady => players.isNotEmpty && setup.isComplete;
@@ -157,6 +162,8 @@ class GuessCountryState {
     Map<String, int>? scores,
     String? notice,
     bool clearNotice = false,
+    Map<String, PlayerAvatarAppearance>? avatarAppearances,
+    int? nextPlayerNumber,
   }) => GuessCountryState(
     screen: screen ?? this.screen,
     players: players ?? this.players,
@@ -168,6 +175,8 @@ class GuessCountryState {
     hintVisible: hintVisible ?? this.hintVisible,
     scores: scores ?? this.scores,
     notice: clearNotice ? null : notice ?? this.notice,
+    avatarAppearances: avatarAppearances ?? this.avatarAppearances,
+    nextPlayerNumber: nextPlayerNumber ?? this.nextPlayerNumber,
   );
 }
 
@@ -235,19 +244,58 @@ class GuessCountryController extends ChangeNotifier {
   void openPreparation() =>
       _set(_state.copyWith(screen: ArenaScreen.preparation, clearNotice: true));
   void addPlayer() {
-    final position = _state.players.length + 1;
+    final position = _state.nextPlayerNumber;
+    final player = PlayerConfiguration.placeholder(position);
     _set(
       _state.copyWith(
-        players: [..._state.players, PlayerConfiguration.placeholder(position)],
+        players: [..._state.players, player],
+        avatarAppearances: {
+          ..._state.avatarAppearances,
+          player.id: PlayerAvatarAppearance.forPlayer(position),
+        },
+        nextPlayerNumber: position + 1,
       ),
     );
   }
 
-  void removePlayer() {
+  void removePlayer([String? playerId]) {
     if (_state.players.isEmpty) return;
+    final removed = playerId == null
+        ? _state.players.last
+        : _state.players.where((player) => player.id == playerId).firstOrNull;
+    if (removed == null) return;
+    final remaining = _state.players
+        .where((player) => player.id != removed.id)
+        .toList();
+    final appearances = Map<String, PlayerAvatarAppearance>.from(
+      _state.avatarAppearances,
+    )..remove(removed.id);
+    final reindexedPlayers = <PlayerConfiguration>[];
+    final reindexedAppearances = <String, PlayerAvatarAppearance>{};
+    for (var index = 0; index < remaining.length; index++) {
+      final position = index + 1;
+      final player = PlayerConfiguration.placeholder(position);
+      reindexedPlayers.add(player);
+      final appearance = appearances[remaining[index].id];
+      if (appearance != null) reindexedAppearances[player.id] = appearance;
+    }
     _set(
       _state.copyWith(
-        players: _state.players.sublist(0, _state.players.length - 1),
+        players: reindexedPlayers,
+        avatarAppearances: reindexedAppearances,
+        nextPlayerNumber: reindexedPlayers.length + 1,
+      ),
+    );
+  }
+
+  void updateAvatarAppearance(
+    String playerId,
+    PlayerAvatarAppearance appearance,
+  ) {
+    if (!_state.players.any((player) => player.id == playerId)) return;
+    _set(
+      _state.copyWith(
+        avatarAppearances: {..._state.avatarAppearances, playerId: appearance},
       ),
     );
   }

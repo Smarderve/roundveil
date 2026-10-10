@@ -4,7 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/app/roundveil_app.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
+import 'package:roundveil/features/guess_country/domain/player_avatar_appearance.dart';
 import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 
 void main() {
   const desktop = Size(1200, 900);
@@ -63,7 +65,8 @@ void main() {
   testWidgets('desktop preparation visual', (tester) async {
     await pumpCandidate(tester, configuredController(), desktop);
     expect(find.text('GUESS THE COUNTRY'), findsOneWidget);
-    expect(find.text('YOUR LINEUP'), findsOneWidget);
+    expect(find.text('SQUAD ASSEMBLY'), findsOneWidget);
+    expect(find.byType(PlayerAvatarFigure), findsNWidgets(2));
     expect(find.text('MATCH BRIEF'), findsOneWidget);
     expect(find.text('MATCH RULES'), findsOneWidget);
     expect(find.text('START MATCH'), findsOneWidget);
@@ -81,6 +84,7 @@ void main() {
       ..addPlayer()
       ..openPreparation();
     await pumpCandidate(tester, controller, mobile);
+    await tester.ensureVisible(find.text('MATCH RULES'));
     await tester.tap(find.text('MATCH RULES'));
     await tester.pumpAndSettle();
     expect(find.text('HOST LOADOUT'), findsOneWidget);
@@ -110,6 +114,55 @@ void main() {
     await tester.pumpAndSettle();
     expect(controller.state.players, isEmpty);
     expect(find.text('ADD PLAYER'), findsOneWidget);
+  });
+
+  testWidgets('host can customize an avatar and the look is retained', (
+    tester,
+  ) async {
+    final controller = GuessCountryController(enableTimers: false)
+      ..addPlayer()
+      ..openPreparation();
+    await pumpCandidate(tester, controller, mobile);
+    await tester.tap(find.text('EDIT LOOK'));
+    await tester.pumpAndSettle();
+    expect(find.text('SQUAD ARMORY'), findsOneWidget);
+    expect(find.text('SKIN TONE'), findsOneWidget);
+    expect(find.text('HAIR STYLE'), findsOneWidget);
+    expect(find.text('OUTFIT'), findsOneWidget);
+    expect(find.text('ACCESSORY'), findsOneWidget);
+    await tester.ensureVisible(find.text('Curls'));
+    await tester.tap(find.text('Curls'));
+    await tester.pumpAndSettle();
+    expect(
+      controller.state.avatarAppearances['player-1']!.hairStyle,
+      AvatarHairStyle.curls,
+    );
+    await tester.tap(find.text('DONE'));
+    await tester.pumpAndSettle();
+    expect(find.text('SQUAD ASSEMBLY'), findsOneWidget);
+    expect(
+      controller.state.avatarAppearances['player-1']!.hairStyle,
+      AvatarHairStyle.curls,
+    );
+  });
+
+  testWidgets('removing a chosen squad member removes only that avatar', (
+    tester,
+  ) async {
+    final controller = GuessCountryController(enableTimers: false)
+      ..addPlayer()
+      ..addPlayer()
+      ..addPlayer()
+      ..openPreparation();
+    await pumpCandidate(tester, controller, mobile);
+    await tester.ensureVisible(find.byTooltip('Remove Player 2'));
+    await tester.tap(find.byTooltip('Remove Player 2'));
+    await tester.pumpAndSettle();
+    expect(controller.state.players.map((player) => player.id), [
+      'player-1',
+      'player-2',
+    ]);
+    expect(controller.state.avatarAppearances.keys, ['player-1', 'player-2']);
   });
 
   testWidgets(
