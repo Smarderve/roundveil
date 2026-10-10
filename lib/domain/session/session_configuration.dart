@@ -25,5 +25,8 @@ class SessionConfiguration {
   final List<PlayerConfiguration> players;
   final List<String> selectedModuleIds;
 
-  bool get canStart => players.isNotEmpty && selectedModuleIds.isNotEmpty;
+  bool get canStart =>
+      players.isNotEmpty &&
+      selectedModuleIds.isNotEmpty &&
+      !selectedModuleIds.contains('mystery');
 }
