@@ -1,6 +1,6 @@
-enum CountryDifficulty { easy, medium, hard, expert }
+enum CountryDifficulty { easy, medium, hard, expert, mixed }
 
-enum CountryRegion { africa, americas, asia, europe }
+enum CountryRegion { africa, americas, asia, europe, oceania, worldwide }
 
 class CountryFlag {
   const CountryFlag({

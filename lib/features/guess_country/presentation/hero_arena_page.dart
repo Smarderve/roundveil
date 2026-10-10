@@ -115,99 +115,84 @@ class _Preparation extends StatelessWidget {
   final GuessCountryState state;
   @override
   Widget build(BuildContext context) => LayoutBuilder(
-    builder: (context, constraints) => SingleChildScrollView(
-      key: const ValueKey('preparation'),
-      padding: const EdgeInsets.all(24),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 960),
+    builder: (context, constraints) {
+      final wide = constraints.maxWidth >= 780;
+      final left = <Widget>[
+        _SetupSection(
+          number: '01',
+          title: 'Players & rounds',
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const ArenaHeader(
-                kicker: 'Host configuration',
-                title: 'Build this match',
-              ),
-              const SizedBox(height: 10),
-              const Text(
-                'Every highlighted choice is a host decision. The included prototype pack limits available regions and difficulties.',
-                style: TextStyle(color: Color(0xFF50647D)),
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'GAME  /  GUESS THE COUNTRY (FLAGS)',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.2,
-                  color: Color(0xFF2879BA),
-                ),
-              ),
-              const SizedBox(height: 18),
               _PlayerRow(controller: controller, state: state),
-              const SizedBox(height: 22),
+              const SizedBox(height: 14),
               _OptionGroup(
-                label: 'Rounds',
-                choices: const {'3': 3, '5': 5},
+                label: 'Rounds per player',
+                choices: const {'1': 1, '3': 3, '5': 5},
                 selected: state.setup.roundCount,
                 onSelected: (value) => controller.configure(
                   state.setup.copyWith(roundCount: value),
                 ),
               ),
+            ],
+          ),
+        ),
+        _SetupSection(
+          number: '02',
+          title: 'Flag challenge',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               _OptionGroup(
                 label: 'Difficulty',
-                choices: {
-                  for (final difficulty in controller.availableDifficulties)
-                    switch (difficulty) {
-                      CountryDifficulty.easy => 'Easy',
-                      CountryDifficulty.medium => 'Medium',
-                      CountryDifficulty.hard => 'Hard',
-                      CountryDifficulty.expert => 'Expert',
-                    }: difficulty,
+                choices: const {
+                  'Easy': CountryDifficulty.easy,
+                  'Medium': CountryDifficulty.medium,
+                  'Hard': CountryDifficulty.hard,
+                  'Expert': CountryDifficulty.expert,
+                  'Mixed': CountryDifficulty.mixed,
                 },
                 selected: state.setup.difficulty,
-                onSelected: (value) {
-                  final currentRegion = state.setup.region;
-                  final retainsRegion =
-                      currentRegion != null &&
-                      controller
-                          .availableRegions(value)
-                          .contains(currentRegion);
-                  controller.configure(
-                    state.setup.copyWith(
-                      difficulty: value,
-                      clearRegion: !retainsRegion,
-                    ),
-                  );
-                },
+                onSelected: (value) => controller.configure(
+                  state.setup.copyWith(difficulty: value),
+                ),
               ),
               _OptionGroup(
-                label: 'Geographical scope',
-                choices: {
-                  for (final region in controller.availableRegions(
-                    state.setup.difficulty,
-                  ))
-                    switch (region) {
-                      CountryRegion.africa => 'Africa',
-                      CountryRegion.americas => 'Americas',
-                      CountryRegion.asia => 'Asia',
-                      CountryRegion.europe => 'Europe',
-                    }: region,
+                label: 'Geographic scope',
+                choices: const {
+                  'Africa': CountryRegion.africa,
+                  'Americas': CountryRegion.americas,
+                  'Asia': CountryRegion.asia,
+                  'Europe': CountryRegion.europe,
+                  'Oceania': CountryRegion.oceania,
+                  'Worldwide': CountryRegion.worldwide,
                 },
                 selected: state.setup.region,
                 onSelected: (value) =>
                     controller.configure(state.setup.copyWith(region: value)),
               ),
               _OptionGroup(
-                label: 'Answer mode',
+                label: 'Answer type',
                 choices: const {
                   'Multiple choice': CountryAnswerMode.multipleChoice,
-                  'Typed answer': CountryAnswerMode.typed,
+                  'Type country': CountryAnswerMode.typed,
                 },
                 selected: state.setup.answerMode,
                 onSelected: (value) => controller.configure(
                   state.setup.copyWith(answerMode: value),
                 ),
               ),
+            ],
+          ),
+        ),
+      ];
+      final right = <Widget>[
+        _SetupSection(
+          number: '03',
+          title: 'Pace & assists',
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
               _OptionGroup(
                 label: 'Challenge timer',
                 choices: const {'Off': 0, '30 sec': 30, '45 sec': 45},
@@ -232,34 +217,194 @@ class _Preparation extends StatelessWidget {
                   state.setup.copyWith(winCountdownSeconds: value),
                 ),
               ),
-              _OptionGroup(
-                label: 'Scoring',
-                choices: const {'Off': false, 'On': true},
-                selected: state.setup.scoringEnabled,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(scoringEnabled: value),
-                ),
-              ),
-              if (state.notice != null)
-                Padding(
-                  padding: const EdgeInsets.only(top: 16),
-                  child: Text(
-                    state.notice!,
-                    style: const TextStyle(
-                      color: Color(0xFFB13634),
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              const SizedBox(height: 28),
-              ArenaButton(
-                label: 'PREPARE MATCH',
-                onPressed: state.isReady ? controller.prepareSession : null,
-              ),
             ],
           ),
         ),
+        _SetupSection(
+          number: '04',
+          title: 'Scorekeeping',
+          child: _OptionGroup(
+            label: 'Points & winner summary',
+            choices: const {'Off': false, 'On': true},
+            selected: state.setup.scoringEnabled,
+            onSelected: (value) => controller.configure(
+              state.setup.copyWith(scoringEnabled: value),
+            ),
+          ),
+        ),
+      ];
+      return Column(
+        key: const ValueKey('preparation'),
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1100),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const ArenaHeader(
+                        kicker: 'HOST CONTROL',
+                        title: 'Set the match',
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Choose every rule before the first turn. No match settings are preselected.',
+                        style: TextStyle(color: Color(0xFF50647D)),
+                      ),
+                      const SizedBox(height: 16),
+                      const Text(
+                        'GUESS THE COUNTRY  /  OFFLINE FLAG REVIEW PACK',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                          color: Color(0xFF2879BA),
+                        ),
+                      ),
+                      const SizedBox(height: 14),
+                      if (wide)
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: Column(children: left)),
+                            const SizedBox(width: 14),
+                            Expanded(child: Column(children: right)),
+                          ],
+                        )
+                      else ...[
+                        ...left,
+                        ...right,
+                      ],
+                      if (controller.configurationIssue != null)
+                        Container(
+                          margin: const EdgeInsets.only(top: 10),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFF4E0),
+                            border: Border.all(color: const Color(0xFFF4A62C)),
+                          ),
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Icon(
+                                Icons.info_outline,
+                                color: Color(0xFF263449),
+                              ),
+                              const SizedBox(width: 9),
+                              Expanded(
+                                child: Text(
+                                  controller.configurationIssue!,
+                                  style: const TextStyle(
+                                    color: Color(0xFF263449),
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      if (state.notice != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 10),
+                          child: Text(
+                            state.notice!,
+                            style: const TextStyle(color: Color(0xFFB13634)),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF3F7FC),
+              border: Border(top: BorderSide(color: Color(0xFFA3B5C6))),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 1100),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: Text(
+                        'HOST CONFIGURATION',
+                        style: TextStyle(
+                          fontSize: 11,
+                          letterSpacing: 1.2,
+                          fontWeight: FontWeight.w900,
+                          color: Color(0xFF50647D),
+                        ),
+                      ),
+                    ),
+                    ArenaButton(
+                      label: 'PREPARE MATCH',
+                      onPressed: controller.configurationIssue == null
+                          ? controller.prepareSession
+                          : null,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    },
+  );
+}
+
+class _SetupSection extends StatelessWidget {
+  const _SetupSection({
+    required this.number,
+    required this.title,
+    required this.child,
+  });
+  final String number;
+  final String title;
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => Container(
+    width: double.infinity,
+    margin: const EdgeInsets.only(bottom: 12),
+    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+    decoration: BoxDecoration(
+      color: const Color(0xCCF8FBFF),
+      border: Border(
+        left: BorderSide(color: const Color(0xFF2879BA), width: 3),
       ),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              number,
+              style: const TextStyle(
+                color: Color(0xFF2879BA),
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 9),
+            Text(
+              title.toUpperCase(),
+              style: const TextStyle(
+                letterSpacing: 1.1,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        child,
+      ],
     ),
   );
 }
@@ -277,19 +422,35 @@ class _PlayerRow extends StatelessWidget {
         style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.4),
       ),
       const SizedBox(height: 8),
+      if (state.players.isEmpty)
+        const Padding(
+          padding: EdgeInsets.only(bottom: 6),
+          child: Text(
+            'No players added yet. Choose who will take turns.',
+            style: TextStyle(color: Color(0xFF50647D), fontSize: 12),
+          ),
+        ),
       Wrap(
         spacing: 8,
         runSpacing: 8,
         children: [
-          ...state.players.map(
-            (player) => ArenaChoice(
-              label: player.displayName,
-              selected: false,
-              onPressed: () {},
+          for (var index = 0; index < state.players.length; index++)
+            Chip(
+              avatar: CircleAvatar(
+                radius: 12,
+                backgroundColor: const Color(0xFF2879BA),
+                child: Text(
+                  '${index + 1}',
+                  style: const TextStyle(color: Colors.white, fontSize: 11),
+                ),
+              ),
+              label: Text(state.players[index].displayName),
+              side: const BorderSide(color: Color(0xFFA3B5C6)),
+              backgroundColor: const Color(0xFFF8FBFF),
+              visualDensity: VisualDensity.compact,
             ),
-          ),
           ArenaChoice(
-            label: '+ PLAYER',
+            label: state.players.isEmpty ? '+ ADD PLAYER' : '+ PLAYER',
             selected: false,
             onPressed: controller.addPlayer,
           ),
@@ -318,7 +479,7 @@ class _OptionGroup<T> extends StatelessWidget {
   final ValueChanged<T> onSelected;
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.only(top: 18),
+    padding: const EdgeInsets.only(top: 8),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -331,14 +492,35 @@ class _OptionGroup<T> extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 4,
+          runSpacing: 0,
           children: choices.entries
               .map(
-                (entry) => ArenaChoice(
-                  label: entry.key,
-                  selected: entry.value == selected,
-                  onPressed: () => onSelected(entry.value),
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(right: 2),
+                  child: ChoiceChip(
+                    label: Text(
+                      entry.key,
+                      style: const TextStyle(
+                        color: Color(0xFF263449),
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    selected: entry.value == selected,
+                    showCheckmark: true,
+                    checkmarkColor: const Color(0xFF263449),
+                    materialTapTargetSize: MaterialTapTargetSize.padded,
+                    labelPadding: const EdgeInsets.symmetric(horizontal: 5),
+                    side: BorderSide(
+                      color: entry.value == selected
+                          ? const Color(0xFF2879BA)
+                          : const Color(0xFFA3B5C6),
+                      width: entry.value == selected ? 2 : 1,
+                    ),
+                    selectedColor: const Color(0xFFDBEBF9),
+                    backgroundColor: const Color(0xFFF8FBFF),
+                    onSelected: (_) => onSelected(entry.value),
+                  ),
                 ),
               )
               .toList(),
@@ -377,15 +559,7 @@ class _PlayerReady extends StatelessWidget {
               letterSpacing: 1,
             ),
           ),
-          Text(
-            state.activePlayer.displayName.toUpperCase(),
-            style: const TextStyle(
-              fontSize: 56,
-              height: 1,
-              fontWeight: FontWeight.w900,
-              color: Color(0xFF263449),
-            ),
-          ),
+          _PlayerIdentity(name: state.activePlayer.displayName, large: true),
           if (state.setup.scoringEnabled!)
             Text(
               '${state.scores[state.activePlayer.displayName] ?? 0} POINTS',
@@ -398,10 +572,33 @@ class _PlayerReady extends StatelessWidget {
           if (state.notice != null)
             Padding(
               padding: const EdgeInsets.only(top: 16),
-              child: Text(
-                state.notice!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF50647D)),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      state.notice!.startsWith('Incorrect') ||
+                          state.notice!.startsWith('Time expired')
+                      ? const Color(0xFFFFE7E3)
+                      : const Color(0xFFDDEAF5),
+                  border: Border.all(
+                    color:
+                        state.notice!.startsWith('Incorrect') ||
+                            state.notice!.startsWith('Time expired')
+                        ? const Color(0xFFB13634)
+                        : const Color(0xFF2879BA),
+                  ),
+                ),
+                child: Text(
+                  state.notice!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Color(0xFF263449),
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ),
           const SizedBox(height: 32),
@@ -441,89 +638,137 @@ class _ChallengeState extends State<_Challenge> {
         final compact = constraints.maxWidth < 650;
         return Padding(
           key: const ValueKey('challenge'),
-          padding: const EdgeInsets.all(20),
+          padding: EdgeInsets.all(compact ? 14 : 24),
           child: Column(
             children: [
               Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      '${state.activePlayer.displayName.toUpperCase()}  •  ROUND ${state.round}',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: 1.2,
+                    child: _PlayerIdentity(
+                      name: state.activePlayer.displayName,
+                      index: state.playerIndex + 1,
+                    ),
+                  ),
+                  if (state.setup.scoringEnabled!)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 12),
+                      child: Text(
+                        '${state.scores[state.activePlayer.displayName] ?? 0} PTS',
+                        style: const TextStyle(
+                          color: Color(0xFF2879BA),
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: .8,
+                        ),
                       ),
                     ),
-                  ),
                   if (state.setup.challengeSeconds! > 0)
-                    _Clock(seconds: state.secondsRemaining),
+                    _ChallengeTimer(
+                      seconds: state.secondsRemaining,
+                      total: state.setup.challengeSeconds!,
+                    ),
                 ],
               ),
-              const Spacer(),
-              Text(
-                'NAME THE COUNTRY',
-                style: TextStyle(
-                  fontSize: compact ? 22 : 30,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 1.4,
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.zero,
+                child: LinearProgressIndicator(
+                  value: (state.round - 1) / state.setup.roundCount!,
+                  minHeight: 4,
+                  backgroundColor: const Color(0x55A3B5C6),
+                  color: const Color(0xFF2879BA),
                 ),
               ),
-              const SizedBox(height: 18),
-              ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: compact ? 360 : 560,
-                  maxHeight: compact ? 240 : 330,
-                ),
-                child: AspectRatio(
-                  aspectRatio: flag.aspectRatio,
-                  child: DecoratedBox(
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Color(0x33263449),
-                          blurRadius: 22,
-                          offset: Offset(0, 8),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'IDENTIFY THE FLAG',
+                        style: TextStyle(
+                          fontSize: compact ? 22 : 30,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.4,
                         ),
-                      ],
-                    ),
-                    child: SvgPicture.asset(
-                      flag.assetPath,
-                      fit: BoxFit.contain,
-                      semanticsLabel: 'National flag challenge',
-                    ),
+                      ),
+                      const SizedBox(height: 12),
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: compact ? 360 : 620,
+                          maxHeight: compact ? 230 : 360,
+                        ),
+                        child: AspectRatio(
+                          aspectRatio: flag.aspectRatio,
+                          child: DecoratedBox(
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              border: Border.all(
+                                color: const Color(0xFFA3B5C6),
+                              ),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x29263449),
+                                  blurRadius: 16,
+                                  offset: Offset(0, 5),
+                                ),
+                              ],
+                            ),
+                            child: SvgPicture.asset(
+                              flag.assetPath,
+                              fit: BoxFit.contain,
+                              semanticsLabel: 'National flag challenge',
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      if (state.hintVisible)
+                        Text(
+                          'HINT • ${flag.hint}',
+                          style: const TextStyle(
+                            color: Color(0xFF2879BA),
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.2,
+                          ),
+                        ),
+                      if (state.setup.hintsEnabled! && !state.hintVisible)
+                        TextButton.icon(
+                          onPressed: controller.revealHint,
+                          icon: const Icon(Icons.lightbulb_outline, size: 18),
+                          label: const Text('REVEAL HINT'),
+                        ),
+                      SizedBox(height: compact ? 4 : 10),
+                      _AnswerArea(
+                        controller: controller,
+                        state: state,
+                        textController: _answer,
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              if (state.hintVisible)
-                Text(
-                  'HINT • ${flag.hint}',
-                  style: const TextStyle(
-                    color: Color(0xFF2879BA),
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
+              Row(
+                children: [
+                  Text(
+                    'ROUND ${state.round.toString().padLeft(2, '0')} / ${state.setup.roundCount}',
+                    style: const TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF50647D),
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1,
+                    ),
                   ),
-                ),
-              if (state.setup.hintsEnabled! && !state.hintVisible)
-                TextButton(
-                  onPressed: controller.revealHint,
-                  child: const Text('REVEAL HOST-CONFIGURED HINT'),
-                ),
-              SizedBox(height: compact ? 8 : 16),
-              _AnswerArea(
-                controller: controller,
-                state: state,
-                textController: _answer,
-              ),
-              const Spacer(),
-              const Text(
-                'HOST CONTROLS REMAIN ON THIS DEVICE',
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Color(0xFF50647D),
-                  letterSpacing: 1,
-                ),
+                  const Spacer(),
+                  const Text(
+                    'HOST DEVICE',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: Color(0xFF50647D),
+                      letterSpacing: 1,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -545,61 +790,226 @@ class _AnswerArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (state.setup.answerMode == CountryAnswerMode.multipleChoice) {
-      return Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 10,
-        runSpacing: 10,
-        children: controller.answerOptions
-            .map(
-              (answer) => ArenaChoice(
-                label: answer,
-                selected: false,
-                onPressed: () => controller.submitAnswer(answer),
+      final options = controller.answerOptions;
+      return ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 720),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            for (var index = 0; index < options.length; index++)
+              _AnswerOption(
+                index: index + 1,
+                label: options[index],
+                onPressed: () => controller.submitAnswer(options[index]),
               ),
-            )
-            .toList(),
+          ],
+        ),
       );
     }
     return SizedBox(
-      width: 420,
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: textController,
-              onSubmitted: controller.submitAnswer,
-              decoration: const InputDecoration(
-                labelText: 'Country name',
-                filled: true,
-                fillColor: Colors.white,
-                border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+      width: double.infinity,
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  controller: textController,
+                  onSubmitted: controller.submitAnswer,
+                  decoration: const InputDecoration(
+                    labelText: 'Country name',
+                    filled: true,
+                    fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.zero),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 10),
+              ArenaButton(
+                label: 'SUBMIT',
+                onPressed: () => controller.submitAnswer(textController.text),
+              ),
+            ],
           ),
-          const SizedBox(width: 10),
-          ArenaButton(
-            label: 'SUBMIT',
-            onPressed: () => controller.submitAnswer(textController.text),
-          ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _Clock extends StatelessWidget {
-  const _Clock({required this.seconds});
+class _PlayerIdentity extends StatelessWidget {
+  const _PlayerIdentity({
+    required this.name,
+    this.index = 1,
+    this.large = false,
+  });
+  final String name;
+  final int index;
+  final bool large;
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Container(
+        width: large ? 62 : 40,
+        height: large ? 62 : 40,
+        alignment: Alignment.center,
+        decoration: const BoxDecoration(
+          color: Color(0xFF2879BA),
+          shape: BoxShape.circle,
+        ),
+        child: Text(
+          index.toString().padLeft(2, '0'),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: large ? 19 : 14,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+      ),
+      SizedBox(width: large ? 14 : 10),
+      Flexible(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (!large)
+              const Text(
+                'ACTIVE PLAYER',
+                style: TextStyle(
+                  fontSize: 9,
+                  color: Color(0xFF2879BA),
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.1,
+                ),
+              ),
+            Text(
+              name.toUpperCase(),
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: large ? 42 : 18,
+                fontWeight: FontWeight.w900,
+                color: const Color(0xFF263449),
+                letterSpacing: -.4,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
+class _AnswerOption extends StatelessWidget {
+  const _AnswerOption({
+    required this.index,
+    required this.label,
+    required this.onPressed,
+  });
+  final int index;
+  final String label;
+  final VoidCallback onPressed;
+  @override
+  Widget build(BuildContext context) => Material(
+    color: const Color(0xFFF8FBFF),
+    child: InkWell(
+      onTap: onPressed,
+      child: Ink(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFA3B5C6), width: 1.4),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 27,
+              height: 27,
+              alignment: Alignment.center,
+              color: const Color(0xFFF4A62C),
+              child: Text(
+                index.toString().padLeft(2, '0'),
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            const SizedBox(width: 9),
+            Text(
+              label,
+              style: const TextStyle(
+                color: Color(0xFF263449),
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class _ChallengeTimer extends StatelessWidget {
+  const _ChallengeTimer({required this.seconds, required this.total});
   final int seconds;
+  final int total;
   @override
   Widget build(BuildContext context) => Semantics(
     label: '$seconds seconds remaining',
-    child: Text(
-      '$seconds',
-      style: const TextStyle(
-        fontSize: 34,
-        fontWeight: FontWeight.w900,
-        color: Color(0xFFF4A62C),
-        shadows: [Shadow(color: Color(0xFF263449), offset: Offset(1, 1))],
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 5),
+      decoration: BoxDecoration(
+        color: seconds <= 10
+            ? const Color(0xFFFFE7E3)
+            : const Color(0xFF263449),
+        border: Border.all(
+          color: seconds <= 10
+              ? const Color(0xFFB13634)
+              : const Color(0xFF2879BA),
+          width: 2,
+        ),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.timer_outlined,
+                size: 18,
+                color: seconds <= 10 ? const Color(0xFFB13634) : Colors.white,
+              ),
+              const SizedBox(width: 6),
+              Text(
+                '$seconds',
+                style: TextStyle(
+                  fontSize: 23,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  color: seconds <= 10 ? const Color(0xFFB13634) : Colors.white,
+                  fontFeatures: const [FontFeature.tabularFigures()],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: 74,
+            child: LinearProgressIndicator(
+              value: seconds / total,
+              minHeight: 3,
+              color: seconds <= 10
+                  ? const Color(0xFFB13634)
+                  : const Color(0xFFF4A62C),
+              backgroundColor: const Color(0x557F93A8),
+            ),
+          ),
+        ],
       ),
     ),
   );
@@ -624,20 +1034,38 @@ class _Countdown extends StatelessWidget {
             color: Color(0xFF2879BA),
           ),
         ),
-        Text(
-          '${state.secondsRemaining}',
-          style: const TextStyle(
-            fontSize: 180,
-            height: .9,
-            fontWeight: FontWeight.w900,
-            color: Color(0xFFF4A62C),
-            shadows: [Shadow(color: Color(0xFF263449), offset: Offset(8, 8))],
+        TweenAnimationBuilder<double>(
+          tween: Tween(begin: .72, end: 1),
+          duration: const Duration(milliseconds: 520),
+          curve: Curves.easeOutBack,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: Text(
+            '${state.secondsRemaining}',
+            style: const TextStyle(
+              fontSize: 180,
+              height: .9,
+              fontWeight: FontWeight.w900,
+              color: Color(0xFFF4A62C),
+              shadows: [Shadow(color: Color(0xFF263449), offset: Offset(8, 8))],
+              fontFeatures: [FontFeature.tabularFigures()],
+            ),
+          ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: 240,
+          child: LinearProgressIndicator(
+            value: state.secondsRemaining / state.setup.winCountdownSeconds!,
+            minHeight: 6,
+            color: const Color(0xFF2879BA),
+            backgroundColor: const Color(0x55A3B5C6),
           ),
         ),
         const SizedBox(height: 18),
-        Text(
-          state.activePlayer.displayName.toUpperCase(),
-          style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 2),
+        _PlayerIdentity(
+          name: state.activePlayer.displayName,
+          index: state.playerIndex + 1,
         ),
         const SizedBox(height: 28),
         ArenaButton(
@@ -655,48 +1083,116 @@ class _Complete extends StatelessWidget {
   final GuessCountryController controller;
   final GuessCountryState state;
   @override
-  Widget build(BuildContext context) => Center(
-    key: const ValueKey('complete'),
-    child: Padding(
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text(
-            'SESSION COMPLETE',
-            style: TextStyle(
-              fontSize: 38,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 1,
+  Widget build(BuildContext context) {
+    final scores = {
+      for (final player in state.players)
+        player.displayName: state.scores[player.displayName] ?? 0,
+    };
+    final highestScore = scores.values.fold<int>(
+      0,
+      (max, score) => score > max ? score : max,
+    );
+    final winners = scores.entries
+        .where((entry) => entry.value == highestScore)
+        .map((entry) => entry.key)
+        .toList();
+    final winnerText = highestScore == 0
+        ? 'No points scored this match'
+        : winners.length == 1
+        ? '${winners.single.toUpperCase()} WINS'
+        : 'IT’S A TIE';
+    return Center(
+      key: const ValueKey('complete'),
+      child: Padding(
+        padding: const EdgeInsets.all(22),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.emoji_events_outlined,
+              size: 44,
+              color: Color(0xFFF4A62C),
             ),
-          ),
-          const SizedBox(height: 12),
-          Text(
-            '${state.players.length} players • ${state.setup.roundCount} rounds',
-            style: const TextStyle(color: Color(0xFF50647D)),
-          ),
-          if (state.setup.scoringEnabled!) ...[
-            const SizedBox(height: 14),
-            ...state.players.map(
-              (player) => Text(
-                '${player.displayName.toUpperCase()}  ${state.scores[player.displayName] ?? 0}',
-                style: const TextStyle(fontWeight: FontWeight.w900),
+            const Text(
+              'SESSION COMPLETE',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1,
               ),
             ),
+            const SizedBox(height: 12),
+            Text(
+              '${state.players.length} ${state.players.length == 1 ? 'player' : 'players'} • ${state.setup.roundCount} ${state.setup.roundCount == 1 ? 'round' : 'rounds'}',
+              style: const TextStyle(color: Color(0xFF50647D)),
+            ),
+            if (state.setup.scoringEnabled!) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: 420,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF8FBFF),
+                  border: Border.all(color: const Color(0xFF2879BA), width: 2),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x22263449), offset: Offset(4, 4)),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Text(
+                      winnerText,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        color: Color(0xFF2879BA),
+                        fontSize: 20,
+                        letterSpacing: 1.2,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    for (final player in state.players)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                player.displayName.toUpperCase(),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '${scores[player.displayName]} PTS',
+                              style: const TextStyle(
+                                color: Color(0xFF263449),
+                                fontWeight: FontWeight.w900,
+                                fontFeatures: [FontFeature.tabularFigures()],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+            const SizedBox(height: 28),
+            ArenaButton(
+              label: 'PREPARE ANOTHER',
+              onPressed: controller.openPreparation,
+            ),
+            const SizedBox(height: 14),
+            ArenaButton(
+              label: 'FINISH',
+              onPressed: controller.finishSession,
+              secondary: true,
+            ),
           ],
-          const SizedBox(height: 28),
-          ArenaButton(
-            label: 'PREPARE ANOTHER',
-            onPressed: controller.openPreparation,
-          ),
-          const SizedBox(height: 14),
-          ArenaButton(
-            label: 'FINISH',
-            onPressed: controller.finishSession,
-            secondary: true,
-          ),
-        ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 }

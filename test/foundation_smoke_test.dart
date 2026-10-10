@@ -70,12 +70,13 @@ void main() {
 
   test('correct country answer enters countdown and wrong answer does not', () {
     final controller = GuessCountryController();
+    controller.addPlayer();
     controller.openPreparation();
     controller.configure(
       const GuessCountrySetup(
         roundCount: 3,
         difficulty: CountryDifficulty.easy,
-        region: CountryRegion.asia,
+        region: CountryRegion.worldwide,
         answerMode: CountryAnswerMode.multipleChoice,
         challengeSeconds: 0,
         hintsEnabled: false,
@@ -85,13 +86,122 @@ void main() {
     );
     controller.prepareSession();
     controller.startTurn();
-    controller.submitAnswer('Japan');
+    controller.submitAnswer(controller.activeFlag.name);
     expect(controller.state.screen, ArenaScreen.winCountdown);
     controller.completeCountdown();
     controller.startTurn();
     controller.submitAnswer('Not Japan');
     expect(controller.state.screen, ArenaScreen.playerReady);
     expect(controller.state.notice, contains('no Win Countdown'));
+    controller.dispose();
+  });
+
+  test('multiple-choice distractors stay inside the selected region', () {
+    final controller = GuessCountryController()..addPlayer();
+    controller.configure(
+      const GuessCountrySetup(
+        roundCount: 3,
+        difficulty: CountryDifficulty.easy,
+        region: CountryRegion.americas,
+        answerMode: CountryAnswerMode.multipleChoice,
+        challengeSeconds: 0,
+        hintsEnabled: false,
+        winCountdownSeconds: 3,
+        scoringEnabled: false,
+      ),
+    );
+
+    expect(controller.configurationIssue, isNull);
+    controller.prepareSession();
+    controller.startTurn();
+    expect(controller.answerOptions, contains(controller.activeFlag.name));
+    expect(
+      controller.answerOptions,
+      everyElement(anyOf('Brazil', 'Canada', 'United States')),
+    );
+    expect(controller.answerOptions, hasLength(3));
+    controller.dispose();
+  });
+
+  test(
+    'undersized eligible pool blocks the session instead of repeating flags',
+    () {
+      final controller = GuessCountryController()
+        ..addPlayer()
+        ..addPlayer();
+      controller.configure(
+        const GuessCountrySetup(
+          roundCount: 3,
+          difficulty: CountryDifficulty.easy,
+          region: CountryRegion.americas,
+          answerMode: CountryAnswerMode.multipleChoice,
+          challengeSeconds: 0,
+          hintsEnabled: false,
+          winCountdownSeconds: 3,
+          scoringEnabled: false,
+        ),
+      );
+
+      expect(controller.configurationIssue, contains('6 are needed'));
+      controller.openPreparation();
+      controller.prepareSession();
+      expect(controller.state.screen, ArenaScreen.preparation);
+      expect(controller.state.notice, contains('Flags will not repeat'));
+      controller.removePlayer();
+      expect(controller.configurationIssue, isNull);
+      controller.prepareSession();
+      final seen = <String>{};
+      for (var turn = 0; turn < 3; turn++) {
+        controller.startTurn();
+        seen.add(controller.activeFlag.id);
+        controller.submitAnswer('wrong');
+      }
+      expect(seen, hasLength(3));
+      expect(controller.state.screen, ArenaScreen.complete);
+      controller.dispose();
+    },
+  );
+
+  test('single-country pool requires typed mode and one turn', () {
+    final controller = GuessCountryController()..addPlayer();
+    controller.configure(
+      const GuessCountrySetup(
+        roundCount: 1,
+        difficulty: CountryDifficulty.easy,
+        region: CountryRegion.asia,
+        answerMode: CountryAnswerMode.multipleChoice,
+        challengeSeconds: 0,
+        hintsEnabled: false,
+        winCountdownSeconds: 3,
+        scoringEnabled: false,
+      ),
+    );
+    expect(controller.configurationIssue, contains('in-scope alternative'));
+    controller.configure(
+      controller.state.setup.copyWith(answerMode: CountryAnswerMode.typed),
+    );
+    expect(controller.configurationIssue, isNull);
+    controller.dispose();
+  });
+
+  test('host must explicitly add players before a match can start', () {
+    final controller = GuessCountryController()..openPreparation();
+    controller.configure(
+      const GuessCountrySetup(
+        roundCount: 1,
+        difficulty: CountryDifficulty.mixed,
+        region: CountryRegion.worldwide,
+        answerMode: CountryAnswerMode.typed,
+        challengeSeconds: 0,
+        hintsEnabled: false,
+        winCountdownSeconds: 3,
+        scoringEnabled: false,
+      ),
+    );
+    expect(controller.state.players, isEmpty);
+    expect(controller.configurationIssue, contains('Add at least one player'));
+    controller.addPlayer();
+    expect(controller.configurationIssue, isNull);
     controller.dispose();
   });
 

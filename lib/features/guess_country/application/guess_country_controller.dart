@@ -15,6 +15,27 @@ enum ArenaScreen {
 
 enum CountryAnswerMode { multipleChoice, typed }
 
+extension on CountryRegion {
+  String get label => switch (this) {
+    CountryRegion.africa => 'Africa',
+    CountryRegion.americas => 'the Americas',
+    CountryRegion.asia => 'Asia',
+    CountryRegion.europe => 'Europe',
+    CountryRegion.oceania => 'Oceania',
+    CountryRegion.worldwide => 'worldwide',
+  };
+}
+
+extension on CountryDifficulty {
+  String get label => switch (this) {
+    CountryDifficulty.easy => 'Easy',
+    CountryDifficulty.medium => 'Medium',
+    CountryDifficulty.hard => 'Hard',
+    CountryDifficulty.expert => 'Expert',
+    CountryDifficulty.mixed => 'Mixed',
+  };
+}
+
 class GuessCountrySetup {
   const GuessCountrySetup({
     this.roundCount,
@@ -46,6 +67,34 @@ class GuessCountrySetup {
       winCountdownSeconds != null &&
       scoringEnabled != null;
 
+  String? validate(List<CountryFlag> flags, int playerCount) {
+    if (!isComplete) {
+      return 'Choose every match setting to continue.';
+    }
+    if (playerCount < 1) {
+      return 'Add at least one player before preparing a match.';
+    }
+    final eligible = flags.where(_matches).toList();
+    final scope = region == CountryRegion.worldwide
+        ? 'worldwide'
+        : region!.label;
+    if (eligible.isEmpty) {
+      return 'The seven-flag review pack has no ${difficulty!.label} flags for $scope.';
+    }
+    if (answerMode == CountryAnswerMode.multipleChoice && eligible.length < 2) {
+      return 'Only one flag is eligible for $scope. Multiple choice needs an in-scope alternative; choose typed answers or another scope.';
+    }
+    final required = playerCount * roundCount!;
+    if (eligible.length < required) {
+      return 'Only ${eligible.length} unique flags fit $scope / ${difficulty!.label}; $required are needed ($playerCount players × $roundCount rounds). Reduce players or rounds, or widen scope/change difficulty. Flags will not repeat.';
+    }
+    return null;
+  }
+
+  bool _matches(CountryFlag flag) =>
+      (region == CountryRegion.worldwide || flag.region == region) &&
+      (difficulty == CountryDifficulty.mixed || flag.difficulty == difficulty);
+
   GuessCountrySetup copyWith({
     int? roundCount,
     CountryDifficulty? difficulty,
@@ -75,7 +124,7 @@ class GuessCountryState {
     this.setup = const GuessCountrySetup(),
     this.round = 1,
     this.playerIndex = 0,
-    this.flagIndex = 0,
+    this.seenFlagIds = const <String>{},
     this.secondsRemaining = 0,
     this.hintVisible = false,
     this.scores = const <String, int>{},
@@ -87,7 +136,7 @@ class GuessCountryState {
   final GuessCountrySetup setup;
   final int round;
   final int playerIndex;
-  final int flagIndex;
+  final Set<String> seenFlagIds;
   final int secondsRemaining;
   final bool hintVisible;
   final Map<String, int> scores;
@@ -102,7 +151,7 @@ class GuessCountryState {
     GuessCountrySetup? setup,
     int? round,
     int? playerIndex,
-    int? flagIndex,
+    Set<String>? seenFlagIds,
     int? secondsRemaining,
     bool? hintVisible,
     Map<String, int>? scores,
@@ -114,7 +163,7 @@ class GuessCountryState {
     setup: setup ?? this.setup,
     round: round ?? this.round,
     playerIndex: playerIndex ?? this.playerIndex,
-    flagIndex: flagIndex ?? this.flagIndex,
+    seenFlagIds: seenFlagIds ?? this.seenFlagIds,
     secondsRemaining: secondsRemaining ?? this.secondsRemaining,
     hintVisible: hintVisible ?? this.hintVisible,
     scores: scores ?? this.scores,
@@ -134,17 +183,22 @@ class GuessCountryController extends ChangeNotifier {
   final VoidCallback? onCountdownComplete;
   final bool enableTimers;
   Timer? _timer;
-  GuessCountryState _state = GuessCountryState(
-    players: <PlayerConfiguration>[
-      PlayerConfiguration.placeholder(1),
-      PlayerConfiguration.placeholder(2),
-    ],
-  );
+  GuessCountryState _state = const GuessCountryState();
 
   GuessCountryState get state => _state;
 
-  CountryFlag get activeFlag =>
-      _eligibleFlags[_state.flagIndex % _eligibleFlags.length];
+  CountryFlag get activeFlag {
+    final unseen = _eligibleFlags
+        .where((flag) => !_state.seenFlagIds.contains(flag.id))
+        .toList();
+    if (unseen.isEmpty) {
+      throw StateError('No unseen eligible country flag remains.');
+    }
+    return unseen.first;
+  }
+
+  String? get configurationIssue =>
+      _state.setup.validate(_flags, _state.players.length);
   List<CountryDifficulty> get availableDifficulties => CountryDifficulty.values
       .where(
         (difficulty) => _flags.any((flag) => flag.difficulty == difficulty),
@@ -164,19 +218,13 @@ class GuessCountryController extends ChangeNotifier {
 
   List<CountryFlag> get _eligibleFlags {
     final setup = _state.setup;
-    return _flags
-        .where(
-          (flag) =>
-              flag.region == setup.region &&
-              flag.difficulty == setup.difficulty,
-        )
-        .toList();
+    return _flags.where(setup._matches).toList();
   }
 
   List<String> get answerOptions {
     final correct = activeFlag.name;
     final choices =
-        _flags
+        _eligibleFlags
             .where((flag) => flag.id != activeFlag.id)
             .map((flag) => flag.name)
             .toList()
@@ -208,11 +256,11 @@ class GuessCountryController extends ChangeNotifier {
       _set(_state.copyWith(setup: setup, clearNotice: true));
 
   void prepareSession() {
-    if (!_state.isReady || _eligibleFlags.isEmpty) {
+    if (!_state.isReady || configurationIssue != null) {
       _set(
         _state.copyWith(
           notice:
-              'Choose every host setting supported by the included flag pack.',
+              configurationIssue ?? 'Choose every match setting to continue.',
         ),
       );
       return;
@@ -221,6 +269,15 @@ class GuessCountryController extends ChangeNotifier {
   }
 
   void startTurn() {
+    if (configurationIssue != null ||
+        !_eligibleFlags.any((flag) => !_state.seenFlagIds.contains(flag.id))) {
+      _set(
+        _state.copyWith(
+          notice: configurationIssue ?? 'No unseen eligible flag remains.',
+        ),
+      );
+      return;
+    }
     _set(
       _state.copyWith(
         screen: ArenaScreen.challenge,
@@ -255,6 +312,7 @@ class GuessCountryController extends ChangeNotifier {
           screen: ArenaScreen.winCountdown,
           secondsRemaining: seconds,
           scores: scores,
+          seenFlagIds: {..._state.seenFlagIds, activeFlag.id},
           notice: 'Correct — Win Countdown active now.',
         ),
       );
@@ -292,12 +350,16 @@ class GuessCountryController extends ChangeNotifier {
   }
 
   void _advanceWithoutCountdown(String notice) {
+    final seenFlagIds = _state.screen == ArenaScreen.challenge
+        ? {..._state.seenFlagIds, activeFlag.id}
+        : _state.seenFlagIds;
     final lastPlayer = _state.playerIndex == _state.players.length - 1;
     final nextRound = lastPlayer ? _state.round + 1 : _state.round;
     if (nextRound > _state.setup.roundCount!) {
       _set(
         _state.copyWith(
           screen: ArenaScreen.complete,
+          seenFlagIds: seenFlagIds,
           notice: 'Session complete.',
         ),
       );
@@ -308,7 +370,7 @@ class GuessCountryController extends ChangeNotifier {
         screen: ArenaScreen.playerReady,
         playerIndex: lastPlayer ? 0 : _state.playerIndex + 1,
         round: nextRound,
-        flagIndex: _state.flagIndex + 1,
+        seenFlagIds: seenFlagIds,
         notice: notice,
       ),
     );

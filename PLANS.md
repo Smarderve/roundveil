@@ -31,8 +31,9 @@ Build vertical slices and finish them. Every phase ends with demonstrable workin
 **Done when:** Flutter doctor reports a healthy Android toolchain, a debug APK builds, and the foundation launches on the approved emulator where available. **Verified:** `flutter doctor -v`, analyzer and tests pass; debug APK builds; `com.example.roundveil` installs and starts on `emulator-5554`. See `docs/architecture/ANDROID_BUILD_ENVIRONMENT.md` for the temporary Codex process setting used during Android build commands.
 
 ### Phase 2 — Game UX redesign and approval
-- **Status:** WORKING UX CANDIDATE READY FOR REVIEW (2026-10-10); not approved or complete.
-- A Flutter Hero Arena candidate demonstrates opening, explicit host configuration, player-ready, flag challenge, immediate correct-answer Win Countdown, and session completion for Guess the Country (Flags).
+- **Status:** CORRECTED CANDIDATE RETURNED FOR REVIEW (2026-10-10); not approved or complete.
+- The seven-flag candidate now filters distractors to the configured scope/difficulty, prevents repeats, and blocks unsupported pool/session sizes with an explanation. Setup choices are explicit; the compact grouped UI improves selected-state contrast and touch targets. The candidate includes an improved gameplay HUD, timer, immediate correct-answer Win Countdown and scored session winner summary.
+- Automated tests verify eligible configuration and actual challenge rendering. Android emulator gameplay was captured through the scored completion flow. Windows compilation and native opening-screen rendering were verified; interactive Windows gameplay states were not exercised.
 - Resolve `docs/design/UX_OPEN_QUESTIONS.md`: host session UX, game placement, in-game controls, player-ready and interruption treatment.
 - Approve functional flows separately from visual style.
 **Done when:** specific wireflow/state decisions have explicit user approval and date. The current candidate is a review artifact and does not authorize a Phase 3 implementation.
