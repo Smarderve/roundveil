@@ -12,7 +12,7 @@ Build vertical slices and finish them. Every phase ends with demonstrable workin
 
 This sequence supersedes the short Phase 0–4 roadmap below for current execution; the earlier phases remain historical context. It preserves the existing Flutter project and requires incremental verified commits. Current content counts and architecture gaps are recorded in [`docs/architecture/ROUNDVEIL_REBUILD_AUDIT.md`](docs/architecture/ROUNDVEIL_REBUILD_AUDIT.md).
 
-1. **Architecture and asset audit — IN PROGRESS.** Repository and 2,000-screen archive inventory/mapping are recorded. The cross-platform 3D renderer proof is still mandatory and outstanding; do not mark this milestone complete or select a renderer until a real model renders and is controllable on Windows and Android.
+1. **Architecture and asset audit — IN PROGRESS.** Repository and 2,000-screen archive inventory/mapping are recorded. The first isolated Flutter GPU proof failed to render a rigged character on Windows and Android due to GLSL ES 1.00 skinning shader errors. Thermion/Filament is the next candidate; its package setup reports Windows symlink support/Developer Mode is required. No system setting was changed. Do not mark this milestone complete or select a renderer until a real model renders and is controllable on both targets.
 2. **Main game shell — NOT STARTED.** Integrate the approved brand references, opening/home and functional navigation, with Windows/Android layout, theme and locale foundations.
 3. **3D avatars — NOT STARTED.** After the renderer proof, build actual model loading, camera, skeletal animation, customization and local appearance storage. No 2D substitute can be described as 3D.
 4. **Session systems — NOT STARTED.** Single/mixed configuration, editable Quick Game templates, drafts, player management, shared runtime and local persistence/recovery.
@@ -21,7 +21,7 @@ This sequence supersedes the short Phase 0–4 roadmap below for current executi
 7. **Localization and settings — NOT STARTED.** The 12 requested UI locales, RTL, persistent themes, audio/graphics and accessibility options.
 8. **Final integration — NOT STARTED.** Recovery, host controls, scoring/results, performance and Windows/Android gameplay QA.
 
-Milestone 1 continuation: build an isolated Filament-vs-alternative Flutter bridge proof against the existing stable SDK; load an attributed/licensed rigged GLB; verify Android and Windows, camera input, skeletal animation, runtime material change, startup failures and measured performance. If either target/capability fails, continue renderer research rather than marking M1 complete.
+Milestone 1 continuation: resolve the Windows symlink/Developer Mode gate for an isolated Thermion proof or choose a candidate that builds without that system change; load an attributed/licensed rigged GLB; verify Android and Windows, camera input, skeletal animation, runtime material change, startup failures and measured performance. If either target/capability fails, continue renderer research rather than marking M1 complete.
 
 ### Phase 0 — Documentation and repository preparation
 - Import this pack and review `AGENTS.md`.

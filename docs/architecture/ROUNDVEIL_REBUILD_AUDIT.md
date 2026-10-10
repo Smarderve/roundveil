@@ -71,13 +71,27 @@ No renderer is selected yet. The product requires genuine 3D and explicitly requ
 | Google Filament native renderer with a Roundveil-owned Flutter platform bridge | Upstream documents native C++ APIs on Windows and Android, glTF loading, and platform-native swap chains (`HWND` / `ANativeWindow`). | Best research candidate for a controlled proof, not selected. Flutter bridge, texture composition, lifecycle, rig animation, runtime material changes, packaging and performance remain unproven in this repository. |
 | `flutter_filament` | Community integration labels itself beta; its Windows path uses a customized Filament build. The published capability notes mark runtime material changes as planned and several animation/transform capabilities partial. | Does not yet satisfy the required proof/feature set as-is. Do not change Flutter channel to accommodate it. |
 | `stage_3d` | Its package documentation describes an experimental beta; packaged native Filament is Android-only and its Windows implementation is a demo runner, not a reusable Windows Flutter backend. | Not cross-platform-ready for this app. |
-| `flutter3d` / Flutter GPU | Very recent package. Flutter's engine documentation calls Flutter GPU early preview, API-unstable, Impeller-dependent and recommends Flutter master; Windows support is not established by this app's own proof. | Do not base the production app on it without substantial stability evidence; not selected. |
+| `flutter3d` / Flutter GPU | Very recent package. Flutter's engine documentation calls Flutter GPU early preview, API-unstable, Impeller-dependent and recommends Flutter master. | Rejected for this integration proof. Its Impeller/OpenGL ES backend failed to compile skinning shaders on both Windows and Android; see results below. |
+| Thermion / Filament (`thermion_flutter`) | Current upstream package advertises Windows x64 and Android, glTF loading, skinning and morph animation. | Next candidate, not selected. Package setup on Windows reports that plugin builds require symlink support and requests Developer Mode. No system setting was changed; native build and runtime remain unverified here. |
 
 ### Renderer proof gate (still open)
 
 Before final selection, build an isolated proof against the current stable Flutter SDK and existing Windows/Android toolchains. Load one correctly licensed rigged glTF model; render it inside the Flutter app on Windows and an Android device/emulator; rotate the camera with mouse/touch; play a skeletal clip; change a material at runtime; record startup/render errors, binary impact and measured frame-time/FPS for both. Do not call a standalone engine demo or static image a Flutter integration proof. Record exact model attribution/license and hashes. If the proof fails any target or capability, revise the renderer choice before avatar production work.
 
-No proof was attempted in this audit. A full 3D production asset is also absent; the user-provided mascot is a 2D portrait reference, not a rigged model. No supplied asset license/provenance file was present in the archive.
+### Renderer proof results (2026-10-11)
+
+An isolated Flutter app was created in the local temporary directory, outside this repository, with no production files or dependencies changed. It loaded Khronos `RiggedSimple.glb` (one skeletal clip and one skinned mesh), and included runtime material recoloring and camera-orbit controls. It was built for Windows and the existing `Medium_Phone_API_37.0` emulator.
+
+| Check | Result |
+|---|---|
+| Flutter Windows debug compile | Passed; application launched. |
+| Windows character rendering | Failed. Impeller selected OpenGL ES and compiled the skinning shader as `#version 100`; diagnostics report unsupported `clamp` overloads, missing `gl_VertexID`, and integer `%` unavailable before GLSL ES 3.00. The resulting invalid pipeline repeatedly throws `Failed to append drawIndexed`. |
+| Android debug compile/install/launch | Passed; isolated app installed and started on `emulator-5554`. |
+| Android character rendering | Failed with the same GLSL ES 1.00 skinning shader diagnostics and `Failed to append drawIndexed`; a device screenshot showed Flutter's red error surface instead of the model. |
+| Camera input, skeletal motion, runtime recoloring, performance | Not verified because the model never rendered. No FPS/performance claim is made. |
+| Thermion `0.5.0` verification | Not run. Windows package setup reported “Building with plugins requires symlink support” and requested Developer Mode. No system setting was changed. |
+
+The Flutter GPU proof is a failed candidate, not a renderer selection. The next meaningful check requires either explicit approval to enable Windows Developer Mode for an isolated Thermion proof, or a different candidate that builds without changing that system setting. Do not begin production avatars until the required renderer proof passes on both targets. The user-provided mascot remains a 2D portrait reference, not a rigged production model; no production model license/provenance has been established.
 
 ### Primary technical sources reviewed
 
@@ -86,10 +100,12 @@ No proof was attempted in this audit. A full 3D production asset is also absent;
 - [`flutter_filament` implementation notes and feature limits](https://github.com/jarrodcolburn/flutter_filament).
 - [`stage_3d` current support statement](https://pub.dev/packages/stage_3d).
 - [Flutter GPU engine documentation](https://github.com/flutter/flutter/blob/master/docs/engine/impeller/Flutter-GPU.md) and [`flutter3d` package metadata](https://pub.dev/packages/flutter3d).
+- [Thermion Flutter package](https://pub.dev/packages/thermion_flutter) for the next renderer candidate's advertised platform support and setup.
 - [Khronos glTF sample asset catalog](https://github.com/KhronosGroup/glTF-Sample-Assets); each sample's own license must be checked before use (some include separate trademark restrictions).
+- [Khronos RiggedSimple model/license](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/RiggedSimple); used only in the temporary proof, not copied into the app.
 
 ## Completion state and next work
 
-Repository/reference audit and chapter mapping are complete. Milestone 1 remains **IN PROGRESS** until the renderer proof gate passes and a documented architecture decision is made. The next implementation task is the isolated Filament bridge proof, not replacement of the current renderer with an unverified package and not the complete avatar editor. After that, proceed through the user's milestones in order: app shell; verified 3D; session builder/storage; modules; validated content; localization/settings; integration and platform QA.
+Repository/reference audit and chapter mapping are complete. Milestone 1 remains **IN PROGRESS** until the renderer proof gate passes and a documented architecture decision is made. The first Flutter GPU candidate failed on Windows and Android. The next candidate is isolated Thermion/Filament verification, currently gated by Windows symlink support/Developer Mode. After that, proceed through the user's milestones in order: app shell; verified 3D; session builder/storage; modules; validated content; localization/settings; integration and platform QA.
 
 The complete content targets remain zero verified playable entries for Quiz, Word Play, Character, Riddles and Memory in the current repository. Guess the Country has seven review records, not a production count. No 1,000-person, 5,000-word or 10,000-question content claims are supported by the repository.
