@@ -62,11 +62,85 @@ void main() {
 
   testWidgets('desktop preparation visual', (tester) async {
     await pumpCandidate(tester, configuredController(), desktop);
+    expect(find.text('GUESS THE COUNTRY'), findsOneWidget);
+    expect(find.text('YOUR LINEUP'), findsOneWidget);
+    expect(find.text('MATCH BRIEF'), findsOneWidget);
+    expect(find.text('MATCH RULES'), findsOneWidget);
+    expect(find.text('START MATCH'), findsOneWidget);
+    expect(find.text('01 Players & rounds'), findsNothing);
     await expectLater(
       find.byType(HeroArenaPage),
       matchesGoldenFile('goldens/hero_arena_preparation_desktop.png'),
     );
   });
+
+  testWidgets('match rules overlay preserves every explicit choice', (
+    tester,
+  ) async {
+    final controller = GuessCountryController(enableTimers: false)
+      ..addPlayer()
+      ..openPreparation();
+    await pumpCandidate(tester, controller, mobile);
+    await tester.tap(find.text('MATCH RULES'));
+    await tester.pumpAndSettle();
+    expect(find.text('HOST LOADOUT'), findsOneWidget);
+    expect(find.text('ROUNDS PER PLAYER'), findsOneWidget);
+    expect(find.text('DIFFICULTY'), findsOneWidget);
+    expect(find.text('GEOGRAPHIC SCOPE'), findsOneWidget);
+    expect(find.text('ANSWER TYPE'), findsOneWidget);
+    expect(find.text('CHALLENGE TIMER'), findsOneWidget);
+    expect(find.text('HINTS'), findsOneWidget);
+    expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+    expect(find.text('POINTS & WINNER SUMMARY'), findsOneWidget);
+    expect(find.text('Mixed'), findsOneWidget);
+    expect(find.text('Worldwide'), findsOneWidget);
+    await tester.tap(find.text('DONE'));
+    await tester.pumpAndSettle();
+    expect(find.text('HOST LOADOUT'), findsNothing);
+  });
+
+  testWidgets('host can add and remove the final lobby player', (tester) async {
+    final controller = GuessCountryController(enableTimers: false)
+      ..openPreparation();
+    await pumpCandidate(tester, controller, mobile);
+    await tester.tap(find.text('ADD PLAYER'));
+    await tester.pumpAndSettle();
+    expect(controller.state.players.single.displayName, 'Player 1');
+    await tester.tap(find.byTooltip('Remove Player 1'));
+    await tester.pumpAndSettle();
+    expect(controller.state.players, isEmpty);
+    expect(find.text('ADD PLAYER'), findsOneWidget);
+  });
+
+  testWidgets(
+    'lobby and rules overlay adapt to narrow phone and tablet widths',
+    (tester) async {
+      final phoneController = GuessCountryController(enableTimers: false)
+        ..addPlayer()
+        ..openPreparation();
+      await pumpCandidate(tester, phoneController, const Size(320, 800));
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('MATCH RULES'));
+      await tester.tap(find.text('MATCH RULES'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOST LOADOUT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('DONE'));
+      await tester.pumpAndSettle();
+
+      final tabletController = GuessCountryController(enableTimers: false)
+        ..addPlayer()
+        ..openPreparation();
+      await pumpCandidate(tester, tabletController, const Size(768, 1024));
+      expect(find.text('GUESS THE COUNTRY'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.ensureVisible(find.text('MATCH RULES'));
+      await tester.tap(find.text('MATCH RULES'));
+      await tester.pumpAndSettle();
+      expect(find.text('HOST LOADOUT'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('desktop player-ready visual', (tester) async {
     final controller = configuredController()..prepareSession();

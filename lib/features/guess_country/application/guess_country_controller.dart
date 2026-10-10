@@ -244,7 +244,7 @@ class GuessCountryController extends ChangeNotifier {
   }
 
   void removePlayer() {
-    if (_state.players.length <= 1) return;
+    if (_state.players.isEmpty) return;
     _set(
       _state.copyWith(
         players: _state.players.sublist(0, _state.players.length - 1),

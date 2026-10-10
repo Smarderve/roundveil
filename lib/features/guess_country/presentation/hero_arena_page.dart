@@ -116,240 +116,85 @@ class _Preparation extends StatelessWidget {
   @override
   Widget build(BuildContext context) => LayoutBuilder(
     builder: (context, constraints) {
-      final wide = constraints.maxWidth >= 780;
-      final left = <Widget>[
-        _SetupSection(
-          number: '01',
-          title: 'Players & rounds',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _PlayerRow(controller: controller, state: state),
-              const SizedBox(height: 14),
-              _OptionGroup(
-                label: 'Rounds per player',
-                choices: const {'1': 1, '3': 3, '5': 5},
-                selected: state.setup.roundCount,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(roundCount: value),
-                ),
-              ),
-            ],
-          ),
-        ),
-        _SetupSection(
-          number: '02',
-          title: 'Flag challenge',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _OptionGroup(
-                label: 'Difficulty',
-                choices: const {
-                  'Easy': CountryDifficulty.easy,
-                  'Medium': CountryDifficulty.medium,
-                  'Hard': CountryDifficulty.hard,
-                  'Expert': CountryDifficulty.expert,
-                  'Mixed': CountryDifficulty.mixed,
-                },
-                selected: state.setup.difficulty,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(difficulty: value),
-                ),
-              ),
-              _OptionGroup(
-                label: 'Geographic scope',
-                choices: const {
-                  'Africa': CountryRegion.africa,
-                  'Americas': CountryRegion.americas,
-                  'Asia': CountryRegion.asia,
-                  'Europe': CountryRegion.europe,
-                  'Oceania': CountryRegion.oceania,
-                  'Worldwide': CountryRegion.worldwide,
-                },
-                selected: state.setup.region,
-                onSelected: (value) =>
-                    controller.configure(state.setup.copyWith(region: value)),
-              ),
-              _OptionGroup(
-                label: 'Answer type',
-                choices: const {
-                  'Multiple choice': CountryAnswerMode.multipleChoice,
-                  'Type country': CountryAnswerMode.typed,
-                },
-                selected: state.setup.answerMode,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(answerMode: value),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ];
-      final right = <Widget>[
-        _SetupSection(
-          number: '03',
-          title: 'Pace & assists',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _OptionGroup(
-                label: 'Challenge timer',
-                choices: const {'Off': 0, '30 sec': 30, '45 sec': 45},
-                selected: state.setup.challengeSeconds,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(challengeSeconds: value),
-                ),
-              ),
-              _OptionGroup(
-                label: 'Hints',
-                choices: const {'Off': false, 'On': true},
-                selected: state.setup.hintsEnabled,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(hintsEnabled: value),
-                ),
-              ),
-              _OptionGroup(
-                label: 'Win Countdown',
-                choices: const {'3 sec': 3, '5 sec': 5, '8 sec': 8},
-                selected: state.setup.winCountdownSeconds,
-                onSelected: (value) => controller.configure(
-                  state.setup.copyWith(winCountdownSeconds: value),
-                ),
-              ),
-            ],
-          ),
-        ),
-        _SetupSection(
-          number: '04',
-          title: 'Scorekeeping',
-          child: _OptionGroup(
-            label: 'Points & winner summary',
-            choices: const {'Off': false, 'On': true},
-            selected: state.setup.scoringEnabled,
-            onSelected: (value) => controller.configure(
-              state.setup.copyWith(scoringEnabled: value),
-            ),
-          ),
-        ),
-      ];
+      final compact = constraints.maxWidth < 620;
+      final issue = controller.configurationIssue;
+      final ready = issue == null;
       return Column(
         key: const ValueKey('preparation'),
         children: [
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+              padding: EdgeInsets.fromLTRB(
+                compact ? 18 : 36,
+                24,
+                compact ? 18 : 36,
+                28,
+              ),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1100),
+                  constraints: const BoxConstraints(maxWidth: 1120),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const ArenaHeader(
-                        kicker: 'HOST CONTROL',
-                        title: 'Set the match',
+                      _GameIdentity(compact: compact),
+                      SizedBox(height: compact ? 28 : 38),
+                      _PlayerLineup(
+                        controller: controller,
+                        state: state,
+                        compact: compact,
                       ),
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Choose every rule before the first turn. No match settings are preselected.',
-                        style: TextStyle(color: Color(0xFF50647D)),
-                      ),
-                      const SizedBox(height: 16),
-                      const Text(
-                        'GUESS THE COUNTRY  /  OFFLINE FLAG REVIEW PACK',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: 1,
-                          color: Color(0xFF2879BA),
-                        ),
-                      ),
+                      SizedBox(height: compact ? 26 : 34),
+                      _MatchBrief(state: state),
                       const SizedBox(height: 14),
-                      if (wide)
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(child: Column(children: left)),
-                            const SizedBox(width: 14),
-                            Expanded(child: Column(children: right)),
-                          ],
-                        )
-                      else ...[
-                        ...left,
-                        ...right,
+                      Align(
+                        alignment: compact
+                            ? Alignment.center
+                            : Alignment.centerLeft,
+                        child: ArenaButton(
+                          label: 'MATCH RULES',
+                          onPressed: () => _showMatchRules(context, controller),
+                          secondary: true,
+                        ),
+                      ),
+                      if (state.notice != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          state.notice!,
+                          style: const TextStyle(color: Color(0xFFB13634)),
+                        ),
                       ],
-                      if (controller.configurationIssue != null)
-                        Container(
-                          margin: const EdgeInsets.only(top: 10),
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFF4E0),
-                            border: Border.all(color: const Color(0xFFF4A62C)),
-                          ),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Icon(
-                                Icons.info_outline,
-                                color: Color(0xFF263449),
+                      SizedBox(height: compact ? 28 : 40),
+                      Center(
+                        child: Column(
+                          children: [
+                            ArenaButton(
+                              label: 'START MATCH',
+                              onPressed: ready
+                                  ? controller.prepareSession
+                                  : null,
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              ready
+                                  ? 'MATCH READY  •  ${state.players.length} ${state.players.length == 1 ? 'PLAYER' : 'PLAYERS'}  /  ${state.setup.roundCount} ${state.setup.roundCount == 1 ? 'ROUND' : 'ROUNDS'}'
+                                  : _readinessPrompt(state, issue),
+                              textAlign: TextAlign.center,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                color: ready
+                                    ? const Color(0xFF2879BA)
+                                    : const Color(0xFF50647D),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: .6,
                               ),
-                              const SizedBox(width: 9),
-                              Expanded(
-                                child: Text(
-                                  controller.configurationIssue!,
-                                  style: const TextStyle(
-                                    color: Color(0xFF263449),
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
-                      if (state.notice != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 10),
-                          child: Text(
-                            state.notice!,
-                            style: const TextStyle(color: Color(0xFFB13634)),
-                          ),
-                        ),
+                      ),
                     ],
                   ),
-                ),
-              ),
-            ),
-          ),
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-            decoration: const BoxDecoration(
-              color: Color(0xFFF3F7FC),
-              border: Border(top: BorderSide(color: Color(0xFFA3B5C6))),
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 1100),
-                child: Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
-                        'HOST CONFIGURATION',
-                        style: TextStyle(
-                          fontSize: 11,
-                          letterSpacing: 1.2,
-                          fontWeight: FontWeight.w900,
-                          color: Color(0xFF50647D),
-                        ),
-                      ),
-                    ),
-                    ArenaButton(
-                      label: 'PREPARE MATCH',
-                      onPressed: controller.configurationIssue == null
-                          ? controller.prepareSession
-                          : null,
-                    ),
-                  ],
                 ),
               ),
             ),
@@ -358,112 +203,585 @@ class _Preparation extends StatelessWidget {
       );
     },
   );
+
+  String _readinessPrompt(GuessCountryState state, String issue) {
+    if (!state.setup.isComplete) return 'CHOOSE MATCH RULES TO CHECK READINESS';
+    if (state.players.isEmpty) return 'ADD AT LEAST ONE PLAYER';
+    return issue;
+  }
+
+  void _showMatchRules(
+    BuildContext context,
+    GuessCountryController controller,
+  ) {
+    showDialog<void>(
+      context: context,
+      builder: (context) => _MatchRulesDialog(controller: controller),
+    );
+  }
 }
 
-class _SetupSection extends StatelessWidget {
-  const _SetupSection({
-    required this.number,
-    required this.title,
-    required this.child,
-  });
-  final String number;
-  final String title;
-  final Widget child;
+class _GameIdentity extends StatelessWidget {
+  const _GameIdentity({required this.compact});
+  final bool compact;
+
   @override
-  Widget build(BuildContext context) => Container(
-    width: double.infinity,
-    margin: const EdgeInsets.only(bottom: 12),
-    padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
-    decoration: BoxDecoration(
-      color: const Color(0xCCF8FBFF),
-      border: Border(
-        left: BorderSide(color: const Color(0xFF2879BA), width: 3),
+  Widget build(BuildContext context) => Column(
+    children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Transform.rotate(
+            angle: -.16,
+            child: const Icon(
+              Icons.flag_rounded,
+              color: Color(0xFFF4A62C),
+              size: 25,
+            ),
+          ),
+          const SizedBox(width: 9),
+          Text(
+            compact ? 'FLAG CHALLENGE' : 'HERO ARENA  /  FLAG CHALLENGE',
+            maxLines: 1,
+            overflow: TextOverflow.clip,
+            style: TextStyle(
+              color: Color(0xFF2879BA),
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.25,
+            ),
+          ),
+        ],
       ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              number,
+      const SizedBox(height: 10),
+      FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Text(
+          'GUESS THE COUNTRY',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: const Color(0xFF263449),
+            fontSize: compact ? 36 : 62,
+            height: .95,
+            fontWeight: FontWeight.w900,
+            letterSpacing: compact ? -1.5 : -2.8,
+          ),
+        ),
+      ),
+      const SizedBox(height: 8),
+      const Text(
+        'THE WORLD IS YOUR ARENA',
+        textAlign: TextAlign.center,
+        style: TextStyle(
+          color: Color(0xFF50647D),
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 2.4,
+        ),
+      ),
+      const SizedBox(height: 16),
+      Container(
+        height: 3,
+        width: compact ? 92 : 150,
+        color: const Color(0xFFF4A62C),
+      ),
+    ],
+  );
+}
+
+class _PlayerLineup extends StatelessWidget {
+  const _PlayerLineup({
+    required this.controller,
+    required this.state,
+    required this.compact,
+  });
+  final GuessCountryController controller;
+  final GuessCountryState state;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Row(
+        children: [
+          const Expanded(
+            child: Text(
+              'YOUR LINEUP',
+              style: TextStyle(
+                color: Color(0xFF263449),
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.4,
+              ),
+            ),
+          ),
+          Text(
+            '${state.players.length} ${state.players.length == 1 ? 'PLAYER' : 'PLAYERS'}',
+            style: const TextStyle(
+              color: Color(0xFF50647D),
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+      const SizedBox(height: 13),
+      Wrap(
+        alignment: compact ? WrapAlignment.center : WrapAlignment.start,
+        spacing: 12,
+        runSpacing: 12,
+        children: [
+          for (var index = 0; index < state.players.length; index++)
+            _PlayerStand(
+              index: index + 1,
+              name: state.players[index].displayName,
+              onRemove: () => controller.removePlayer(),
+            ),
+          _AddPlayerStand(onPressed: controller.addPlayer),
+        ],
+      ),
+      if (state.players.isEmpty)
+        const Padding(
+          padding: EdgeInsets.only(top: 8),
+          child: Text(
+            'Add your first player to build the lineup.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: Color(0xFF50647D), fontSize: 12),
+          ),
+        ),
+    ],
+  );
+}
+
+class _PlayerStand extends StatelessWidget {
+  const _PlayerStand({
+    required this.index,
+    required this.name,
+    required this.onRemove,
+  });
+  final int index;
+  final String name;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 190,
+    height: 128,
+    child: ClipPath(
+      clipper: _LobbyCut(),
+      child: Stack(
+        children: [
+          Positioned.fill(child: ColoredBox(color: const Color(0xFF263449))),
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            child: Container(width: 7, color: const Color(0xFFF4A62C)),
+          ),
+          Positioned(
+            right: 4,
+            top: 4,
+            child: IconButton(
+              tooltip: 'Remove $name',
+              onPressed: onRemove,
+              icon: const Icon(Icons.close, color: Color(0xFFDBE7F3), size: 19),
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+          Positioned(
+            left: 19,
+            top: 17,
+            child: Text(
+              'PLAYER ${index.toString().padLeft(2, '0')}',
               style: const TextStyle(
-                color: Color(0xFF2879BA),
+                color: Color(0xFF8ABCE5),
+                fontSize: 10,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          Positioned(
+            left: 18,
+            top: 37,
+            child: Text(
+              index.toString().padLeft(2, '0'),
+              style: const TextStyle(
+                color: Color(0xFFF4A62C),
+                fontSize: 48,
+                height: 1,
                 fontWeight: FontWeight.w900,
               ),
             ),
-            const SizedBox(width: 9),
-            Text(
-              title.toUpperCase(),
+          ),
+          Positioned(
+            left: 74,
+            bottom: 18,
+            right: 12,
+            child: Text(
+              name.toUpperCase(),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: const TextStyle(
-                letterSpacing: 1.1,
+                color: Colors.white,
+                fontSize: 15,
                 fontWeight: FontWeight.w900,
+                letterSpacing: .7,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _AddPlayerStand extends StatelessWidget {
+  const _AddPlayerStand({required this.onPressed});
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+    width: 190,
+    height: 128,
+    child: OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: const Color(0xFF263449),
+        side: const BorderSide(color: Color(0xFF2879BA), width: 2),
+        shape: const RoundedRectangleBorder(borderRadius: BorderRadius.zero),
+        backgroundColor: const Color(0x4479A6D2),
+      ),
+      child: const Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.add_circle_outline, size: 29, color: Color(0xFF2879BA)),
+          SizedBox(height: 6),
+          Text(
+            'ADD PLAYER',
+            style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.1),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+class _LobbyCut extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) => Path()
+    ..moveTo(0, 0)
+    ..lineTo(size.width - 18, 0)
+    ..lineTo(size.width, 18)
+    ..lineTo(size.width, size.height)
+    ..lineTo(0, size.height)
+    ..close();
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _MatchBrief extends StatelessWidget {
+  const _MatchBrief({required this.state});
+  final GuessCountryState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final setup = state.setup;
+    final entries = <String>[
+      _rule('ROUNDS', setup.roundCount == null ? null : '${setup.roundCount}'),
+      _rule('LEVEL', switch (setup.difficulty) {
+        CountryDifficulty.easy => 'Easy',
+        CountryDifficulty.medium => 'Medium',
+        CountryDifficulty.hard => 'Hard',
+        CountryDifficulty.expert => 'Expert',
+        CountryDifficulty.mixed => 'Mixed',
+        null => null,
+      }),
+      _rule('SCOPE', switch (setup.region) {
+        CountryRegion.africa => 'Africa',
+        CountryRegion.americas => 'Americas',
+        CountryRegion.asia => 'Asia',
+        CountryRegion.europe => 'Europe',
+        CountryRegion.oceania => 'Oceania',
+        CountryRegion.worldwide => 'Worldwide',
+        null => null,
+      }),
+      _rule('ANSWER', switch (setup.answerMode) {
+        CountryAnswerMode.multipleChoice => 'Multiple choice',
+        CountryAnswerMode.typed => 'Typed answer',
+        null => null,
+      }),
+      _rule(
+        'TIMER',
+        setup.challengeSeconds == null
+            ? null
+            : setup.challengeSeconds == 0
+            ? 'Off'
+            : '${setup.challengeSeconds}s',
+      ),
+      _rule(
+        'HINTS',
+        setup.hintsEnabled == null
+            ? null
+            : setup.hintsEnabled!
+            ? 'On'
+            : 'Off',
+      ),
+      _rule(
+        'COUNTDOWN',
+        setup.winCountdownSeconds == null
+            ? null
+            : '${setup.winCountdownSeconds}s',
+      ),
+      _rule(
+        'SCORE',
+        setup.scoringEnabled == null
+            ? null
+            : setup.scoringEnabled!
+            ? 'On'
+            : 'Off',
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MATCH BRIEF',
+          style: TextStyle(
+            color: Color(0xFF263449),
+            fontSize: 14,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.3,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 0,
+          runSpacing: 6,
+          children: [
+            for (var index = 0; index < entries.length; index++) ...[
+              if (index > 0)
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 8),
+                  child: Text(
+                    '•',
+                    style: TextStyle(
+                      color: Color(0xFFF4A62C),
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              Text(
+                entries[index],
+                style: const TextStyle(
+                  color: Color(0xFF50647D),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _rule(String label, String? value) => '$label  ${value ?? 'NOT SET'}';
+}
+
+class _MatchRulesDialog extends ConsumerWidget {
+  const _MatchRulesDialog({required this.controller});
+  final GuessCountryController controller;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(guessCountryControllerProvider).state;
+    final setup = state.setup;
+    final compact = MediaQuery.sizeOf(context).width < 620;
+    final issue = controller.configurationIssue;
+    return Dialog(
+      insetPadding: EdgeInsets.symmetric(
+        horizontal: compact ? 8 : 36,
+        vertical: compact ? 12 : 28,
+      ),
+      backgroundColor: const Color(0xFFF3F7FC),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.zero,
+        side: BorderSide(color: Color(0xFF2879BA), width: 2),
+      ),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 760,
+          maxHeight: MediaQuery.sizeOf(context).height * .94,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(18, 12, 12, 12),
+              color: const Color(0xFF263449),
+              child: Row(
+                children: [
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'HOST LOADOUT',
+                          style: TextStyle(
+                            color: Color(0xFF8ABCE5),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.8,
+                          ),
+                        ),
+                        SizedBox(height: 3),
+                        Text(
+                          'MATCH RULES',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: .8,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close match rules',
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close, color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+            Flexible(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.fromLTRB(
+                  compact ? 16 : 26,
+                  10,
+                  compact ? 16 : 26,
+                  18,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _OptionGroup(
+                      label: 'Rounds per player',
+                      choices: const {'1': 1, '3': 3, '5': 5},
+                      selected: setup.roundCount,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(roundCount: value),
+                      ),
+                    ),
+                    _OptionGroup(
+                      label: 'Difficulty',
+                      choices: const {
+                        'Easy': CountryDifficulty.easy,
+                        'Medium': CountryDifficulty.medium,
+                        'Hard': CountryDifficulty.hard,
+                        'Expert': CountryDifficulty.expert,
+                        'Mixed': CountryDifficulty.mixed,
+                      },
+                      selected: setup.difficulty,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(difficulty: value),
+                      ),
+                    ),
+                    _OptionGroup(
+                      label: 'Geographic scope',
+                      choices: const {
+                        'Africa': CountryRegion.africa,
+                        'Americas': CountryRegion.americas,
+                        'Asia': CountryRegion.asia,
+                        'Europe': CountryRegion.europe,
+                        'Oceania': CountryRegion.oceania,
+                        'Worldwide': CountryRegion.worldwide,
+                      },
+                      selected: setup.region,
+                      onSelected: (value) =>
+                          controller.configure(setup.copyWith(region: value)),
+                    ),
+                    _OptionGroup(
+                      label: 'Answer type',
+                      choices: const {
+                        'Multiple choice': CountryAnswerMode.multipleChoice,
+                        'Type country': CountryAnswerMode.typed,
+                      },
+                      selected: setup.answerMode,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(answerMode: value),
+                      ),
+                    ),
+                    _OptionGroup(
+                      label: 'Challenge timer',
+                      choices: const {'Off': 0, '30 sec': 30, '45 sec': 45},
+                      selected: setup.challengeSeconds,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(challengeSeconds: value),
+                      ),
+                    ),
+                    _OptionGroup(
+                      label: 'Hints',
+                      choices: const {'Off': false, 'On': true},
+                      selected: setup.hintsEnabled,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(hintsEnabled: value),
+                      ),
+                    ),
+                    _OptionGroup(
+                      label: 'Win Countdown',
+                      choices: const {'3 sec': 3, '5 sec': 5, '8 sec': 8},
+                      selected: setup.winCountdownSeconds,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(winCountdownSeconds: value),
+                      ),
+                    ),
+                    _OptionGroup(
+                      label: 'Points & winner summary',
+                      choices: const {'Off': false, 'On': true},
+                      selected: setup.scoringEnabled,
+                      onSelected: (value) => controller.configure(
+                        setup.copyWith(scoringEnabled: value),
+                      ),
+                    ),
+                    if (issue != null && setup.isComplete)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 14),
+                        child: Semantics(
+                          liveRegion: true,
+                          child: Text(
+                            issue,
+                            style: const TextStyle(
+                              color: Color(0xFF8C321F),
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: ArenaButton(
+                  label: 'DONE',
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
-        child,
-      ],
-    ),
-  );
-}
-
-class _PlayerRow extends StatelessWidget {
-  const _PlayerRow({required this.controller, required this.state});
-  final GuessCountryController controller;
-  final GuessCountryState state;
-  @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      const Text(
-        'PLAYERS',
-        style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1.4),
       ),
-      const SizedBox(height: 8),
-      if (state.players.isEmpty)
-        const Padding(
-          padding: EdgeInsets.only(bottom: 6),
-          child: Text(
-            'No players added yet. Choose who will take turns.',
-            style: TextStyle(color: Color(0xFF50647D), fontSize: 12),
-          ),
-        ),
-      Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: [
-          for (var index = 0; index < state.players.length; index++)
-            Chip(
-              avatar: CircleAvatar(
-                radius: 12,
-                backgroundColor: const Color(0xFF2879BA),
-                child: Text(
-                  '${index + 1}',
-                  style: const TextStyle(color: Colors.white, fontSize: 11),
-                ),
-              ),
-              label: Text(state.players[index].displayName),
-              side: const BorderSide(color: Color(0xFFA3B5C6)),
-              backgroundColor: const Color(0xFFF8FBFF),
-              visualDensity: VisualDensity.compact,
-            ),
-          ArenaChoice(
-            label: state.players.isEmpty ? '+ ADD PLAYER' : '+ PLAYER',
-            selected: false,
-            onPressed: controller.addPlayer,
-          ),
-          if (state.players.length > 1)
-            ArenaChoice(
-              label: '− LAST',
-              selected: false,
-              onPressed: controller.removePlayer,
-            ),
-        ],
-      ),
-    ],
-  );
+    );
+  }
 }
 
 class _OptionGroup<T> extends StatelessWidget {
