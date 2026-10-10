@@ -18,8 +18,8 @@
 **AC-10 Source control:** changes scoped and tested; no unauthorized commits/deployment.
 **AC-11 Guess Country registration:** Guess the Country is a separate module available to validated single and mixed configurations without game-specific runtime branching.
 **AC-12 Flag content integrity:** Every shipped flag is a locally available licensed, version-pinned and hashed asset with an audited native ratio/colors; no emoji or live content dependency.
-**AC-13 Country evaluation:** Typed and multiple-choice modes use canonical names plus curated non-colliding aliases and respect configured difficulty, geographic scope, inclusion policy and repeat avoidance.
-**AC-14 Guess Country outcomes:** Correct answer enters one immediate shared Win Countdown; wrong answer and timeout enter none.
+**AC-13 Country evaluation:** Show the flag without the country name; the player answers aloud; the host reveals the canonical name and judges the answer. No multiple-choice/typed-answer UI or automatic speech-recognition award.
+**AC-14 Guess Country outcomes:** Host judgement of a correct spoken answer enters one immediate shared Win Countdown; wrong judgement and timeout enter none.
 
 ## Feature-specific definition of done
 A feature is *done* only when requirements are linked, implemented, tests are added/executed, relevant platform checks recorded, accessibility behavior reviewed and unresolved defects declared. Generated files or passing compile alone are not completion.

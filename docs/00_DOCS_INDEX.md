@@ -13,12 +13,12 @@
 5. `docs/design/UX_OPEN_QUESTIONS.md` tracks unresolved UX and blocks guessing.
 6. Archived HTML screenshots **never** authorize application behavior.
 
-**Current decisions:** ROUNDVEIL; Windows + Android Flutter; local-first host-configured sessions; `Player 1` placeholders; immediate Win Countdown after correct; Guess Character stays visible to clue-givers through final guess; Guess the Country (Flags) mechanics/content policy specified but gameplay UX blocked; Mystery removed; Felix/Overwatch *visuals only* liked and UX rejected.
+**Current decisions:** ROUNDVEIL; Windows + Android Flutter; local-first host-configured sessions; `Player 1` placeholders; immediate Win Countdown after correct; Guess Character stays visible to clue-givers through final guess; Guess the Country standard answer is spoken with host reveal/judgement (see current rebuild directive); Mystery removed. The supplied 2,000-screen archive is visual concept material, not 2,000 approved UX specifications. See [`ROUNDVEIL_REBUILD_AUDIT.md`](architecture/ROUNDVEIL_REBUILD_AUDIT.md) for current baseline and renderer proof gate.
 
 ## Read only task-relevant files
 - New agent task -> [`AGENTS.md`](../AGENTS.md), this index.
 - Gameplay -> game design specification plus specific module/constraints.
-- Presentation -> UI approval + theme/style/component/responsive docs, then *approved* UX (not yet available).
+- Presentation -> UI approval + theme/style/component/responsive docs and the current rebuild directive; do not use unapproved concept images to infer behavior.
 - Persistence -> architecture storage/offline docs.
 - QA -> test plan, acceptance criteria and traceability.
 
@@ -73,6 +73,7 @@
 - [`docs/architecture/DATA_MODELS_AND_STORAGE.md`](architecture/DATA_MODELS_AND_STORAGE.md)
 - [`docs/architecture/OFFLINE_AND_RECOVERY.md`](architecture/OFFLINE_AND_RECOVERY.md)
 - [`docs/architecture/TECHNICAL_ARCHITECTURE.md`](architecture/TECHNICAL_ARCHITECTURE.md)
+- [`docs/architecture/ROUNDVEIL_REBUILD_AUDIT.md`](architecture/ROUNDVEIL_REBUILD_AUDIT.md) — 2026-10-11 repository/reference audit, 25-chapter mapping and open renderer proof gate.
 - [`docs/architecture/WINDOWS_ANDROID_BEHAVIOR.md`](architecture/WINDOWS_ANDROID_BEHAVIOR.md)
 - [`docs/architecture/ANDROID_BUILD_ENVIRONMENT.md`](architecture/ANDROID_BUILD_ENVIRONMENT.md) — verified Android toolchain notes and the temporary Codex-only Java workaround.
 

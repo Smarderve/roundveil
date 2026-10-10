@@ -6,7 +6,7 @@
 > **Rule:** This file must not be used to revive removed features or to treat rejected prototype UX as approved.
 
 ## The active scope
-One-device host-configured multiplayer sessions; game types including Quiz, Word Play, Guess the Character, Guess the Country (Flags), Riddles and Memory; shared GameRuntime, robust clocks, Win Countdown, profiles, local content, settings, recovery and responsive visual themes. Guess the Country is documentation-specified only until its functional gameplay UX is approved.
+One-device host-configured multiplayer sessions; game types including Quiz, Word Play, Guess the Character, Guess the Country (Flags), Riddles and Memory; shared GameRuntime, robust clocks, Win Countdown, profiles, local content, settings, recovery and responsive visual themes. The 2026-10-11 user directive authorizes the staged platform rebuild. Guess the Country's current target is flag-only, spoken answer and host reveal/judgement; the old multiple-choice/typed candidate must be replaced.
 
 ## Hard exclusions
 1. **Mystery/investigation**: no “Solve the Mystery”, crime cases, suspects, evidence boards, detective content, mystery assets, module registration, tests or navigation.

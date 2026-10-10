@@ -5,7 +5,7 @@
 > **Product:** ROUNDVEIL — Windows + Android via Flutter/Dart<br>
 > **Rule:** This file must not be used to revive removed features or to treat rejected prototype UX as approved.
 
-> **BLOCKER: FINAL UX IS NOT APPROVED.** The user rejected both HTML prototypes' navigation/session-builder/gameplay arrangements. This file lists decisions that must be resolved before wiring complete gameplay screens.
+> **Status reconciliation (2026-10-11):** the new master user directive authorizes implementing the specified product flows. The questions below remain useful product/visual decisions where the directive is not explicit; they no longer block all implementation. Do not infer their answers from rejected HTML or unapproved screen concepts.
 
 ## Decisions requiring direct approval
 | ID | Decision to settle | Why it matters | Do not assume |

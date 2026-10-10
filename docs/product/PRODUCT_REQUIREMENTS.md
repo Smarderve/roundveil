@@ -35,11 +35,11 @@
 
 ### Guess the Country (Flags)
 - **PR-034 MUST:** Register Guess the Country (Flags) as a separately configurable game module for both Single Game and Mixed Games sessions.
-- **PR-035 MUST:** Support multiple-choice and typed-answer rounds with canonical official country names plus curated, non-colliding reasonable aliases.
+- **PR-035 MUST:** Standard Guess the Country shows a flag without its country name; the player answers aloud, then the host reveals the name and judges Correct or Wrong. It does not offer multiple-choice or typed-answer controls.
 - **PR-036 MUST:** Support Easy, Medium, Hard, Expert and Mixed difficulty; regional and worldwide scopes; host-configured challenge timers; and optional hints.
 - **PR-037 MUST:** Select from offline, licensed, versioned flag assets and avoid repeated flags in a session whenever enough eligible unseen records exist. Emoji flags and remote live lookups are prohibited.
 - **PR-038 MUST:** Apply an explicit, configurable, versioned inclusion policy for UN members, observer states, dependent territories and any curated extension; never imply a recognition position from the policy.
-- **PR-039 MUST:** Preserve each shipped flag's audited native proportions and colors. A correct answer starts the shared Win Countdown immediately; wrong answer or timeout does not.
+- **PR-039 MUST:** Preserve each shipped flag's audited native proportions and colors. Host judgement of a correct spoken answer starts the shared Win Countdown immediately; Wrong or timeout does not.
 
 ### Platforms, accessibility and recovery
 - **PR-040 MUST:** Windows and Android share gameplay semantics; adaptive layouts and input.

@@ -33,7 +33,7 @@ session:
 **This YAML is illustrative schema only; not an approved preset, timer value or mandatory flow.** Use typed Dart configs and validation in implementation.
 
 ## Validation
-Before start: at least one active player, at least one configured round, every module installed, each module compatible with requested categories/language, enough eligible content to satisfy repeat rules, nonnegative/valid timer bounds, no contradictory options. Guess the Country additionally requires a resolved inclusion policy, installed licensed flag assets, a non-empty scope/difficulty pool, non-colliding answer aliases, and valid distinct multiple-choice records when that mode is selected. Give understandable corrections rather than secretly substituting modes or filling fake content.
+Before start: at least one active player, at least one configured round, every module installed, each module compatible with requested categories/language, enough eligible content to satisfy repeat rules, nonnegative/valid timer bounds, no contradictory options. Guess the Country additionally requires a resolved inclusion policy, installed licensed flag assets, a non-empty scope/difficulty pool, and curated names/aliases for host judgement. Its current target is spoken-answer/host-reveal, not typed or multiple-choice. Give understandable corrections rather than secretly substituting modes or filling fake content.
 
 ## Host control lifecycle
 - Pre-session: change, cancel, save personal preset, preview and explicitly start.

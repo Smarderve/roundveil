@@ -9,7 +9,7 @@
 - [`QUIZ.md`](QUIZ.md) — multiple choice/true-false reference module.
 - [`WORD_PLAY.md`](WORD_PLAY.md) — word games family; Word Scramble first reference.
 - [`GUESS_THE_CHARACTER.md`](GUESS_THE_CHARACTER.md) — correct physical turn-away reveal mechanics.
-- [`GUESS_THE_COUNTRY.md`](GUESS_THE_COUNTRY.md) — offline flag identification; mechanics specified, gameplay UX pending.
+- [`GUESS_THE_COUNTRY.md`](GUESS_THE_COUNTRY.md) — offline flag-only, spoken answer with host reveal/judgement under the current rebuild directive.
 - [`RIDDLES.md`](RIDDLES.md) — candidate; UX and rules pending.
 - [`MEMORY.md`](MEMORY.md) — candidate; UX and rules pending.
 

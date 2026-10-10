@@ -1,6 +1,6 @@
 # Game module: Guess the Country (Flags)
 
-> **Status:** SPECIFIED / GAMEPLAY UX BLOCKED<br>
+> **Status:** SPOKEN-ANSWER MECHANICS SPECIFIED / VISUAL UX TO IMPLEMENT<br>
 > **Authority:** ROUNDVEIL project decisions<br>
 > **Product:** ROUNDVEIL — Windows + Android via Flutter/Dart<br>
 > **Rule:** This file defines game semantics and content integrity. It does not approve a game-selection layout, a play screen, or any former prototype UX.
@@ -10,23 +10,22 @@ Display one real national flag from installed offline content and ask the active
 
 ## Turn mechanics
 1. GameRuntime assigns a player and requests an eligible, not-yet-seen flag item.
-2. The module enters `FlagPresented` and accepts exactly one configured answer path: `multiple_choice` or `typed_answer`.
+2. The module enters `FlagPresented`. The active player identifies the country aloud; there is no multiple-choice list or typed-answer field in the standard mode.
 3. If hints are enabled, an eligible hint may be revealed without replacing the flag or changing the canonical answer.
-4. A validated correct answer emits `success` to GameRuntime. GameRuntime enters the shared Win Countdown in the same logical result transition.
-5. A wrong answer, an exhausted challenge timer, or a host-confirmed failure emits failure/timeout. It must not start the Win Countdown.
+4. The host reveals the canonical country name and judges the spoken answer. A Correct judgement emits `success` to GameRuntime, which enters the shared Win Countdown in the same logical result transition.
+5. A Wrong judgement or expired challenge timer emits failure/timeout. It must not start the Win Countdown.
 
-The visual composition, answer-control placement, hint presentation, host control placement, feedback treatment, and transition design remain blocked pending gameplay UX approval.
+The visual composition, flag scale, hint presentation, host control placement, feedback treatment and transition design are implementation work under the current rebuild directive; the image archive does not decide those details.
 
 ## Host-configurable options
 | Option | Allowed values / validation |
 |---|---|
-| Answer mode | `multiple_choice` or `typed_answer`; a round uses one explicit mode. |
+| Answer mode | Spoken answer with host reveal and Correct/Wrong judgement; no choice list or text entry. |
 | Difficulty | `easy`, `medium`, `hard`, `expert`, or `mixed`. `mixed` selects only from the selected concrete bands. |
 | Geographic scope | One or more installed regions, or `worldwide`; scope is intersected with the selected inclusion policy and asset availability. |
 | Inclusion policy | `un_members_only`, `un_members_plus_observers`, `un_members_observers_plus_dependencies`, or a named, versioned curated extension. The host must resolve the policy before start; no unapproved screen default is implied. |
 | Challenge timer | Disabled or a valid module deadline selected by the host/preset. Exact defaults and control design remain unapproved. |
 | Hints | Disabled or an allowed hint budget/type. Hints never reveal a competing country name or alter correctness. |
-| Multiple-choice options | Valid count and one canonical correct option; all distractors must be eligible country records, distinct after display-name normalization, and compatible with the chosen policy/scope. |
 | Repeat policy | Avoid all session-seen item IDs while enough eligible unseen content remains. If the requested rounds exceed the eligible pool, configuration must explain the limit and require host resolution; it must not silently repeat a flag. |
 
 ## Difficulty and selection
@@ -66,11 +65,9 @@ Canonical English names and UN-member/observer classification are reviewed again
 No package is accepted merely because it has a country code. A package that normalizes every flag to a generic icon ratio, lacks a reproducible license/source record, or fails visual comparison to the documented source is rejected for this module.
 
 ## Answer validation
-The canonical name always validates. Reasonable aliases are curated per country and locale, versioned with the content record, and reviewed to prevent two simultaneously eligible records from accepting the same normalized answer.
+The host judges a spoken answer against the canonical name and curated aliases for the selected record and locale. Reasonable aliases are versioned with the content record and reviewed to avoid ambiguity between simultaneously eligible records. The app does not use speech recognition to grant correctness.
 
-For typed answers, normalize Unicode compatibility form, case, surrounding and repeated whitespace, punctuation variants, and diacritics before exact comparison to canonical/approved alias keys. Do not use unconstrained fuzzy matching, guessed transliteration, or an online service to mark an answer correct. A near match that is not a curated alias may be offered to an authorized host for judgement only if that option is enabled by the eventual approved UX; it cannot auto-award success.
-
-For multiple choice, choice labels must map to distinct canonical country IDs. The evaluator compares IDs, not visible strings. Distractors cannot be the correct record, aliases of it, unavailable policy records, or duplicate display labels.
+For host judgement, present the canonical name only after the player has answered aloud. The host decides whether the spoken answer is a reasonable canonical/alias match; no unconstrained fuzzy matching or online service may auto-award success. The correct-name reveal must not precede the host's judgement.
 
 ## Module contract and recovery
 Suggested state path: `Ready -> FlagPresented -> AnswerSubmitted | HintRevealed | ChallengeTimeout -> Correct | Incorrect | Timeout`. A host-judgement branch, if enabled later, is explicit and only accepts an unresolved submitted answer. Persist selected content ID, pack version, answer mode, effective configuration, remaining deadline, revealed hints, and terminal outcome so pause/recovery cannot draw a different flag or award two wins.
@@ -81,7 +78,8 @@ The module never starts a Win Countdown, advances player order, changes navigati
 - A locally installed, licensed, hashed flag pack works with networking disabled on Windows and Android.
 - Every shipped flag has a recorded source revision, license record, native ratio, and visual/automated geometry validation; no flag is rendered from emoji.
 - The Phase 2 candidate exposes only the difficulty and regional combinations represented by its installed seven-flag review slice; `Expert`, `Mixed`, worldwide, Oceania and territory-policy selections remain unavailable until a reviewed production pack can support them.
-- Both answer modes honor the same canonical/alias rules and never accept a collision with another eligible record.
+- The flag is shown without a country name until the player has answered aloud; the host then reveals the canonical name and judges the answer.
+- A spoken answer judged Correct enters one immediate shared Win Countdown; Wrong and timeout never do. No choice list, text-entry answer or automatic speech recognition is presented.
 - Selection honors difficulty, geographic scope, policy, and repeat avoidance; insufficient content blocks Start with an explainable validation result.
 - Correct answer transitions directly to the shared Win Countdown once; wrong answer and timeout never do.
 - Pause, restore, stale deadlines, duplicate submissions, missing assets, and changed content-pack versions are safely handled.

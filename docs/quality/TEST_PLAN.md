@@ -32,9 +32,10 @@
 | T-015 | Guess the Country validates canonical names and curated aliases, while rejecting alias collisions and unconstrained fuzzy matches |
 | T-016 | Guess the Country honors configured difficulty, region/worldwide scope and versioned inclusion policy |
 | T-017 | Guess the Country avoids repeated eligible flags until the unseen pool is exhausted; insufficient-pool validation is explainable |
-| T-018 | Multiple-choice country options are distinct canonical IDs and contain one eligible correct answer |
+| T-018 | Guess the Country shows no country name before spoken response; host reveal follows the response and host judgement gates the outcome |
 | T-019 | Installed flag assets are licensed, hashed, available offline, preserve audited aspect ratios/colors and are never emoji-rendered |
 | T-020 | Guess the Country correct result starts one immediate Win Countdown; wrong/timeout starts none, including after pause/restore |
+| T-021 | Guess the Country does not show choices or text entry and does not use automatic speech recognition to award success |
 
 ## Tool commands when Flutter scaffold exists
 ```bash

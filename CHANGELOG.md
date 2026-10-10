@@ -5,6 +5,11 @@
 > **Product:** ROUNDVEIL — Windows + Android via Flutter/Dart<br>
 > **Rule:** This file must not be used to revive removed features or to treat rejected prototype UX as approved.
 
+## Unreleased — Complete platform rebuild initiated (2026-10-11)
+- Added a repository/reference audit and feature mapping for all 25 chapters and 2,000 numbered concepts in the supplied visual archive. Only the approved V5 home and supplied brand references are treated as approved visual assets; the concepts remain unapproved.
+- Reconciled the current Guess the Country target to flag-only spoken answers followed by host reveal/judgement. The existing multiple-choice/typed prototype remains to be replaced; no gameplay code changed in this audit.
+- Recorded the repository implementation baseline and the open cross-platform 3D renderer proof gate. No new renderer, game module, content pack or UI flow was implemented.
+
 ## Unreleased — Documentation initialization (2026-10-09)
 - Created Markdown handoff organized by product, gameplay, visual design, architecture, QA, release and architectural decisions.
 - Adopted name **ROUNDVEIL**; legal/branding clearance not yet concluded.

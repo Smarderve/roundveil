@@ -18,7 +18,10 @@ The user **liked only the visual/UI styling** of the uploaded Felix-inspired (`F
 | Old HTML playable module screens | REJECTED | do not copy quiz/word/character demos as game design |
 | Mystery screen/content in old references | EXCLUDED | no functional Mystery module or visuals in product |
 | Final game visual theme selection and mixing | PENDING | preserve two alternatives; don't merge unasked |
-| Actual UX for desktop and Android | PENDING REDESIGN | do not claim approved |
+| Actual UX for desktop and Android | REBUILD DIRECTIVE ACTIVE; individual concept images remain unapproved | implement direct user requirements; do not copy old rejected HTML or infer mechanics from art |
+
+## 2026-10-11 rebuild directive reconciliation
+The user has explicitly authorized a complete staged product implementation against the new master requirements. This supersedes the earlier blanket stop on building new functional flows, to the extent the direct requirements define them. It does **not** approve the 2,000 exported screen concepts individually: the archive manifest labels all 2,000 `UNAPPROVED VISUAL CONCEPT`. Use them for feature/state coverage and visual exploration only. Preserve the approved V5 home, logo and mascot references; implement the directly specified product flows without copying rejected HTML behavior or treating concept images as finished screens. See `../architecture/ROUNDVEIL_REBUILD_AUDIT.md`.
 
 ## Safe use of screenshots
 Screenshots under `assets/design_references/` illustrate **visual properties only**: spatial hierarchy, border style, palette, high/low emphasis, button silhouette, typography feeling, atmospheric surfaces. Even if a screenshot shows a setting or game control, it does not authorize that control's location, behavior or data.
