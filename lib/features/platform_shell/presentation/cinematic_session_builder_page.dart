@@ -145,18 +145,24 @@ class _CinematicSessionBuilderPageState
                   return SingleChildScrollView(
                     child: Column(
                       children: <Widget>[
-                        _ModuleForge(
-                          selected: selected,
-                          mixed: config.isMixed,
-                          onSelect: _controller.toggleGame,
+                        SizedBox(
+                          height: 330,
+                          child: _ModuleForge(
+                            selected: selected,
+                            mixed: config.isMixed,
+                            onSelect: _controller.toggleGame,
+                          ),
                         ),
                         const SizedBox(height: 10),
-                        _SquadForge(
-                          players: config.players,
-                          rounds: config.roundCount,
-                          onAdd: _controller.addPlayer,
-                          onRemove: _controller.removePlayer,
-                          onRounds: _controller.setRoundCount,
+                        SizedBox(
+                          height: 220,
+                          child: _SquadForge(
+                            players: config.players,
+                            rounds: config.roundCount,
+                            onAdd: _controller.addPlayer,
+                            onRemove: _controller.removePlayer,
+                            onRounds: _controller.setRoundCount,
+                          ),
                         ),
                       ],
                     ),

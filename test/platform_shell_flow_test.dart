@@ -9,6 +9,7 @@ import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
+import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
@@ -127,6 +128,47 @@ void main() {
       ]);
     },
   );
+
+  testWidgets('quick template editor provides Material for its text field', (
+    tester,
+  ) async {
+    final repository = _MemoryDraftRepository();
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: V5QuickGamesPage(drafts: repository, onBack: () {}),
+      ),
+    );
+    await tester.tap(find.text('QUICK QUIZ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('EDIT & START MATCH'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'Friday Match');
+    await tester.pump();
+    expect(find.text('Friday Match'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('builder fits narrow landscape without unbounded flex errors', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(640, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: CinematicSessionBuilderPage(
+          drafts: _MemoryDraftRepository(),
+          onBack: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+  });
 
   test('quick game templates are complete, editable configurations', () {
     final template = quickGameTemplates.firstWhere(

@@ -115,12 +115,19 @@ class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
                         if (selected != null) {
                           Navigator.of(context).push(
                             MaterialPageRoute<void>(
-                              builder: (_) => CinematicSessionBuilderPage(
-                                drafts: widget.drafts,
-                                initial: selected.configuration,
-                                initialName: _title(l10n, selected.titleKey),
-                                templateId: selected.id,
-                                onBack: () => Navigator.of(context).pop(),
+                              builder: (_) => Scaffold(
+                                body: SafeArea(
+                                  child: CinematicSessionBuilderPage(
+                                    drafts: widget.drafts,
+                                    initial: selected.configuration,
+                                    initialName: _title(
+                                      l10n,
+                                      selected.titleKey,
+                                    ),
+                                    templateId: selected.id,
+                                    onBack: () => Navigator.of(context).pop(),
+                                  ),
+                                ),
                               ),
                             ),
                           );
