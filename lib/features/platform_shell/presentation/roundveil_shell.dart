@@ -1132,7 +1132,7 @@ class _GameModesPage extends StatelessWidget {
                                           .bodySmall,
                                     ),
                                   ),
-                                  if (game.playable)
+                                  if (game.id == 'guess_country_flags')
                                     Align(
                                       alignment: Alignment.centerRight,
                                       child: TextButton.icon(

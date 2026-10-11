@@ -170,6 +170,34 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('configured Memory session opens its playable match rules', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: CinematicSessionBuilderPage(
+          drafts: _MemoryDraftRepository(),
+          onBack: () {},
+        ),
+      ),
+    );
+    await tester.tap(find.text('MEMORY').first);
+    await tester.tap(find.byTooltip('Add player'));
+    await tester.tap(find.byType(DropdownButton<int>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('1').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PREPARE MATCH'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PLAY MEMORY'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SET THE MEMORY RULES'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   test('quick game templates are complete, editable configurations', () {
     final template = quickGameTemplates.firstWhere(
       (item) => item.id == 'quick_party_mix',

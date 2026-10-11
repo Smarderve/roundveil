@@ -30,7 +30,12 @@ const gameCatalog = <GameDefinition>[
     iconCodePoint: 0xe87c,
   ),
   GameDefinition(id: 'riddles', titleKey: 'riddles', iconCodePoint: 0xe3a5),
-  GameDefinition(id: 'memory', titleKey: 'memory', iconCodePoint: 0xe1bd),
+  GameDefinition(
+    id: 'memory',
+    titleKey: 'memory',
+    iconCodePoint: 0xe1bd,
+    playable: true,
+  ),
   GameDefinition(
     id: 'guess_country_flags',
     titleKey: 'guessCountry',

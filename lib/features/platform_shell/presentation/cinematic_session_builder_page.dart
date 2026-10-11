@@ -5,6 +5,7 @@ import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
+import 'package:roundveil/features/memory/presentation/memory_game_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -268,9 +269,12 @@ class _CinematicSessionBuilderPageState
     final draft = await _controller.createSession();
     if (!mounted || draft == null) return;
     final l10n = AppLocalizations.of(context)!;
-    final onlyCountry =
-        draft.configuration.selectedModuleIds.length == 1 &&
-        draft.configuration.selectedModuleIds.single == 'guess_country_flags';
+    final selectedModule = draft.configuration.selectedModuleIds.length == 1
+        ? draft.configuration.selectedModuleIds.single
+        : null;
+    final onlyCountry = selectedModule == 'guess_country_flags';
+    final onlyMemory = selectedModule == 'memory';
+    final canLaunch = onlyCountry || onlyMemory;
     final launch = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -284,16 +288,32 @@ class _CinematicSessionBuilderPageState
             onPressed: () => Navigator.pop(dialogContext, false),
             child: Text(l10n.close),
           ),
-          if (onlyCountry)
+          if (canLaunch)
             FilledButton.icon(
               onPressed: () => Navigator.pop(dialogContext, true),
               icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(l10n.playablePrototype),
+              label: Text(onlyMemory ? 'PLAY MEMORY' : l10n.playablePrototype),
             ),
         ],
       ),
     );
     if (!mounted || launch != true) return;
+    if (onlyMemory) {
+      Navigator.of(context).push(
+        MaterialPageRoute<void>(
+          builder: (_) => Scaffold(
+            body: SafeArea(
+              child: MemoryGamePage(
+                players: draft.configuration.players,
+                rounds: draft.configuration.roundCount,
+                onExit: () => Navigator.of(context).pop(),
+              ),
+            ),
+          ),
+        ),
+      );
+      return;
+    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ProviderScope(
