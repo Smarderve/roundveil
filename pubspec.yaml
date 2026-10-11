@@ -62,6 +62,7 @@ flutter:
   assets:
     - assets/app/flags/
     - assets/brand/
+    - assets/brand/v5/
 
   # Production assets are curated under assets/app/.
   # Design-reference screenshots are intentionally not bundled with the app.

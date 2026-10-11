@@ -200,7 +200,7 @@ class _GameNavigationBar extends StatelessWidget {
       (_ShellDestination.settings, 'SETTINGS', Icons.settings_rounded),
     ];
     return Container(
-      height: compact ? 56 : 76,
+      height: compact ? 48 : 76,
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 24),
       decoration: BoxDecoration(
         color: const Color(0xED06152B),

@@ -28,3 +28,6 @@ Screenshots under `assets/design_references/` illustrate **visual properties onl
 
 ## Rule for Codex
 Before implementing a complete interactive UI: find the active, approved UX spec and `GAME_DESIGN_SPECIFICATION.md`. If the UI specification is absent, implement design-system widgets/storybook previews only, or seek approval; do not resurrect the old HTML JS. See `docs/decisions/0003-ui-approved-ux-pending.md`.
+
+## 2026-10-11 Version 5 reconstruction candidate
+The live Flutter home candidate has Android runtime evidence at `../evidence/v5_reconstruction_2026-10-11/`. The approved V5 source is a flattened screenshot: the environment/hero plate is a generated reconstruction, while the squad portraits and game artwork use crops from the supplied reference. This candidate is **not approved** and must be reviewed against the full-resolution source before any approval status changes.
