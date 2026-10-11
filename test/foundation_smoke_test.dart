@@ -21,6 +21,7 @@ void main() {
     final configured = SessionConfiguration(
       players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
       selectedModuleIds: const <String>['future-module'],
+      roundCount: 3,
     );
 
     expect(empty.canStart, isFalse);
@@ -31,10 +32,12 @@ void main() {
     final mystery = SessionConfiguration(
       players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
       selectedModuleIds: const <String>['mystery'],
+      roundCount: 3,
     );
     final country = SessionConfiguration(
       players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
       selectedModuleIds: const <String>['guess_country_flags'],
+      roundCount: 3,
     );
 
     expect(mystery.canStart, isFalse);
@@ -205,11 +208,10 @@ void main() {
     controller.dispose();
   });
 
-  testWidgets('app boots into the Hero Arena opening candidate', (
-    tester,
-  ) async {
+  testWidgets('app boots into the branded platform home', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: RoundveilApp()));
-    expect(find.text('ROUNDVEIL'), findsOneWidget);
-    expect(find.text('PLAY'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(find.text('CREATE GAME'), findsOneWidget);
+    expect(find.text('QUICK GAME'), findsOneWidget);
   });
 }

@@ -1,0 +1,220 @@
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:roundveil/app/roundveil_app.dart';
+import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/domain/session/session_draft.dart';
+import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
+import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
+import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
+import 'package:roundveil/l10n/generated/app_localizations.dart';
+
+void main() {
+  test(
+    'builder enforces single and mixed selection and persists a draft',
+    () async {
+      final repository = _MemoryDraftRepository();
+      final controller = SessionBuilderController(drafts: repository);
+
+      expect(controller.canCreate, isFalse);
+      controller.addPlayer();
+      controller.toggleGame('quiz');
+      controller.toggleGame('riddles');
+      expect(controller.configuration.selectedModuleIds, <String>['riddles']);
+
+      controller.setFormat(SessionFormat.mixed);
+      controller.toggleGame('quiz');
+      expect(controller.canCreate, isFalse);
+      controller.setRoundCount(4);
+      expect(controller.canCreate, isTrue);
+
+      final draft = await controller.createSession();
+      expect(draft, isNotNull);
+      expect(draft!.configuration.isMixed, isTrue);
+      expect(
+        draft.configuration.selectedModuleIds,
+        containsAll(<String>['riddles', 'quiz']),
+      );
+      expect((await repository.loadAll()).single.id, draft.id);
+      controller.dispose();
+    },
+  );
+
+  test('created country session carries its explicit roster and rounds', () {
+    final players = <PlayerConfiguration>[
+      PlayerConfiguration.placeholder(1),
+      PlayerConfiguration.placeholder(2),
+    ];
+    final controller = GuessCountryController(
+      initialPlayers: players,
+      initialSetup: const GuessCountrySetup(roundCount: 4),
+    );
+
+    expect(controller.state.screen, ArenaScreen.preparation);
+    expect(controller.state.players, players);
+    expect(controller.state.setup.roundCount, 4);
+    expect(controller.state.setup.isComplete, isFalse);
+    expect(
+      controller.configurationIssue,
+      contains('Choose every match setting'),
+    );
+    controller.dispose();
+  });
+
+  testWidgets('Create Game navigation reaches a working session builder', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(844, 390));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const RoundveilApp());
+    await tester.pumpAndSettle();
+    expect(find.text('CREATE GAME'), findsOneWidget);
+    await tester.tap(find.text('CREATE GAME'));
+    await tester.pumpAndSettle();
+    expect(find.text('CHOOSE THE CHALLENGE'), findsOneWidget);
+    expect(find.byTooltip('Add player'), findsOneWidget);
+  });
+
+  testWidgets('shell keeps the home and navigation usable in landscape', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(960, 390));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const RoundveilApp());
+    await tester.pumpAndSettle();
+    expect(find.text('CREATE GAME'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tester.tap(find.text('CREATE GAME'));
+    await tester.pumpAndSettle();
+    expect(find.text('SQUAD & ROUNDS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'host can create a multi-game session through the actual builder UI',
+    (tester) async {
+      final repository = _MemoryDraftRepository();
+      await tester.binding.setSurfaceSize(const Size(1280, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _TestApp(
+          child: CinematicSessionBuilderPage(drafts: repository, onBack: () {}),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('MIXED'));
+      await tester.tap(find.text('QUIZ'));
+      await tester.tap(find.text('MEMORY').first);
+      await tester.tap(find.byTooltip('Add player'));
+      await tester.tap(find.byType(DropdownButton<int>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('4').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('PREPARE MATCH'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Your session is assembled'), findsOneWidget);
+      expect(repository.items, hasLength(1));
+      expect(repository.items.single.configuration.isMixed, isTrue);
+      expect(repository.items.single.configuration.selectedModuleIds, <String>[
+        'quiz',
+        'memory',
+      ]);
+    },
+  );
+
+  test('quick game templates are complete, editable configurations', () {
+    final template = quickGameTemplates.firstWhere(
+      (item) => item.id == 'quick_party_mix',
+    );
+    final config = template.configuration;
+    expect(config.canStart, isTrue);
+    expect(config.isMixed, isTrue);
+    expect(config.players.map((player) => player.displayName), <String>[
+      'Player 1',
+      'Player 2',
+      'Player 3',
+      'Player 4',
+    ]);
+    expect(config.roundCount, 6);
+  });
+
+  test(
+    'local draft repository survives reload and supports deletion',
+    () async {
+      final directory = await Directory.systemTemp.createTemp(
+        'roundveil-drafts-',
+      );
+      addTearDown(() => directory.delete(recursive: true));
+      final repository = LocalDraftRepository(
+        directoryProvider: () async => directory,
+      );
+      final draft = SessionDraft(
+        id: 'draft-1',
+        name: 'Friday games',
+        configuration: quickGameTemplates.last.configuration,
+        updatedAt: DateTime.utc(2026, 10, 11),
+        templateId: quickGameTemplates.last.id,
+      );
+
+      await repository.save(draft);
+      final restored = (await LocalDraftRepository(
+        directoryProvider: () async => directory,
+      ).loadAll()).single;
+      expect(restored.name, draft.name);
+      expect(restored.configuration.toJson(), draft.configuration.toJson());
+      expect(restored.templateId, draft.templateId);
+
+      await repository.delete(draft.id);
+      expect(await repository.loadAll(), isEmpty);
+    },
+  );
+
+  test('application exposes exactly the 12 requested UI locales', () {
+    expect(RoundveilApp.supportedLocales, hasLength(12));
+    expect(RoundveilApp.supportedLocales, contains(Locale('sw')));
+    expect(RoundveilApp.supportedLocales, contains(Locale('ar')));
+    expect(RoundveilApp.supportedLocales, contains(Locale('ur')));
+    expect(
+      RoundveilApp.supportedLocales,
+      contains(Locale.fromSubtags(languageCode: 'zh', scriptCode: 'Hans')),
+    );
+  });
+}
+
+class _MemoryDraftRepository implements DraftRepository {
+  final List<SessionDraft> items = <SessionDraft>[];
+  @override
+  Future<List<SessionDraft>> loadAll() async => List<SessionDraft>.of(items);
+  @override
+  Future<void> save(SessionDraft draft) async {
+    items.removeWhere((item) => item.id == draft.id);
+    items.add(draft);
+  }
+
+  @override
+  Future<void> delete(String id) async =>
+      items.removeWhere((item) => item.id == id);
+}
+
+class _TestApp extends StatelessWidget {
+  const _TestApp({required this.child});
+  final Widget child;
+  @override
+  Widget build(BuildContext context) => MaterialApp(
+    theme: RoundveilThemeFactory.versionFive(dark: true),
+    supportedLocales: AppLocalizations.supportedLocales,
+    localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    home: Scaffold(body: child),
+  );
+}

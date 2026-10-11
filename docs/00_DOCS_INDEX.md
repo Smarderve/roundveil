@@ -74,6 +74,7 @@
 - [`docs/architecture/OFFLINE_AND_RECOVERY.md`](architecture/OFFLINE_AND_RECOVERY.md)
 - [`docs/architecture/TECHNICAL_ARCHITECTURE.md`](architecture/TECHNICAL_ARCHITECTURE.md)
 - [`docs/architecture/ROUNDVEIL_REBUILD_AUDIT.md`](architecture/ROUNDVEIL_REBUILD_AUDIT.md) — 2026-10-11 repository/reference audit, 25-chapter mapping and open renderer proof gate.
+- [`docs/architecture/PLATFORM_SHELL_FOUNDATION.md`](architecture/PLATFORM_SHELL_FOUNDATION.md) — branded shell, session-entry and draft foundation with verification boundaries.
 - [`docs/architecture/WINDOWS_ANDROID_BEHAVIOR.md`](architecture/WINDOWS_ANDROID_BEHAVIOR.md)
 - [`docs/architecture/ANDROID_BUILD_ENVIRONMENT.md`](architecture/ANDROID_BUILD_ENVIRONMENT.md) — verified Android toolchain notes and the temporary Codex-only Java workaround.
 

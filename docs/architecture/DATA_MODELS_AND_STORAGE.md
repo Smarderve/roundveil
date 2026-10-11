@@ -28,3 +28,6 @@ Selected/seen content recorded with stable IDs and pack versions. When custom co
 
 ## Open details
 Database DDL and Drift annotations are implementation deliverables, not fixed by this abstract model. Choose after actual Flutter project scaffold and unit tests.
+
+## Interim session-entry storage (2026-10-11)
+The current app has an intentionally small `SessionConfiguration` model (player placeholders, selected module IDs, single/mixed format and round count) plus `SessionDraft`. Create/Quick Game saves drafts through `LocalDraftRepository` to an application-private JSON file with temp/backup replacement and reload support. This enables the current shell flow only; it is not the user.db schema above. Profiles, schema versioning/migrations, active-game snapshots, recovery and SQLite/Drift remain unimplemented.

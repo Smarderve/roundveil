@@ -36,6 +36,11 @@
 | T-019 | Installed flag assets are licensed, hashed, available offline, preserve audited aspect ratios/colors and are never emoji-rendered |
 | T-020 | Guess the Country correct result starts one immediate Win Countdown; wrong/timeout starts none, including after pause/restore |
 | T-021 | Guess the Country does not show choices or text entry and does not use automatic speech recognition to award success |
+| T-022 | Platform shell Home -> Create Game navigation and responsive compact home |
+| T-023 | Single/mixed module constraints, explicit player/round setup and saved session creation |
+| T-024 | Quick Game templates are editable configuration seeds, not fake gameplay screens |
+| T-025 | Local drafts survive repository reload and support edit/duplicate/delete operations |
+| T-026 | App locale list contains the 12 requested locales, including RTL languages and `zh-Hans` |
 
 ## Tool commands when Flutter scaffold exists
 ```bash

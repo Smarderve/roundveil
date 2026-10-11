@@ -30,6 +30,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
   flutter_riverpod: ^3.4.3
   flutter_svg: ^2.2.3
@@ -50,6 +52,7 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  generate: true
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
@@ -58,6 +61,7 @@ flutter:
 
   assets:
     - assets/app/flags/
+    - assets/brand/
 
   # Production assets are curated under assets/app/.
   # Design-reference screenshots are intentionally not bundled with the app.

@@ -185,14 +185,24 @@ class GuessCountryController extends ChangeNotifier {
     List<CountryFlag> flags = firstSliceFlags,
     this.onCountdownComplete,
     this.enableTimers = true,
+    List<PlayerConfiguration> initialPlayers = const <PlayerConfiguration>[],
+    GuessCountrySetup? initialSetup,
   }) : _flags = List<CountryFlag>.unmodifiable(flags),
+       _state = GuessCountryState(
+         screen: initialPlayers.isEmpty
+             ? ArenaScreen.opening
+             : ArenaScreen.preparation,
+         players: List<PlayerConfiguration>.unmodifiable(initialPlayers),
+         setup: initialSetup ?? const GuessCountrySetup(),
+         nextPlayerNumber: initialPlayers.length + 1,
+       ),
        super();
 
   final List<CountryFlag> _flags;
   final VoidCallback? onCountdownComplete;
   final bool enableTimers;
   Timer? _timer;
-  GuessCountryState _state = const GuessCountryState();
+  GuessCountryState _state;
 
   GuessCountryState get state => _state;
 

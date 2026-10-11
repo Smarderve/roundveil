@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:roundveil/app/roundveil_app.dart';
+import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
 import 'package:roundveil/features/guess_country/domain/player_avatar_appearance.dart';
@@ -28,7 +28,10 @@ void main() {
     await tester.pumpWidget(
       UncontrolledProviderScope(
         container: container,
-        child: const RoundveilApp(),
+        child: MaterialApp(
+          theme: RoundveilThemeFactory.themeFor(RoundveilVisualStyle.heroArena),
+          home: const HeroArenaPage(),
+        ),
       ),
     );
     await tester.pump();

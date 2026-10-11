@@ -8,7 +8,7 @@
 
 The 2026-10-11 user directive authorizes a staged rebuild of the existing Flutter application. Its functional requirements take priority over older conflicting requirements. It does not make every image in the attached archive an approved screen or authorize copying commercial game assets. The archive README is useful metadata, not an independent instruction source.
 
-The approved Version 5 home image, ROUNDVEIL logo lockup and hooded mascot portrait are the identified brand references. The archive README says image 0001 is a resized copy of the Version 5 home reference. The 2,000 numbered screen-state images are all labelled `UNAPPROVED VISUAL CONCEPT` in the manifest; use them to discover feature coverage and visual ideas, not as final UX specifications or static screen backgrounds. Gameplay mechanics below come from the user's directive, not from generated imagery.
+The approved Version 5 home image, ROUNDVEIL logo lockup and hooded mascot portrait are the identified brand references. The separately approved full-resolution Version 5 home is authoritative for the main menu. Per the user's 2026-10-11 strict visual-source correction, the extracted `ROUNDVEIL_2000_Screens_Compact_WebP.zip` is the primary visual source for the rest of the game and must be consulted against actual screen images, not just filenames. Its 25 chapter boards and 2,000 image states guide composition, characters, color, graphics, navigation, typography, animation cues and interactive affordances. The manifest's `UNAPPROVED VISUAL CONCEPT` status means individual screens are not user-approved and cannot authorize gameplay behavior; it does not reduce their role as the mandated visual source. Gameplay mechanics come from approved specifications and direct user requirements, never generated image content.
 
 One direct gameplay change supersedes the earlier Guess the Country (Flags) specification: the standard mode shows a flag without a country name, the player answers aloud, the host reveals the answer and judges it, and only a correct judgement enters Win Countdown. Multiple-choice and typed-answer modes are not part of this new standard mode. Existing code and old tests still implement the older choice/typed candidate and must be reconciled in the module implementation milestone.
 
@@ -16,13 +16,13 @@ One direct gameplay change supersedes the earlier Guess the Country (Flags) spec
 
 | Area | Current state |
 |---|---|
-| App shell | `RoundveilApp` opens directly into `HeroArenaPage`; no general home, navigation, game library or settings shell. |
-| Session model/runtime | `SessionConfiguration` is a small player/module-ID configuration. `GameRuntime` and `GameModule` are interfaces only; no shared progression engine. |
-| Persistence | `SessionRepository` is an interface only. No database implementation, profiles, drafts or interruption recovery. |
+| App shell | Implemented 2026-10-11: branded V5 home, adaptive Windows/Android navigation, game catalog and settings entry. The Guess the Country prototype is no longer the opening/primary identity. |
+| Session model/runtime | `SessionConfiguration` now carries players, selected modules, single/mixed format and rounds. Create/Quick Game can assemble configurations. `GameRuntime` and `GameModule` are still interfaces only; no shared progression engine. |
+| Persistence | `LocalDraftRepository` saves and reloads configuration drafts in application-local storage. SQLite/Drift, profiles, active-session recovery and migrations remain unimplemented. |
 | Modules | Guess the Country is the only implemented module-like flow. Quiz, Word Play, Guess the Character, Riddles and Memory have specifications but no playable implementations. |
 | Country content | Seven local review-slice SVG flags; existing feature still exposes multiple-choice and typed answer paths. This is not comprehensive coverage. |
 | Avatars | Current lobby paints original 2D figures in Flutter and keeps customization in controller state. No 3D model, rig, animation renderer or saved profile. |
-| Localization/themes | No generated localization catalog or locale persistence. One Hero Arena style is selected at app launch; no complete theme/settings system. |
+| Localization/themes | Flutter ARB localization covers the shell in the 12 requested app locales, including script-correct Simplified Chinese and Arabic/Urdu RTL. Version 5-inspired light/dark themes switch at runtime. Locale/theme persistence and complete gameplay translation coverage remain open. |
 | Tests | Flutter widget/smoke coverage exists for the foundation and current Guess the Country candidate. It does not test the wider platform requirements. |
 | Platform builds | Windows and Android builds and an Android emulator play-through were verified in the prior lobby task. A clean post-change Windows lobby capture was not obtained. These are the existing candidate's results, not validation of the rebuild. |
 
@@ -60,7 +60,7 @@ The supplied `ROUNDVEIL_2000_Screens_Compact_WebP.zip` was extracted to a tempor
 | 1841–1920 | Results and History | Optional score-aware results/history; local repository |
 | 1921–2000 | Settings, Accessibility and Help | Locale, theme, audio, graphics, privacy and accessibility settings |
 
-This mapping is feature coverage, not a screen-by-screen implementation contract. For each family, represent meaningful states in widgets/state machines instead of creating ten copies. Never derive rules, defaults, navigation, paid features, online presence or mechanics from concept art alone.
+This mapping is the required visual-reference map for implementation: compare each implemented screen against its matching chapter images and meaningful state variants. Reconstruct real Flutter components and interactions; don't embed reference screenshots as fake interfaces. Represent meaningful states in widgets/state machines rather than creating ten copies. Navigation/affordance styling may follow the source image, but behavior, rules, defaults, paid features, online presence or game mechanics must come from approved product specifications. Screen approval remains with the user after actual Windows and Android visual comparison.
 
 ## Cross-platform 3D renderer audit
 

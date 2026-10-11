@@ -53,3 +53,6 @@ No backend, API, accounts, WebSockets or CMS necessary for first offline playabl
 
 ## Platform guarantee
 Windows and Android share all gameplay semantics. Differences limited to adaptive presentation, file picker, haptics, wake lock, window management and interruption handling.
+
+## Current implementation checkpoint (2026-10-11)
+The app now boots into the Version 5 branded platform shell. Its Create Game/Quick Game flows produce typed `SessionConfiguration` values and local drafts, with single/mixed module selection. This is session-entry architecture only: `GameRuntime` and `GameModule` remain interfaces, so the shell does not claim shared turn progression or playable implementations for the catalog's unfinished modules. The current JSON draft repository is an interim local adapter; it does not replace the planned SQLite/Drift stores and migration/recovery design.
