@@ -10,6 +10,7 @@ import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
+import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
@@ -32,7 +33,7 @@ void main() {
       controller.setRoundCount(4);
       expect(controller.canCreate, isTrue);
 
-      final draft = await controller.createSession();
+      final draft = await controller.saveDraft();
       expect(draft, isNotNull);
       expect(draft!.configuration.isMixed, isTrue);
       expect(
@@ -40,6 +41,26 @@ void main() {
         containsAll(<String>['quiz', 'word_play']),
       );
       expect((await repository.loadAll()).single.id, draft.id);
+      controller.dispose();
+    },
+  );
+
+  test(
+    'starting a match returns its configuration without saving a draft',
+    () async {
+      final repository = _MemoryDraftRepository();
+      final controller = SessionBuilderController(drafts: repository);
+      controller.addPlayer();
+      controller.addPlayer();
+      controller.toggleGame('quiz');
+      controller.setRoundCount(2);
+
+      final configuration = await controller.startMatch();
+
+      expect(configuration, isNotNull);
+      expect(configuration!.selectedModuleIds, <String>['quiz']);
+      expect(configuration.players.length, 2);
+      expect(await repository.loadAll(), isEmpty);
       controller.dispose();
     },
   );
@@ -142,20 +163,24 @@ void main() {
       await tester.tap(find.text('QUIZ'));
       await tester.tap(find.text('WORD PLAY').first);
       await tester.tap(find.byTooltip('Add player'));
-      await tester.tap(find.byType(DropdownButton<int>));
+      await tester.tap(find.byKey(const ValueKey<String>('round-count')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('4').last);
       await tester.pumpAndSettle();
       await tester.tap(find.text('PREPARE MATCH'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Your session is assembled'), findsOneWidget);
-      expect(repository.items, hasLength(1));
-      expect(repository.items.single.configuration.isMixed, isTrue);
-      expect(repository.items.single.configuration.selectedModuleIds, <String>[
-        'quiz',
-        'word_play',
-      ]);
+      expect(
+        find.text('Which planet is the largest in our solar system?'),
+        findsOneWidget,
+      );
+      expect(repository.items, isEmpty);
+      await tester.tap(find.text('Jupiter'));
+      await tester.pump();
+      expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 3));
+      expect(find.text('Unscramble: T E N A L P'), findsOneWidget);
+      expect(repository.items, isEmpty);
     },
   );
 
@@ -172,13 +197,193 @@ void main() {
     );
     await tester.tap(find.text('QUICK QUIZ'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('EDIT & START MATCH'));
+    await tester.tap(find.byTooltip('Edit quick game settings'));
     await tester.pumpAndSettle();
 
     expect(find.byType(TextField), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Friday Match');
     await tester.pump();
     expect(find.text('Friday Match'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('quick template Start Match opens the selected game directly', (
+    tester,
+  ) async {
+    final repository = _MemoryDraftRepository();
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: V5QuickGamesPage(drafts: repository, onBack: () {}),
+      ),
+    );
+    await tester.tap(find.text('QUICK QUIZ'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('START MATCH'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Which planet is the largest in our solar system?'),
+      findsOneWidget,
+    );
+    expect(repository.items, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('mixed quick preview fits compact landscape', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(800, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: V5QuickGamesPage(
+          drafts: _MemoryDraftRepository(),
+          onBack: () {},
+        ),
+      ),
+    );
+    await tester.tap(find.text('MIXED'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PARTY MIX'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+    'country match is flag-only and requires reveal before judgement',
+    (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 360));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(
+        _TestApp(
+          child: ActiveMatchPage(
+            enableTimers: false,
+            configuration: SessionConfiguration(
+              players: <PlayerConfiguration>[
+                PlayerConfiguration.placeholder(1),
+              ],
+              selectedModuleIds: const <String>['guess_country_flags'],
+              roundCount: 1,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('SAY THE COUNTRY ALOUD'), findsOneWidget);
+      expect(find.text('REVEAL ANSWER'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Brazil'), findsNothing);
+      await tester.tap(find.text('REVEAL ANSWER'));
+      await tester.pump();
+      expect(find.text('BRAZIL'), findsOneWidget);
+      expect(find.text('CORRECT'), findsOneWidget);
+      await tester.tap(find.text('CORRECT'));
+      await tester.pump();
+      expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+    },
+  );
+
+  testWidgets('character player turns away before the name is revealed', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(960, 540));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: ActiveMatchPage(
+          enableTimers: false,
+          configuration: SessionConfiguration(
+            players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+            selectedModuleIds: const <String>['guess_character'],
+            roundCount: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('PLAYER — TURN AWAY'), findsOneWidget);
+    expect(find.text('Sherlock Holmes'), findsNothing);
+    await tester.tap(find.text('PLAYER IS TURNED AWAY · REVEAL'));
+    await tester.pump();
+    expect(find.text('Sherlock Holmes'), findsOneWidget);
+    expect(find.text('CORRECT'), findsOneWidget);
+    await tester.tap(find.text('CORRECT'));
+    await tester.pump();
+    expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+  });
+
+  testWidgets('word play accepts a typed offline answer', (tester) async {
+    await tester.binding.setSurfaceSize(const Size(960, 540));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: ActiveMatchPage(
+          enableTimers: false,
+          configuration: SessionConfiguration(
+            players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+            selectedModuleIds: const <String>['word_play'],
+            roundCount: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'planet');
+    await tester.tap(find.text('SUBMIT WORD'));
+    await tester.pump();
+    expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+  });
+
+  testWidgets('word challenge fits a compact landscape viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: ActiveMatchPage(
+          enableTimers: false,
+          configuration: SessionConfiguration(
+            players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+            selectedModuleIds: const <String>['word_play'],
+            roundCount: 1,
+          ),
+        ),
+      ),
+    );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('match results fit compact landscape and expose return action', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(800, 360));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: ActiveMatchPage(
+          configuration: SessionConfiguration(
+            players: <PlayerConfiguration>[
+              PlayerConfiguration.placeholder(1),
+              PlayerConfiguration.placeholder(2),
+              PlayerConfiguration.placeholder(3),
+              PlayerConfiguration.placeholder(4),
+            ],
+            selectedModuleIds: const <String>['quiz'],
+            roundCount: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    for (final answer in <String>['Jupiter', 'H₂O', 'Africa', '56']) {
+      await tester.tap(find.text(answer));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 4));
+    }
+    expect(find.text('MATCH COMPLETE'), findsOneWidget);
+    expect(find.text('BACK TO LOBBY'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -297,7 +502,14 @@ void main() {
       final draft = SessionDraft(
         id: 'draft-1',
         name: 'Friday games',
-        configuration: quickGameTemplates.last.configuration,
+        configuration: quickGameTemplates.last.configuration.copyWith(
+          challengeSeconds: 30,
+          winCountdownSeconds: 5,
+          hintsEnabled: false,
+          scoringEnabled: false,
+          countryRegion: 'africa',
+          countryDifficulty: 'hard',
+        ),
         updatedAt: DateTime.utc(2026, 10, 11),
         templateId: quickGameTemplates.last.id,
       );

@@ -29,23 +29,47 @@ class SessionConfiguration {
     this.selectedModuleIds = const <String>[],
     this.roundCount = 0,
     this.isMixed = false,
+    this.challengeSeconds = 45,
+    this.winCountdownSeconds = 3,
+    this.hintsEnabled = true,
+    this.scoringEnabled = true,
+    this.countryRegion = 'worldwide',
+    this.countryDifficulty = 'mixed',
   });
 
   final List<PlayerConfiguration> players;
   final List<String> selectedModuleIds;
   final int roundCount;
   final bool isMixed;
+  final int challengeSeconds;
+  final int winCountdownSeconds;
+  final bool hintsEnabled;
+  final bool scoringEnabled;
+  final String countryRegion;
+  final String countryDifficulty;
 
   SessionConfiguration copyWith({
     List<PlayerConfiguration>? players,
     List<String>? selectedModuleIds,
     int? roundCount,
     bool? isMixed,
+    int? challengeSeconds,
+    int? winCountdownSeconds,
+    bool? hintsEnabled,
+    bool? scoringEnabled,
+    String? countryRegion,
+    String? countryDifficulty,
   }) => SessionConfiguration(
     players: players ?? this.players,
     selectedModuleIds: selectedModuleIds ?? this.selectedModuleIds,
     roundCount: roundCount ?? this.roundCount,
     isMixed: isMixed ?? this.isMixed,
+    challengeSeconds: challengeSeconds ?? this.challengeSeconds,
+    winCountdownSeconds: winCountdownSeconds ?? this.winCountdownSeconds,
+    hintsEnabled: hintsEnabled ?? this.hintsEnabled,
+    scoringEnabled: scoringEnabled ?? this.scoringEnabled,
+    countryRegion: countryRegion ?? this.countryRegion,
+    countryDifficulty: countryDifficulty ?? this.countryDifficulty,
   );
 
   bool get canStart =>
@@ -68,6 +92,12 @@ class SessionConfiguration {
     'selectedModuleIds': selectedModuleIds,
     'roundCount': roundCount,
     'isMixed': isMixed,
+    'challengeSeconds': challengeSeconds,
+    'winCountdownSeconds': winCountdownSeconds,
+    'hintsEnabled': hintsEnabled,
+    'scoringEnabled': scoringEnabled,
+    'countryRegion': countryRegion,
+    'countryDifficulty': countryDifficulty,
   };
 
   factory SessionConfiguration.fromJson(Map<String, Object?> json) =>
@@ -85,5 +115,11 @@ class SessionConfiguration {
                 .cast<String>(),
         roundCount: json['roundCount'] as int? ?? 3,
         isMixed: json['isMixed'] as bool? ?? false,
+        challengeSeconds: json['challengeSeconds'] as int? ?? 45,
+        winCountdownSeconds: json['winCountdownSeconds'] as int? ?? 3,
+        hintsEnabled: json['hintsEnabled'] as bool? ?? true,
+        scoringEnabled: json['scoringEnabled'] as bool? ?? true,
+        countryRegion: json['countryRegion'] as String? ?? 'worldwide',
+        countryDifficulty: json['countryDifficulty'] as String? ?? 'mixed',
       );
 }

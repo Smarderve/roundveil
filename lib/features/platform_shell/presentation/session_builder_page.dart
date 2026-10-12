@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
-import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
+import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
@@ -335,7 +335,7 @@ class _SessionBuilderPageState extends State<SessionBuilderPage> {
                         ),
                       ),
                       FilledButton.icon(
-                        onPressed: _controller.canCreate
+                        onPressed: _controller.canStartMatch
                             ? _createSession
                             : null,
                         icon: const Icon(Icons.play_arrow_rounded),
@@ -361,40 +361,13 @@ class _SessionBuilderPageState extends State<SessionBuilderPage> {
   }
 
   Future<void> _createSession() async {
-    final draft = await _controller.createSession();
-    if (!mounted || draft == null) return;
-    final l10n = AppLocalizations.of(context)!;
-    final onlyCountry =
-        draft.configuration.selectedModuleIds.length == 1 &&
-        draft.configuration.selectedModuleIds.single == 'guess_country_flags';
-    final launch = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: Icon(
-          Icons.auto_awesome_rounded,
-          color: Theme.of(context).colorScheme.secondary,
-        ),
-        title: Text(l10n.sessionReadyTitle),
-        content: Text(
-          onlyCountry ? l10n.moduleOnlyCountry : l10n.sessionReadyBody,
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.close),
-          ),
-          if (onlyCountry)
-            FilledButton.icon(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(l10n.playablePrototype),
-            ),
-        ],
+    final configuration = await _controller.startMatch();
+    if (!mounted || configuration == null) return;
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ActiveMatchPage(configuration: configuration),
       ),
     );
-    if (!mounted || launch != true) return;
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const HeroArenaPage()));
   }
 }
 

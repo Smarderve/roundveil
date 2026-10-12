@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
-import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
-import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
+import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -86,6 +84,7 @@ class _CinematicSessionBuilderPageState
     final config = _controller.configuration;
     final compact = size.height < 580 || size.width < 820;
     final canBuild = _controller.canCreate;
+    final canStart = _controller.canStartMatch;
     final selected = config.selectedModuleIds.toSet();
 
     return Padding(
@@ -164,6 +163,27 @@ class _CinematicSessionBuilderPageState
                             onRounds: _controller.setRoundCount,
                           ),
                         ),
+                        const SizedBox(height: 10),
+                        SizedBox(
+                          height: 260,
+                          child: _MatchRulesRail(
+                            config: config,
+                            selectedNames: config.selectedModuleIds.map((id) {
+                              final game = gameCatalog.firstWhere(
+                                (item) => item.id == id,
+                              );
+                              return _title(l10n, game.titleKey);
+                            }).toList(),
+                            onChallengeSeconds: _controller.setChallengeSeconds,
+                            onCountdownSeconds:
+                                _controller.setWinCountdownSeconds,
+                            onHints: _controller.setHintsEnabled,
+                            onScoring: _controller.setScoringEnabled,
+                            onCountryRegion: _controller.setCountryRegion,
+                            onCountryDifficulty:
+                                _controller.setCountryDifficulty,
+                          ),
+                        ),
                       ],
                     ),
                   );
@@ -195,13 +215,18 @@ class _CinematicSessionBuilderPageState
                       flex: 7,
                       child: _MatchRulesRail(
                         config: config,
-                        onRounds: _controller.setRoundCount,
                         selectedNames: config.selectedModuleIds.map((id) {
                           final game = gameCatalog.firstWhere(
                             (item) => item.id == id,
                           );
                           return _title(l10n, game.titleKey);
                         }).toList(),
+                        onChallengeSeconds: _controller.setChallengeSeconds,
+                        onCountdownSeconds: _controller.setWinCountdownSeconds,
+                        onHints: _controller.setHintsEnabled,
+                        onScoring: _controller.setScoringEnabled,
+                        onCountryRegion: _controller.setCountryRegion,
+                        onCountryDifficulty: _controller.setCountryDifficulty,
                       ),
                     ),
                   ],
@@ -212,13 +237,10 @@ class _CinematicSessionBuilderPageState
           const SizedBox(height: 8),
           Row(
             children: <Widget>[
-              if (config.selectedModuleIds.any(
-                (id) =>
-                    !gameCatalog.firstWhere((game) => game.id == id).playable,
-              ))
+              if (_controller.startValidationMessage != null)
                 Expanded(
                   child: Text(
-                    l10n.sessionReadyBody,
+                    _controller.startValidationMessage!,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: tokens.muted, fontSize: 10),
@@ -237,7 +259,7 @@ class _CinematicSessionBuilderPageState
               ),
               const SizedBox(width: 8),
               FilledButton.icon(
-                onPressed: canBuild ? _createSession : null,
+                onPressed: canStart ? _createSession : null,
                 icon: const Icon(Icons.play_arrow_rounded),
                 label: Text(
                   widget.templateId == null ? 'PREPARE MATCH' : 'START MATCH',
@@ -265,52 +287,11 @@ class _CinematicSessionBuilderPageState
   }
 
   Future<void> _createSession() async {
-    final draft = await _controller.createSession();
-    if (!mounted || draft == null) return;
-    final l10n = AppLocalizations.of(context)!;
-    final selectedModule = draft.configuration.selectedModuleIds.length == 1
-        ? draft.configuration.selectedModuleIds.single
-        : null;
-    final onlyCountry = selectedModule == 'guess_country_flags';
-    final canLaunch = onlyCountry;
-    final launch = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        icon: const Icon(Icons.bolt_rounded, color: Color(0xFFFF9B2F)),
-        title: Text(l10n.sessionReadyTitle),
-        content: Text(
-          onlyCountry ? l10n.moduleOnlyCountry : l10n.sessionReadyBody,
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext, false),
-            child: Text(l10n.close),
-          ),
-          if (canLaunch)
-            FilledButton.icon(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(l10n.playablePrototype),
-            ),
-        ],
-      ),
-    );
-    if (!mounted || launch != true) return;
-    Navigator.of(context).push(
+    final configuration = await _controller.startMatch();
+    if (!mounted || configuration == null) return;
+    Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => ProviderScope(
-          overrides: [
-            guessCountryControllerProvider.overrideWith(
-              (ref) => GuessCountryController(
-                initialPlayers: draft.configuration.players,
-                initialSetup: GuessCountrySetup(
-                  roundCount: draft.configuration.roundCount,
-                ),
-              ),
-            ),
-          ],
-          child: const HeroArenaPage(),
-        ),
+        builder: (_) => ActiveMatchPage(configuration: configuration),
       ),
     );
   }
@@ -466,6 +447,7 @@ class _SquadForge extends StatelessWidget {
               ),
             ),
             DropdownButton<int>(
+              key: const ValueKey<String>('round-count'),
               value: rounds == 0 ? null : rounds,
               hint: Text(l10n.rounds.toUpperCase()),
               items: List<DropdownMenuItem<int>>.generate(
@@ -505,61 +487,231 @@ class _SquadForge extends StatelessWidget {
 class _MatchRulesRail extends StatelessWidget {
   const _MatchRulesRail({
     required this.config,
-    required this.onRounds,
     required this.selectedNames,
+    required this.onChallengeSeconds,
+    required this.onCountdownSeconds,
+    required this.onHints,
+    required this.onScoring,
+    required this.onCountryRegion,
+    required this.onCountryDifficulty,
   });
   final SessionConfiguration config;
-  final ValueChanged<int> onRounds;
   final List<String> selectedNames;
+  final ValueChanged<int> onChallengeSeconds;
+  final ValueChanged<int> onCountdownSeconds;
+  final ValueChanged<bool> onHints;
+  final ValueChanged<bool> onScoring;
+  final ValueChanged<String> onCountryRegion;
+  final ValueChanged<String> onCountryDifficulty;
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: <Widget>[
-        _ForgeHeading(
-          icon: Icons.tune_rounded,
-          title: 'MATCH BRIEF',
-          subtitle: '${selectedNames.length} ${l10n.selected.toUpperCase()}',
-        ),
-        const SizedBox(height: 12),
-        for (final name in selectedNames)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 6),
-            child: Row(
-              children: <Widget>[
-                Icon(Icons.check_rounded, color: tokens.orange, size: 16),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: Text(
-                    name.toUpperCase(),
-                    style: const TextStyle(
-                      fontSize: 10,
-                      fontWeight: FontWeight.w900,
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: <Widget>[
+          _ForgeHeading(
+            icon: Icons.tune_rounded,
+            title: 'MATCH RULES',
+            subtitle: '${selectedNames.length} ${l10n.selected.toUpperCase()}',
+          ),
+          const SizedBox(height: 12),
+          for (final name in selectedNames)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: <Widget>[
+                  Icon(Icons.check_rounded, color: tokens.orange, size: 16),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      name.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 8),
+          Text(
+            config.isMixed
+                ? 'PLAYLIST ORDER FOLLOWS SELECTION'
+                : 'MODULE RULES',
+            style: TextStyle(
+              color: tokens.muted,
+              fontSize: 9,
+              letterSpacing: .7,
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'CHALLENGE TIMER',
+                  style: TextStyle(
+                    color: tokens.muted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              DropdownButton<int>(
+                key: const ValueKey<String>('challenge-timer'),
+                value: config.challengeSeconds,
+                items: const <int>[15, 30, 45, 60]
+                    .map(
+                      (value) => DropdownMenuItem<int>(
+                        value: value,
+                        child: Text('${value}s'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) onChallengeSeconds(value);
+                },
+              ),
+            ],
+          ),
+          Row(
+            children: <Widget>[
+              Expanded(
+                child: Text(
+                  'WIN COUNTDOWN',
+                  style: TextStyle(
+                    color: tokens.muted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              DropdownButton<int>(
+                key: const ValueKey<String>('win-countdown'),
+                value: config.winCountdownSeconds,
+                items: const <int>[3, 5, 10]
+                    .map(
+                      (value) => DropdownMenuItem<int>(
+                        value: value,
+                        child: Text('${value}s'),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) onCountdownSeconds(value);
+                },
+              ),
+            ],
+          ),
+          SwitchListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'HINTS',
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+            ),
+            value: config.hintsEnabled,
+            onChanged: onHints,
+          ),
+          SwitchListTile(
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+            title: const Text(
+              'SCOREKEEPING',
+              style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+            ),
+            value: config.scoringEnabled,
+            onChanged: onScoring,
+          ),
+          if (config.selectedModuleIds.contains(
+            'guess_country_flags',
+          )) ...<Widget>[
+            const SizedBox(height: 8),
+            Text(
+              'FLAG SCOPE · UN MEMBERS ONLY',
+              style: TextStyle(
+                color: tokens.cyan,
+                fontSize: 9,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text('REGION', style: TextStyle(fontSize: 9)),
+                ),
+                DropdownButton<String>(
+                  key: const ValueKey<String>('country-region'),
+                  value: config.countryRegion,
+                  items:
+                      const <String>[
+                            'worldwide',
+                            'africa',
+                            'americas',
+                            'asia',
+                            'europe',
+                            'oceania',
+                          ]
+                          .map(
+                            (value) => DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value.toUpperCase()),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (value) {
+                    if (value != null) onCountryRegion(value);
+                  },
                 ),
               ],
             ),
-          ),
-        const SizedBox(height: 8),
-        Text(
-          config.isMixed ? 'PLAYLIST ORDER FOLLOWS SELECTION' : 'MODULE RULES',
-          style: TextStyle(color: tokens.muted, fontSize: 9, letterSpacing: .7),
-        ),
-        const Spacer(),
-        if (selectedNames.contains(l10n.guessCountry.toUpperCase()))
-          Text(
-            l10n.moduleOnlyCountry,
-            style: TextStyle(color: tokens.muted, fontSize: 9),
-          )
-        else
-          Text(
-            'DIFFICULTY, TIMER, CATEGORIES & HOST RULES',
-            style: TextStyle(color: tokens.muted, fontSize: 9),
-          ),
-      ],
+            Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text('DIFFICULTY', style: TextStyle(fontSize: 9)),
+                ),
+                DropdownButton<String>(
+                  key: const ValueKey<String>('country-difficulty'),
+                  value: config.countryDifficulty,
+                  items:
+                      const <String>[
+                            'mixed',
+                            'easy',
+                            'medium',
+                            'hard',
+                            'expert',
+                          ]
+                          .map(
+                            (value) => DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value.toUpperCase()),
+                            ),
+                          )
+                          .toList(),
+                  onChanged: (value) {
+                    if (value != null) onCountryDifficulty(value);
+                  },
+                ),
+              ],
+            ),
+          ],
+          if (config.selectedModuleIds.contains('guess_character'))
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                'CHARACTER MODE · NAME ONLY  |  PICTURE MODE NOT IN VERIFIED OFFLINE PACK',
+                style: TextStyle(
+                  color: tokens.muted,
+                  fontSize: 8,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

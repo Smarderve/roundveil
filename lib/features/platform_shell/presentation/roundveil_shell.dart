@@ -3,7 +3,7 @@ import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
-import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
+import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
@@ -138,8 +138,19 @@ class _RoundveilShellState extends State<RoundveilShell> {
   }
 
   void _openCountryPrototype() {
-    Navigator.of(context)
-        .push(MaterialPageRoute<void>(builder: (_) => const HeroArenaPage()));
+    final configuration = SessionConfiguration(
+      players: <PlayerConfiguration>[
+        PlayerConfiguration.placeholder(1),
+        PlayerConfiguration.placeholder(2),
+      ],
+      selectedModuleIds: const <String>['guess_country_flags'],
+      roundCount: 3,
+    );
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ActiveMatchPage(configuration: configuration),
+      ),
+    );
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
@@ -111,6 +112,16 @@ class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
                     );
                     final preview = _TemplatePreview(
                       template: selected,
+                      onStart: () {
+                        if (selected == null) return;
+                        Navigator.of(context).push<void>(
+                          MaterialPageRoute<void>(
+                            builder: (_) => ActiveMatchPage(
+                              configuration: selected.configuration,
+                            ),
+                          ),
+                        );
+                      },
                       onEdit: () {
                         if (selected != null) {
                           Navigator.of(context).push(
@@ -275,8 +286,13 @@ class _TemplateGallery extends StatelessWidget {
 }
 
 class _TemplatePreview extends StatelessWidget {
-  const _TemplatePreview({required this.template, required this.onEdit});
+  const _TemplatePreview({
+    required this.template,
+    required this.onStart,
+    required this.onEdit,
+  });
   final QuickGameTemplate? template;
+  final VoidCallback onStart;
   final VoidCallback onEdit;
   @override
   Widget build(BuildContext context) {
@@ -315,58 +331,61 @@ class _TemplatePreview extends StatelessWidget {
               Positioned.fill(
                 child: Padding(
                   padding: const EdgeInsets.all(18),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: <Widget>[
-                      Text(
-                        'MATCH PREVIEW',
-                        style: TextStyle(
-                          color: tokens.cyan,
-                          fontSize: 9,
-                          letterSpacing: 1.5,
-                          fontWeight: FontWeight.w900,
+                  child: SingleChildScrollView(
+                    reverse: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: <Widget>[
+                        Text(
+                          'MATCH PREVIEW',
+                          style: TextStyle(
+                            color: tokens.cyan,
+                            fontSize: 9,
+                            letterSpacing: 1.5,
+                            fontWeight: FontWeight.w900,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        _title(l10n, template!.titleKey).toUpperCase(),
-                        style: Theme.of(context).textTheme.titleLarge
-                            ?.copyWith(fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 7),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        children: <Widget>[
-                          for (var i = 0; i < gameNames.length; i++)
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 5,
-                              ),
-                              decoration: BoxDecoration(
-                                color: const Color(0xCC07162C),
-                                border: Border(
-                                  bottom: BorderSide(color: tokens.orange),
+                        const SizedBox(height: 5),
+                        Text(
+                          _title(l10n, template!.titleKey).toUpperCase(),
+                          style: Theme.of(context).textTheme.titleLarge
+                              ?.copyWith(fontWeight: FontWeight.w900),
+                        ),
+                        const SizedBox(height: 7),
+                        Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: <Widget>[
+                            for (var i = 0; i < gameNames.length; i++)
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 5,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xCC07162C),
+                                  border: Border(
+                                    bottom: BorderSide(color: tokens.orange),
+                                  ),
+                                ),
+                                child: Text(
+                                  gameNames[i].toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 8,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
-                              child: Text(
-                                gameNames[i].toUpperCase(),
-                                style: const TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '${template!.players} ${l10n.players.toLowerCase()}  ·  ${template!.rounds} ${l10n.rounds.toLowerCase()}',
-                        style: TextStyle(color: tokens.muted, fontSize: 10),
-                      ),
-                    ],
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${template!.players} ${l10n.players.toLowerCase()}  ·  ${template!.rounds} ${l10n.rounds.toLowerCase()}',
+                          style: TextStyle(color: tokens.muted, fontSize: 10),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -374,15 +393,27 @@ class _TemplatePreview extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        FilledButton.icon(
-          onPressed: onEdit,
-          icon: const Icon(Icons.tune_rounded),
-          label: const Text('EDIT & START MATCH'),
-          style: FilledButton.styleFrom(
-            backgroundColor: tokens.orange,
-            foregroundColor: const Color(0xFF16100A),
-            minimumSize: const Size.fromHeight(48),
-          ),
+        Row(
+          children: <Widget>[
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: onStart,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('START MATCH'),
+                style: FilledButton.styleFrom(
+                  backgroundColor: tokens.orange,
+                  foregroundColor: const Color(0xFF16100A),
+                  minimumSize: const Size.fromHeight(48),
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton.filledTonal(
+              tooltip: 'Edit quick game settings',
+              onPressed: onEdit,
+              icon: const Icon(Icons.tune_rounded),
+            ),
+          ],
         ),
       ],
     );

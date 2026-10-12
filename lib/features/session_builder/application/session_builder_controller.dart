@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
+import 'package:roundveil/features/active_match/application/active_match_content.dart';
 
 enum SessionFormat { single, mixed }
 
@@ -22,12 +23,23 @@ class GameDefinition {
 }
 
 const gameCatalog = <GameDefinition>[
-  GameDefinition(id: 'quiz', titleKey: 'quiz', iconCodePoint: 0xe0bf),
-  GameDefinition(id: 'word_play', titleKey: 'wordPlay', iconCodePoint: 0xe262),
+  GameDefinition(
+    id: 'quiz',
+    titleKey: 'quiz',
+    iconCodePoint: 0xe0bf,
+    playable: true,
+  ),
+  GameDefinition(
+    id: 'word_play',
+    titleKey: 'wordPlay',
+    iconCodePoint: 0xe262,
+    playable: true,
+  ),
   GameDefinition(
     id: 'guess_character',
     titleKey: 'guessCharacter',
     iconCodePoint: 0xe87c,
+    playable: true,
   ),
   GameDefinition(
     id: 'guess_country_flags',
@@ -60,6 +72,12 @@ class QuickGameTemplate {
     selectedModuleIds: moduleIds,
     roundCount: rounds,
     isMixed: moduleIds.length > 1,
+    challengeSeconds: 45,
+    winCountdownSeconds: 3,
+    hintsEnabled: true,
+    scoringEnabled: true,
+    countryRegion: 'worldwide',
+    countryDifficulty: 'mixed',
   );
 }
 
@@ -158,6 +176,26 @@ class SessionBuilderController extends ChangeNotifier {
 
   bool get canCreate => validationMessage == null && !_busy;
 
+  bool get canStartMatch => startValidationMessage == null && !_busy;
+
+  String? get startValidationMessage {
+    final issue = validationMessage;
+    if (issue != null) return issue;
+    final requiredChallenges = _configuration.isMixed
+        ? _configuration.roundCount
+        : _configuration.roundCount * _configuration.players.length;
+    for (final moduleId in _configuration.selectedModuleIds) {
+      final available = challengesForModule(
+        moduleId,
+        configuration: _configuration,
+      ).length;
+      if (available < requiredChallenges) {
+        return '$moduleId has $available unique offline challenges; $requiredChallenges are required. Reduce rounds or players.';
+      }
+    }
+    return null;
+  }
+
   void setName(String value) {
     _name = value;
     notifyListeners();
@@ -216,6 +254,36 @@ class SessionBuilderController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setChallengeSeconds(int value) {
+    _configuration = _configuration.copyWith(challengeSeconds: value);
+    notifyListeners();
+  }
+
+  void setWinCountdownSeconds(int value) {
+    _configuration = _configuration.copyWith(winCountdownSeconds: value);
+    notifyListeners();
+  }
+
+  void setHintsEnabled(bool value) {
+    _configuration = _configuration.copyWith(hintsEnabled: value);
+    notifyListeners();
+  }
+
+  void setScoringEnabled(bool value) {
+    _configuration = _configuration.copyWith(scoringEnabled: value);
+    notifyListeners();
+  }
+
+  void setCountryRegion(String value) {
+    _configuration = _configuration.copyWith(countryRegion: value);
+    notifyListeners();
+  }
+
+  void setCountryDifficulty(String value) {
+    _configuration = _configuration.copyWith(countryDifficulty: value);
+    notifyListeners();
+  }
+
   Future<SessionDraft?> saveDraft() async {
     if (validationMessage != null || _busy) return null;
     _busy = true;
@@ -239,5 +307,15 @@ class SessionBuilderController extends ChangeNotifier {
     }
   }
 
-  Future<SessionDraft?> createSession() async => saveDraft();
+  Future<SessionConfiguration?> startMatch() async {
+    if (!canStartMatch) return null;
+    _busy = true;
+    notifyListeners();
+    try {
+      return _configuration;
+    } finally {
+      _busy = false;
+      notifyListeners();
+    }
+  }
 }
