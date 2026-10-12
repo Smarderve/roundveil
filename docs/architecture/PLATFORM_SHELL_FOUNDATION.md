@@ -44,4 +44,4 @@ Updated after execution checks on 2026-10-11:
 
 ## Renderer status carried forward
 
-Thermion/Filament remains an unverified candidate; Milestone 1 is **BLOCKED / NOT COMPLETE**. Windows proof execution requires a policy-approved execution environment. Android proof still requires completion of SDK Platform 33 setup and a compatible ARM64 runtime. No renderer investigation or production avatar integration was performed as part of this shell task.
+Thermion/Filament remains an unverified candidate; Milestone 1 is **BLOCKED / NOT COMPLETE**. Owner-authorized Android SDK Platform 33 revision 3.0.0 is installed in the existing SDK and `flutter doctor -v` reports licenses accepted. The existing API 37 AVD is x86_64 with ARM64 translation, not native ARM64. The isolated Android proof stops before APK creation because Gradle requested the separate CMake 3.22.1 SDK package; obtain approval before installing it. Windows proof compilation succeeds, but Code Integrity Enterprise signing policy blocks execution; continue with an IT-approved signing path or test environment. No production avatar integration was performed.
