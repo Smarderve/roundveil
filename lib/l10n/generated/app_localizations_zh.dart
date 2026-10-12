@@ -129,12 +129,6 @@ class AppLocalizationsZh extends AppLocalizations {
   String get guessCharacter => 'Guess the Character';
 
   @override
-  String get riddles => 'Riddles';
-
-  @override
-  String get memory => 'Memory';
-
-  @override
   String get quickQuiz => 'Quick Quiz';
 
   @override
@@ -142,12 +136,6 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get quickCharacter => 'Character Challenge';
-
-  @override
-  String get quickRiddles => 'Riddle Session';
-
-  @override
-  String get quickMemory => 'Memory Match';
 
   @override
   String get quickFlags => 'Flag Challenge';
@@ -240,6 +228,9 @@ class AppLocalizationsZh extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'The broader multi-game rebuild is in progress.';
+
+  @override
+  String get draftNeedsEditing => '此草稿包含已停用的游戏。请先编辑再使用。';
 }
 
 /// The translations for Chinese, using the Han script (`zh_Hans`).
@@ -364,12 +355,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
   String get guessCharacter => '猜角色';
 
   @override
-  String get riddles => '谜题';
-
-  @override
-  String get memory => '记忆';
-
-  @override
   String get quickQuiz => '快速问答';
 
   @override
@@ -377,12 +362,6 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get quickCharacter => '角色挑战';
-
-  @override
-  String get quickRiddles => '谜题对局';
-
-  @override
-  String get quickMemory => '记忆配对';
 
   @override
   String get quickFlags => '旗帜挑战';
@@ -466,4 +445,7 @@ class AppLocalizationsZhHans extends AppLocalizationsZh {
 
   @override
   String get rebuildStatus => '其他游戏正在开发中。';
+
+  @override
+  String get draftNeedsEditing => '此草稿包含已停用的游戏。请先编辑再使用。';
 }

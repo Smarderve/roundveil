@@ -129,12 +129,6 @@ class AppLocalizationsTr extends AppLocalizations {
   String get guessCharacter => 'Karakteri tahmin et';
 
   @override
-  String get riddles => 'Bilmeceler';
-
-  @override
-  String get memory => 'Hafıza';
-
-  @override
   String get quickQuiz => 'Hızlı quiz';
 
   @override
@@ -142,12 +136,6 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get quickCharacter => 'Karakter meydan okuması';
-
-  @override
-  String get quickRiddles => 'Bilmece oturumu';
-
-  @override
-  String get quickMemory => 'Hafıza eşleştirme';
 
   @override
   String get quickFlags => 'Bayrak mücadelesi';
@@ -232,4 +220,8 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'Diğer oyunların geliştirilmesi sürüyor.';
+
+  @override
+  String get draftNeedsEditing =>
+      'Bu taslakta kaldırılmış oyunlar bulunuyor. Kullanmadan önce düzenleyin.';
 }

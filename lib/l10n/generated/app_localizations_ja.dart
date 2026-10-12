@@ -127,12 +127,6 @@ class AppLocalizationsJa extends AppLocalizations {
   String get guessCharacter => 'キャラクター当て';
 
   @override
-  String get riddles => 'なぞなぞ';
-
-  @override
-  String get memory => 'メモリー';
-
-  @override
   String get quickQuiz => 'クイッククイズ';
 
   @override
@@ -140,12 +134,6 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get quickCharacter => 'キャラクターチャレンジ';
-
-  @override
-  String get quickRiddles => 'なぞなぞセッション';
-
-  @override
-  String get quickMemory => 'メモリーマッチ';
 
   @override
   String get quickFlags => '国旗チャレンジ';
@@ -229,4 +217,7 @@ class AppLocalizationsJa extends AppLocalizations {
 
   @override
   String get rebuildStatus => '他のゲームを開発中です。';
+
+  @override
+  String get draftNeedsEditing => 'この下書きには提供終了したゲームが含まれています。使用前に編集してください。';
 }

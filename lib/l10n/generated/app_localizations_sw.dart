@@ -130,12 +130,6 @@ class AppLocalizationsSw extends AppLocalizations {
   String get guessCharacter => 'Nadhani Mhusika';
 
   @override
-  String get riddles => 'Vitendawili';
-
-  @override
-  String get memory => 'Kumbukumbu';
-
-  @override
   String get quickQuiz => 'Maswali ya Haraka';
 
   @override
@@ -143,12 +137,6 @@ class AppLocalizationsSw extends AppLocalizations {
 
   @override
   String get quickCharacter => 'Changamoto ya Mhusika';
-
-  @override
-  String get quickRiddles => 'Kipindi cha Vitendawili';
-
-  @override
-  String get quickMemory => 'Mechi ya Kumbukumbu';
 
   @override
   String get quickFlags => 'Changamoto ya Bendera';
@@ -234,4 +222,8 @@ class AppLocalizationsSw extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'Ujenzi wa michezo mingine unaendelea.';
+
+  @override
+  String get draftNeedsEditing =>
+      'Rasimu hii ina michezo iliyoondolewa. Ihariri kabla ya kuitumia.';
 }

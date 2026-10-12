@@ -15,6 +15,13 @@ class SessionDraft {
   final DateTime updatedAt;
   final String? templateId;
 
+  /// True for saved configurations that refer to a game no longer offered.
+  /// The original serialized data is preserved until the host edits and saves.
+  bool get needsEditing =>
+      configuration.selectedModuleIds.any(
+        (id) => !activeGameModuleIds.contains(id),
+      );
+
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
     'name': name,

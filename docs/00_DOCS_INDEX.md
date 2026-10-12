@@ -53,10 +53,8 @@
 - [`docs/gameplay/TIMERS_AND_WIN_COUNTDOWN.md`](gameplay/TIMERS_AND_WIN_COUNTDOWN.md)
 - [`docs/gameplay/games/GUESS_THE_CHARACTER.md`](gameplay/games/GUESS_THE_CHARACTER.md)
 - [`docs/gameplay/games/GUESS_THE_COUNTRY.md`](gameplay/games/GUESS_THE_COUNTRY.md)
-- [`docs/gameplay/games/MEMORY.md`](gameplay/games/MEMORY.md)
 - [`docs/gameplay/games/QUIZ.md`](gameplay/games/QUIZ.md)
 - [`docs/gameplay/games/README.md`](gameplay/games/README.md)
-- [`docs/gameplay/games/RIDDLES.md`](gameplay/games/RIDDLES.md)
 - [`docs/gameplay/games/WORD_PLAY.md`](gameplay/games/WORD_PLAY.md)
 
 ### Design
@@ -92,6 +90,7 @@
 - [`docs/decisions/0002-remove-mystery-mode.md`](decisions/0002-remove-mystery-mode.md)
 - [`docs/decisions/0003-ui-approved-ux-pending.md`](decisions/0003-ui-approved-ux-pending.md)
 - [`docs/decisions/0004-offline-first.md`](decisions/0004-offline-first.md)
+- [`docs/decisions/0005-four-core-games.md`](decisions/0005-four-core-games.md)
 
 ## Historical document reconciliation
 Older functional/technical Word documents described a Mystery module and a partly desktop-first sequence. Those details have been **superseded** and are excluded from active Markdown specs. See `docs/decisions/0002-remove-mystery-mode.md`.

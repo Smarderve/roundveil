@@ -10,7 +10,7 @@ An inclusive, premium **multi-game family party platform** for a group physicall
 
 ## Core characteristics
 - Not solely trivia, not a catalog of ready-to-play premade matches, and not an online social network.
-- Supports a growing collection of **game types** (Quiz, Word Play, Guess the Character, Guess the Country (Flags), Riddles, Memory and other approved modules), independent of **topics/categories** (animals, sports, science, vegetables, family, geography, etc.).
+- Launch product has exactly four **game types**: Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country (Flags). Topics/categories (animals, sports, science, vegetables, family, geography, etc.) remain independent of game type.
 - The game has a shared round/turn structure and two timer concepts: challenge-specific clocks and the **immediate Win Countdown** on correct results.
 - The host decides complexity; players can have saved profiles or join as guests. Default labels are Player 1, Player 2, etc.
 - Works offline on Windows and Android. Mobile is a real product target, not an optional distant rewrite.
@@ -23,3 +23,6 @@ Real-world activities happen outside the software; ROUNDVEIL must not encourage 
 
 ## Product identity note
 ROUNDVEIL is the working game name. Trademark/domain/app-store availability should be checked before public branding or store publication.
+
+## Active game roster (approved 2026-10-12)
+The product contains exactly Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country. Riddles and Memory are discontinued and must not appear in gameplay, navigation, templates or active content. See [`docs/decisions/0005-four-core-games.md`](../decisions/0005-four-core-games.md).

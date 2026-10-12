@@ -1,3 +1,10 @@
+const activeGameModuleIds = <String>{
+  'quiz',
+  'word_play',
+  'guess_character',
+  'guess_country_flags',
+};
+
 class PlayerConfiguration {
   const PlayerConfiguration({required this.id, required this.displayName});
 
@@ -44,7 +51,8 @@ class SessionConfiguration {
   bool get canStart =>
       players.isNotEmpty &&
       selectedModuleIds.isNotEmpty &&
-      !selectedModuleIds.contains('mystery') &&
+      selectedModuleIds.toSet().length == selectedModuleIds.length &&
+      selectedModuleIds.every(activeGameModuleIds.contains) &&
       roundCount > 0 &&
       (isMixed ? selectedModuleIds.length > 1 : selectedModuleIds.length == 1);
 

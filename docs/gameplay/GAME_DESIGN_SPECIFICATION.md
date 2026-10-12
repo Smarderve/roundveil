@@ -33,9 +33,7 @@ ROUNDVEIL is a **host-configured multi-game social challenge platform**. The app
 | Word Play / Word Scramble | reference module to build | typed/arranged answers or human judgement |
 | Guess the Character | core reference | verbal final guess; host/clue-giver judgement |
 | Guess the Country (Flags) | spoken answer and host-reveal/judgement flow specified by current rebuild directive | flag-only challenge; host reveals canonical country and judges spoken answer |
-| Riddles | module candidate, exact UX pending | host judgement or valid typed answer |
-| Memory / matching | module candidate, exact UX pending | module-defined success/timeout |
-| Visual, charades, sound/logic | future candidates | module-specific |
+The active game catalog is limited to the four rows above. Riddles and Memory were discontinued by the approved 2026-10-12 product decision; archive images depicting them are obsolete visual references and must not be implemented.
 
 ## Decisions NOT yet approved
 The 2026-10-11 user rebuild directive now authorizes implementing the listed platform flows and module behaviors. Older Felix/Overwatch HTML navigation, placements and gameplay remain rejected. The 2,000-screen reference archive is unapproved visual concept material except for the explicitly approved V5 home and brand references; it does not set mechanics. See `docs/design/UX_OPEN_QUESTIONS.md` and `docs/architecture/ROUNDVEIL_REBUILD_AUDIT.md`.

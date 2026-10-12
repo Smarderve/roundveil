@@ -5,7 +5,6 @@ import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
-import 'package:roundveil/features/memory/presentation/memory_game_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -273,8 +272,7 @@ class _CinematicSessionBuilderPageState
         ? draft.configuration.selectedModuleIds.single
         : null;
     final onlyCountry = selectedModule == 'guess_country_flags';
-    final onlyMemory = selectedModule == 'memory';
-    final canLaunch = onlyCountry || onlyMemory;
+    final canLaunch = onlyCountry;
     final launch = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -292,28 +290,12 @@ class _CinematicSessionBuilderPageState
             FilledButton.icon(
               onPressed: () => Navigator.pop(dialogContext, true),
               icon: const Icon(Icons.play_arrow_rounded),
-              label: Text(onlyMemory ? 'PLAY MEMORY' : l10n.playablePrototype),
+              label: Text(l10n.playablePrototype),
             ),
         ],
       ),
     );
     if (!mounted || launch != true) return;
-    if (onlyMemory) {
-      Navigator.of(context).push(
-        MaterialPageRoute<void>(
-          builder: (_) => Scaffold(
-            body: SafeArea(
-              child: MemoryGamePage(
-                players: draft.configuration.players,
-                rounds: draft.configuration.roundCount,
-                onExit: () => Navigator.of(context).pop(),
-              ),
-            ),
-          ),
-        ),
-      );
-      return;
-    }
     Navigator.of(context).push(
       MaterialPageRoute<void>(
         builder: (_) => ProviderScope(
@@ -767,8 +749,6 @@ IconData _gameIcon(String id) => switch (id) {
   'quiz' => Icons.quiz_outlined,
   'word_play' => Icons.text_fields_rounded,
   'guess_character' => Icons.person_search_outlined,
-  'riddles' => Icons.lightbulb_outline_rounded,
-  'memory' => Icons.grid_view_rounded,
   'guess_country_flags' => Icons.flag_outlined,
   _ => Icons.sports_esports_outlined,
 };
@@ -777,14 +757,10 @@ String _title(AppLocalizations l10n, String key) => switch (key) {
   'quiz' => l10n.quiz,
   'wordPlay' => l10n.wordPlay,
   'guessCharacter' => l10n.guessCharacter,
-  'riddles' => l10n.riddles,
-  'memory' => l10n.memory,
   'guessCountry' => l10n.guessCountry,
   'quickQuiz' => l10n.quickQuiz,
   'quickWordPlay' => l10n.quickWordPlay,
   'quickCharacter' => l10n.quickCharacter,
-  'quickRiddles' => l10n.quickRiddles,
-  'quickMemory' => l10n.quickMemory,
   'quickFlags' => l10n.quickFlags,
   'quickPartyMix' => l10n.quickPartyMix,
   _ => key,

@@ -13,7 +13,7 @@
 `players`, `avatars`, `host_presets`, `app_settings`, `session_configs`, `session_snapshots`, `rounds`, `turns`, `session_events`, `seen_content`, `custom_content`, `custom_media`, `game_history`. User-private files stored in app-managed filesystem and referenced by safe paths/IDs. Do not automatically upload.
 
 ### content.db (official published content)
-`content_packs`, `categories`, `content_metadata`, `quiz_items`, `word_items`, `character_items`, `country_flag_items`, `riddle_items`, `memory_sets`, `media_assets`, `translations`, `compatibility_index`. `country_flag_items` records canonical IDs/names/aliases, regional and inclusion-policy tags, asset ratio/design version and source-license hash linkage. Category tree and content-type payload tables should remain normalized/validated; indexes for game type, categories, locale, difficulty and seen-content eligible query.
+`content_packs`, `categories`, `content_metadata`, `quiz_items`, `word_items`, `character_items`, `country_flag_items`, `media_assets`, `translations`, `compatibility_index`. `country_flag_items` records canonical IDs/names/aliases, regional and inclusion-policy tags, asset ratio/design version and source-license hash linkage. Category tree and content-type payload tables should remain normalized/validated; indexes for game type, categories, locale, difficulty and seen-content eligible query. Riddle and Memory tables are not part of the active schema.
 
 **No Mystery, suspects, cases or evidence tables.** Any schema in older drafts suggesting those is obsolete.
 

@@ -35,7 +35,7 @@ Only one terminal result may settle a turn. Define arbitration when answer submi
 `PlayerReady -> PlayerTurnsAway -> CharacterShownToClueGivers + ClueTimer -> FinalGuess + FinalGuessTimer -> HumanJudgement -> Correct/Failed`. The character stays visible until judgement, the active player stays turned away, and a Correct judgement switches immediately to countdown.
 
 ## Other modules
-Quiz, Word Play, Riddles and Memory have internal phase states defined by their module specifications. GameRuntime should know only their generic success/failure and timer requests, not every game-specific UI detail.
+Quiz and Word Play own their internal challenge phases. GameRuntime should know only their generic success/failure and timer requests, not every game-specific UI detail. Guess the Character and Guess the Country have their specialized lifecycle sections below.
 
 ## Guess the Country semantics
 Guess the Country (Flags) owns `FlagPresented`, optional `HintRevealed`, answer submission and evaluation. Its selected flag remains stable across pause/recovery. A valid correct canonical country ID emits success; a wrong answer or challenge deadline emits failure/timeout. The module's visual answer flow remains unapproved.

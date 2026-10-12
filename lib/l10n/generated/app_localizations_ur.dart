@@ -129,12 +129,6 @@ class AppLocalizationsUr extends AppLocalizations {
   String get guessCharacter => 'کردار پہچانیں';
 
   @override
-  String get riddles => 'پہیلیاں';
-
-  @override
-  String get memory => 'یادداشت';
-
-  @override
   String get quickQuiz => 'فوری کوئز';
 
   @override
@@ -142,12 +136,6 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get quickCharacter => 'کردار چیلنج';
-
-  @override
-  String get quickRiddles => 'پہیلی سیشن';
-
-  @override
-  String get quickMemory => 'یادداشت میچ';
 
   @override
   String get quickFlags => 'جھنڈوں کا چیلنج';
@@ -232,4 +220,8 @@ class AppLocalizationsUr extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'باقی گیمز کی تیاری جاری ہے۔';
+
+  @override
+  String get draftNeedsEditing =>
+      'اس مسودے میں بند کیے گئے کھیل شامل ہیں۔ استعمال سے پہلے اس میں ترمیم کریں۔';
 }

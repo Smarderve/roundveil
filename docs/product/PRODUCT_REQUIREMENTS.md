@@ -46,6 +46,7 @@
 - **PR-041 MUST:** Offline gameplay; retain critical state after interruption.
 - **PR-042 MUST:** Text/contrast scaling and mouse/keyboard/touch paths; clear pause/resume.
 - **PR-043 MUST:** No Mystery module or physical reward/eating tracking.
+- **PR-044 MUST:** The active catalog contains exactly Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country. Riddles and Memory are not selectable, routable, templated or included in content packs. Mixed sessions may select any two or more of the four active modules.
 
 ## Explicitly unapproved
 Old HTML prototype navigation, builder stages, game-mode placement, game HUD positions, example question timings, animations, scoring defaults and player-judgement controls are **not** accepted UX specs. Track these in `docs/design/UX_OPEN_QUESTIONS.md`.

@@ -353,18 +353,6 @@ abstract class AppLocalizations {
   /// **'Guess the Character'**
   String get guessCharacter;
 
-  /// No description provided for @riddles.
-  ///
-  /// In en, this message translates to:
-  /// **'Riddles'**
-  String get riddles;
-
-  /// No description provided for @memory.
-  ///
-  /// In en, this message translates to:
-  /// **'Memory'**
-  String get memory;
-
   /// No description provided for @quickQuiz.
   ///
   /// In en, this message translates to:
@@ -382,18 +370,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Character Challenge'**
   String get quickCharacter;
-
-  /// No description provided for @quickRiddles.
-  ///
-  /// In en, this message translates to:
-  /// **'Riddle Session'**
-  String get quickRiddles;
-
-  /// No description provided for @quickMemory.
-  ///
-  /// In en, this message translates to:
-  /// **'Memory Match'**
-  String get quickMemory;
 
   /// No description provided for @quickFlags.
   ///
@@ -556,6 +532,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The broader multi-game rebuild is in progress.'**
   String get rebuildStatus;
+
+  /// No description provided for @draftNeedsEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'This draft includes discontinued games. Edit it before use.'**
+  String get draftNeedsEditing;
 }
 
 class _AppLocalizationsDelegate

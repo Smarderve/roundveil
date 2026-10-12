@@ -862,8 +862,6 @@ String _gameTitle(AppLocalizations l10n, String key) => switch (key) {
   'quiz' => l10n.quiz,
   'wordPlay' => l10n.wordPlay,
   'guessCharacter' => l10n.guessCharacter,
-  'riddles' => l10n.riddles,
-  'memory' => l10n.memory,
   'guessCountry' => l10n.guessCountry,
   _ => key,
 };

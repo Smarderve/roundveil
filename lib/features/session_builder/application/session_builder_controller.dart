@@ -29,13 +29,6 @@ const gameCatalog = <GameDefinition>[
     titleKey: 'guessCharacter',
     iconCodePoint: 0xe87c,
   ),
-  GameDefinition(id: 'riddles', titleKey: 'riddles', iconCodePoint: 0xe3a5),
-  GameDefinition(
-    id: 'memory',
-    titleKey: 'memory',
-    iconCodePoint: 0xe1bd,
-    playable: true,
-  ),
   GameDefinition(
     id: 'guess_country_flags',
     titleKey: 'guessCountry',
@@ -93,20 +86,6 @@ const quickGameTemplates = <QuickGameTemplate>[
     rounds: 3,
   ),
   QuickGameTemplate(
-    id: 'quick_riddles',
-    titleKey: 'quickRiddles',
-    moduleIds: <String>['riddles'],
-    players: 2,
-    rounds: 4,
-  ),
-  QuickGameTemplate(
-    id: 'quick_memory',
-    titleKey: 'quickMemory',
-    moduleIds: <String>['memory'],
-    players: 2,
-    rounds: 4,
-  ),
-  QuickGameTemplate(
     id: 'quick_flags',
     titleKey: 'quickFlags',
     moduleIds: <String>['guess_country_flags'],
@@ -116,7 +95,12 @@ const quickGameTemplates = <QuickGameTemplate>[
   QuickGameTemplate(
     id: 'quick_party_mix',
     titleKey: 'quickPartyMix',
-    moduleIds: <String>['quiz', 'word_play', 'riddles'],
+    moduleIds: <String>[
+      'quiz',
+      'word_play',
+      'guess_character',
+      'guess_country_flags',
+    ],
     players: 4,
     rounds: 6,
   ),
@@ -129,7 +113,9 @@ class SessionBuilderController extends ChangeNotifier {
     this.templateId,
     this.draftId,
     String? name,
-  }) : _configuration = initial ?? const SessionConfiguration(),
+  }) : _configuration = _supportedConfiguration(
+         initial ?? const SessionConfiguration(),
+       ),
        _name = name ?? '';
 
   final DraftRepository drafts;
@@ -160,6 +146,15 @@ class SessionBuilderController extends ChangeNotifier {
     if (_configuration.roundCount < 1) return 'rounds';
     return null;
   }
+
+  static SessionConfiguration _supportedConfiguration(
+    SessionConfiguration configuration,
+  ) => configuration.copyWith(
+    selectedModuleIds: configuration.selectedModuleIds
+        .where(activeGameModuleIds.contains)
+        .toSet()
+        .toList(),
+  );
 
   bool get canCreate => validationMessage == null && !_busy;
 

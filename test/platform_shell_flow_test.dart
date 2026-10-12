@@ -24,11 +24,10 @@ void main() {
       expect(controller.canCreate, isFalse);
       controller.addPlayer();
       controller.toggleGame('quiz');
-      controller.toggleGame('riddles');
-      expect(controller.configuration.selectedModuleIds, <String>['riddles']);
+      expect(controller.configuration.selectedModuleIds, <String>['quiz']);
 
       controller.setFormat(SessionFormat.mixed);
-      controller.toggleGame('quiz');
+      controller.toggleGame('word_play');
       expect(controller.canCreate, isFalse);
       controller.setRoundCount(4);
       expect(controller.canCreate, isTrue);
@@ -38,7 +37,7 @@ void main() {
       expect(draft!.configuration.isMixed, isTrue);
       expect(
         draft.configuration.selectedModuleIds,
-        containsAll(<String>['riddles', 'quiz']),
+        containsAll(<String>['quiz', 'word_play']),
       );
       expect((await repository.loadAll()).single.id, draft.id);
       controller.dispose();
@@ -80,6 +79,34 @@ void main() {
     expect(find.byTooltip('Add player'), findsOneWidget);
   });
 
+  testWidgets('removed games are absent from Create Game and Quick Game', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 900));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const RoundveilApp());
+    await tester.pumpAndSettle();
+    expect(find.text('RIDDLES'), findsNothing);
+    expect(find.text('MEMORY'), findsNothing);
+    await tester.tap(find.text('CREATE GAME'));
+    await tester.pumpAndSettle();
+    expect(find.text('RIDDLES'), findsNothing);
+    expect(find.text('MEMORY'), findsNothing);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('QUICK GAME'));
+    await tester.pumpAndSettle();
+    expect(find.text('QUICK RIDDLES'), findsNothing);
+    expect(find.text('QUICK MEMORY'), findsNothing);
+    await tester.tap(find.byTooltip('Back'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('GAMES'));
+    await tester.pumpAndSettle();
+    expect(find.text('RIDDLES'), findsNothing);
+    expect(find.text('MEMORY'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('shell keeps the home and navigation usable in landscape', (
     tester,
   ) async {
@@ -110,7 +137,7 @@ void main() {
 
       await tester.tap(find.text('MIXED'));
       await tester.tap(find.text('QUIZ'));
-      await tester.tap(find.text('MEMORY').first);
+      await tester.tap(find.text('WORD PLAY').first);
       await tester.tap(find.byTooltip('Add player'));
       await tester.tap(find.byType(DropdownButton<int>));
       await tester.pumpAndSettle();
@@ -124,7 +151,7 @@ void main() {
       expect(repository.items.single.configuration.isMixed, isTrue);
       expect(repository.items.single.configuration.selectedModuleIds, <String>[
         'quiz',
-        'memory',
+        'word_play',
       ]);
     },
   );
@@ -170,34 +197,6 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('configured Memory session opens its playable match rules', (
-    tester,
-  ) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 900));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(
-      _TestApp(
-        child: CinematicSessionBuilderPage(
-          drafts: _MemoryDraftRepository(),
-          onBack: () {},
-        ),
-      ),
-    );
-    await tester.tap(find.text('MEMORY').first);
-    await tester.tap(find.byTooltip('Add player'));
-    await tester.tap(find.byType(DropdownButton<int>));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('1').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('PREPARE MATCH'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('PLAY MEMORY'));
-    await tester.pumpAndSettle();
-
-    expect(find.text('SET THE MEMORY RULES'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
-
   test('quick game templates are complete, editable configurations', () {
     final template = quickGameTemplates.firstWhere(
       (item) => item.id == 'quick_party_mix',
@@ -212,6 +211,71 @@ void main() {
       'Player 4',
     ]);
     expect(config.roundCount, 6);
+    expect(gameCatalog.map((game) => game.id), <String>[
+      'quiz',
+      'word_play',
+      'guess_character',
+      'guess_country_flags',
+    ]);
+    expect(config.selectedModuleIds, <String>[
+      'quiz',
+      'word_play',
+      'guess_character',
+      'guess_country_flags',
+    ]);
+    expect(
+      quickGameTemplates
+          .expand((template) => template.moduleIds)
+          .toSet()
+          .difference(gameCatalog.map((game) => game.id).toSet()),
+      isEmpty,
+    );
+  });
+
+  test('legacy draft with discontinued games remains flagged for editing', () {
+    final draft = SessionDraft(
+      id: 'legacy-memory-mix',
+      name: 'Family night',
+      configuration: SessionConfiguration(
+        players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+        selectedModuleIds: const <String>['quiz', 'memory'],
+        roundCount: 4,
+        isMixed: true,
+      ),
+      updatedAt: DateTime.utc(2026, 10, 11),
+      templateId: 'quick_party_mix',
+    );
+    expect(draft.needsEditing, isTrue);
+    expect(draft.configuration.selectedModuleIds, <String>['quiz', 'memory']);
+    expect(draft.name, 'Family night');
+  });
+
+  test('editing a legacy mixed draft drops retired IDs but retains active IDs', () {
+    final legacy = SessionDraft(
+      id: 'legacy-mix',
+      name: 'Family night',
+      configuration: SessionConfiguration(
+        players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+        selectedModuleIds: const <String>['quiz', 'memory', 'riddles'],
+        roundCount: 4,
+        isMixed: true,
+      ),
+      updatedAt: DateTime.utc(2026, 10, 11),
+      templateId: 'quick_party_mix',
+    );
+    final controller = SessionBuilderController(
+      drafts: _MemoryDraftRepository(),
+      initial: legacy.configuration,
+      draftId: legacy.id,
+      templateId: legacy.templateId,
+      name: legacy.name,
+    );
+    expect(controller.configuration.selectedModuleIds, <String>['quiz']);
+    expect(controller.configuration.players.single.displayName, 'Player 1');
+    expect(controller.configuration.roundCount, 4);
+    expect(controller.configuration.isMixed, isTrue);
+    expect(legacy.needsEditing, isTrue);
+    controller.dispose();
   });
 
   test(

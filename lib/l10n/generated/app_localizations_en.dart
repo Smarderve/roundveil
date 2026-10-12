@@ -129,12 +129,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get guessCharacter => 'Guess the Character';
 
   @override
-  String get riddles => 'Riddles';
-
-  @override
-  String get memory => 'Memory';
-
-  @override
   String get quickQuiz => 'Quick Quiz';
 
   @override
@@ -142,12 +136,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get quickCharacter => 'Character Challenge';
-
-  @override
-  String get quickRiddles => 'Riddle Session';
-
-  @override
-  String get quickMemory => 'Memory Match';
 
   @override
   String get quickFlags => 'Flag Challenge';
@@ -240,4 +228,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'The broader multi-game rebuild is in progress.';
+
+  @override
+  String get draftNeedsEditing =>
+      'This draft includes discontinued games. Edit it before use.';
 }

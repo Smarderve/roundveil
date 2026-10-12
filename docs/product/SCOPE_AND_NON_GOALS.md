@@ -6,7 +6,7 @@
 > **Rule:** This file must not be used to revive removed features or to treat rejected prototype UX as approved.
 
 ## The active scope
-One-device host-configured multiplayer sessions; game types including Quiz, Word Play, Guess the Character, Guess the Country (Flags), Riddles and Memory; shared GameRuntime, robust clocks, Win Countdown, profiles, local content, settings, recovery and responsive visual themes. The 2026-10-11 user directive authorizes the staged platform rebuild. Guess the Country's current target is flag-only, spoken answer and host reveal/judgement; the old multiple-choice/typed candidate must be replaced.
+One-device host-configured multiplayer sessions with exactly four core game types: Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country (Flags); shared GameRuntime, robust clocks, Win Countdown, profiles, local content, settings, recovery and responsive visual themes. By the 2026-10-12 approved decision, Riddles and Memory are removed from the active product. Guess the Country's target is flag-only, spoken answer and host reveal/judgement; the old multiple-choice/typed candidate must be replaced.
 
 ## Hard exclusions
 1. **Mystery/investigation**: no “Solve the Mystery”, crime cases, suspects, evidence boards, detective content, mystery assets, module registration, tests or navigation.
@@ -23,3 +23,5 @@ Product spec v0.2 and technical architecture v0.1 previously described a Mini My
 
 ## Scope-change procedure
 A previously excluded mode or feature may be reintroduced only with a direct, explicit user decision, updated ADR, impact analysis, and tests. Agents cannot infer consent from old screenshots or archive documents.
+
+The 2,000-screen design archive remains unchanged. Riddles and Memory concepts in that archive are obsolete references and excluded from implementation; see ADR 0005.

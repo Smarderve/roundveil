@@ -130,12 +130,6 @@ class AppLocalizationsFr extends AppLocalizations {
   String get guessCharacter => 'Devinez le personnage';
 
   @override
-  String get riddles => 'Énigmes';
-
-  @override
-  String get memory => 'Mémoire';
-
-  @override
   String get quickQuiz => 'Quiz rapide';
 
   @override
@@ -143,12 +137,6 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get quickCharacter => 'Défi personnage';
-
-  @override
-  String get quickRiddles => 'Session d’énigmes';
-
-  @override
-  String get quickMemory => 'Jeu de mémoire';
 
   @override
   String get quickFlags => 'Défi des drapeaux';
@@ -234,4 +222,8 @@ class AppLocalizationsFr extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'La reconstruction des autres jeux continue.';
+
+  @override
+  String get draftNeedsEditing =>
+      'Ce brouillon contient des jeux retirés. Modifiez-le avant utilisation.';
 }

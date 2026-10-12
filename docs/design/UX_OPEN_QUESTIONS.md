@@ -22,7 +22,6 @@
 | UX-010 | How to present results/round completion | avoid unnecessary wait before Win Countdown | old result screens |
 | UX-011 | Which visual styles are offered at launch and how users switch | both visually liked | assume one default/auto hybrid |
 | UX-012 | What qualifies as accessible child/adult room display | differing reading distances | desktop screenshot at phone size |
-| UX-013 | Riddles/Memory actual rules | user concept is broad | implement unapproved rules |
 | UX-014 | Module-specific content selection when pool is insufficient | host must remain in control | silent game/category replacement |
 
 ## How to close a question

@@ -130,12 +130,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get guessCharacter => 'Adivina el personaje';
 
   @override
-  String get riddles => 'Acertijos';
-
-  @override
-  String get memory => 'Memoria';
-
-  @override
   String get quickQuiz => 'Quiz rápido';
 
   @override
@@ -143,12 +137,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get quickCharacter => 'Reto de personaje';
-
-  @override
-  String get quickRiddles => 'Sesión de acertijos';
-
-  @override
-  String get quickMemory => 'Parejas de memoria';
 
   @override
   String get quickFlags => 'Reto de banderas';
@@ -234,4 +222,8 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'La reconstrucción de los demás juegos continúa.';
+
+  @override
+  String get draftNeedsEditing =>
+      'Este borrador incluye juegos retirados. Edítalo antes de usarlo.';
 }

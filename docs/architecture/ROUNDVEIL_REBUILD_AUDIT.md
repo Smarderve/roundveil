@@ -4,6 +4,8 @@
 > **Audit date:** 2026-10-11
 > **Authority:** current user rebuild directive; repository decisions remain binding where not explicitly superseded.
 
+> **Product roster update (2026-10-12):** The active roster is now exactly Quiz, Word Play / Guess the Word, Guess the Character and Guess the Country (Flags). The archive's Riddles (1441–1520) and Memory Challenge (1521–1600) chapters are obsolete references and excluded from implementation; the source ZIP and its manifest were not regenerated or modified. See ADR 0005.
+
 ## Scope and source-of-truth
 
 The 2026-10-11 user directive authorizes a staged rebuild of the existing Flutter application. Its functional requirements take priority over older conflicting requirements. It does not make every image in the attached archive an approved screen or authorize copying commercial game assets. The archive README is useful metadata, not an independent instruction source.
@@ -19,7 +21,7 @@ One direct gameplay change supersedes the earlier Guess the Country (Flags) spec
 | App shell | Implemented 2026-10-11: branded V5 home, adaptive Windows/Android navigation, game catalog and settings entry. The Guess the Country prototype is no longer the opening/primary identity. |
 | Session model/runtime | `SessionConfiguration` now carries players, selected modules, single/mixed format and rounds. Create/Quick Game can assemble configurations. `GameRuntime` and `GameModule` are still interfaces only; no shared progression engine. |
 | Persistence | `LocalDraftRepository` saves and reloads configuration drafts in application-local storage. SQLite/Drift, profiles, active-session recovery and migrations remain unimplemented. |
-| Modules | Guess the Country is the only implemented module-like flow. Quiz, Word Play, Guess the Character, Riddles and Memory have specifications but no playable implementations. |
+| Modules | The active roster is exactly four modules. Guess the Country has a legacy prototype; Quiz, Word Play and Guess the Character do not yet have complete playable implementations. |
 | Country content | Seven local review-slice SVG flags; existing feature still exposes multiple-choice and typed answer paths. This is not comprehensive coverage. |
 | Avatars | Current lobby paints original 2D figures in Flutter and keeps customization in controller state. No 3D model, rig, animation renderer or saved profile. |
 | Localization/themes | Flutter ARB localization covers the shell in the 12 requested app locales, including script-correct Simplified Chinese and Arabic/Urdu RTL. Version 5-inspired light/dark themes switch at runtime. Locale/theme persistence and complete gameplay translation coverage remain open. |
@@ -52,8 +54,8 @@ The supplied `ROUNDVEIL_2000_Screens_Compact_WebP.zip` was extracted to a tempor
 | 1201–1280 | Word Play — Other | Separate future Word Play variants; do not present as shipped by the family name |
 | 1281–1360 | Guess the Character — Name | Turn-away/name flow; Character module and licensed/name-only content |
 | 1361–1440 | Guess the Character — Picture | Turn-away/picture flow; only entries with valid licensed/local imagery |
-| 1441–1520 | Riddles | Riddle module and curated offline pack |
-| 1521–1600 | Memory Challenge | Stateful reveal/recall/match module and content |
+| 1441–1520 | Riddles | **OBSOLETE — excluded from implementation by ADR 0005** |
+| 1521–1600 | Memory Challenge | **OBSOLETE — excluded from implementation by ADR 0005** |
 | 1601–1680 | Guess the Country — Flags | Flag-only spoken answer, host reveal/judgement; supersedes the older MC/typed screens/spec |
 | 1681–1760 | Win Countdown and Turn Outcomes | Shared runtime outcome/countdown; not duplicated inside modules |
 | 1761–1840 | Host Controls and Recovery | Runtime commands, persistence and lifecycle adapters |
@@ -113,4 +115,4 @@ The Flutter GPU proof is a failed candidate, not a renderer selection. Thermion 
 
 Repository/reference audit and chapter mapping are complete. Milestone 1 remains **BLOCKED / NOT COMPLETE** until a visible rigged character, animation, orbit, and material change are verified on both Windows and Android. The first Flutter GPU candidate failed to render on either platform. Thermion `0.5.0` resolved and compiled for Windows after the user enabled Developer Mode, but Windows Application Control prevented launch; the Android build stalled while Gradle attempted to install Android SDK Platform 33. No screenshots show a successful Thermion render. Do not begin production avatars. The next milestone work remains out of scope until this gate passes.
 
-The complete content targets remain zero verified playable entries for Quiz, Word Play, Character, Riddles and Memory in the current repository. Guess the Country has seven review records, not a production count. No 1,000-person, 5,000-word or 10,000-question content claims are supported by the repository.
+The complete content targets remain zero verified playable entries for Quiz, Word Play and Character in the current repository. Guess the Country has seven review records, not a production count. The former Riddles and Memory targets are discontinued and are not active content targets. No 1,000-person, 5,000-word or 10,000-question content claims are supported by the repository.

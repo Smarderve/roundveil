@@ -16,7 +16,7 @@ void main() {
     expect(player.displayName, 'Player 2');
   });
 
-  test('a session needs players and a selected module before it can start', () {
+  test('a session needs players and one of the four active modules', () {
     const empty = SessionConfiguration();
     final configured = SessionConfiguration(
       players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
@@ -25,7 +25,7 @@ void main() {
     );
 
     expect(empty.canStart, isFalse);
-    expect(configured.canStart, isTrue);
+    expect(configured.canStart, isFalse);
   });
 
   test('a removed Mystery module cannot make a session startable', () {

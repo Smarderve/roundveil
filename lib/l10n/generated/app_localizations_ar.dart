@@ -128,12 +128,6 @@ class AppLocalizationsAr extends AppLocalizations {
   String get guessCharacter => 'خمن الشخصية';
 
   @override
-  String get riddles => 'ألغاز';
-
-  @override
-  String get memory => 'ذاكرة';
-
-  @override
   String get quickQuiz => 'أسئلة سريعة';
 
   @override
@@ -141,12 +135,6 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get quickCharacter => 'تحدي الشخصية';
-
-  @override
-  String get quickRiddles => 'جلسة ألغاز';
-
-  @override
-  String get quickMemory => 'مطابقة الذاكرة';
 
   @override
   String get quickFlags => 'تحدي الأعلام';
@@ -230,4 +218,8 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get rebuildStatus => 'إعادة بناء بقية الألعاب قيد التقدم.';
+
+  @override
+  String get draftNeedsEditing =>
+      'تتضمن هذه المسودة ألعابًا متوقفة. عدّلها قبل استخدامها.';
 }

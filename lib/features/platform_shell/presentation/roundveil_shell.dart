@@ -960,11 +960,21 @@ class _DraftsPageState extends State<_DraftsPage> {
                                       ),
                                       const SizedBox(height: 4),
                                       Text(
-                                        '${draft.configuration.players.length} ${l10n.players.toLowerCase()} · ${draft.configuration.roundCount} ${l10n.rounds.toLowerCase()} · ${draft.configuration.selectedModuleIds.map((id) => _gameTitle(l10n, gameCatalog.firstWhere((game) => game.id == id).titleKey)).join(' + ')}',
+                                        '${draft.configuration.players.length} ${l10n.players.toLowerCase()} · ${draft.configuration.roundCount} ${l10n.rounds.toLowerCase()} · ${draft.configuration.selectedModuleIds.map((id) => _draftGameTitle(l10n, id)).join(' + ')}',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodySmall,
                                       ),
+                                      if (draft.needsEditing) ...<Widget>[
+                                        const SizedBox(height: 6),
+                                        Text(
+                                          l10n.draftNeedsEditing,
+                                          style: TextStyle(
+                                            color: Color(0xFFFFB84A),
+                                            fontWeight: FontWeight.w700,
+                                          ),
+                                        ),
+                                      ],
                                     ],
                                   ),
                                 ),
@@ -1082,7 +1092,7 @@ class _GameModesPage extends StatelessWidget {
                                 (constraints.maxWidth - (columns - 1) * 14) /
                                 columns,
                             child: Container(
-                              height: 176,
+                              height: 200,
                               padding: const EdgeInsets.all(19),
                               decoration: BoxDecoration(
                                 color: tokens.surface,
@@ -1281,25 +1291,26 @@ String _gameTitle(AppLocalizations l10n, String key) => switch (key) {
   'quiz' => l10n.quiz,
   'wordPlay' => l10n.wordPlay,
   'guessCharacter' => l10n.guessCharacter,
-  'riddles' => l10n.riddles,
-  'memory' => l10n.memory,
   'guessCountry' => l10n.guessCountry,
   'quickQuiz' => l10n.quickQuiz,
   'quickWordPlay' => l10n.quickWordPlay,
   'quickCharacter' => l10n.quickCharacter,
-  'quickRiddles' => l10n.quickRiddles,
-  'quickMemory' => l10n.quickMemory,
   'quickFlags' => l10n.quickFlags,
   'quickPartyMix' => l10n.quickPartyMix,
   _ => key,
 };
 
+String _draftGameTitle(AppLocalizations l10n, String id) {
+  for (final game in gameCatalog) {
+    if (game.id == id) return _gameTitle(l10n, game.titleKey);
+  }
+  return 'Discontinued game';
+}
+
 IconData _iconFor(String id) => switch (id) {
   'quiz' => Icons.quiz_outlined,
   'word_play' => Icons.text_fields_rounded,
   'guess_character' => Icons.person_search_outlined,
-  'riddles' => Icons.lightbulb_outline_rounded,
-  'memory' => Icons.grid_view_rounded,
   'guess_country_flags' => Icons.flag_outlined,
   _ => Icons.sports_esports_outlined,
 };

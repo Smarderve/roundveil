@@ -127,12 +127,6 @@ class AppLocalizationsKo extends AppLocalizations {
   String get guessCharacter => '캐릭터 맞히기';
 
   @override
-  String get riddles => '수수께끼';
-
-  @override
-  String get memory => '메모리';
-
-  @override
   String get quickQuiz => '빠른 퀴즈';
 
   @override
@@ -140,12 +134,6 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get quickCharacter => '캐릭터 도전';
-
-  @override
-  String get quickRiddles => '수수께끼 세션';
-
-  @override
-  String get quickMemory => '메모리 매치';
 
   @override
   String get quickFlags => '국기 도전';
@@ -229,4 +217,7 @@ class AppLocalizationsKo extends AppLocalizations {
 
   @override
   String get rebuildStatus => '나머지 게임은 계속 개발 중입니다.';
+
+  @override
+  String get draftNeedsEditing => '이 초안에는 중단된 게임이 포함되어 있습니다. 사용하기 전에 편집하세요.';
 }
