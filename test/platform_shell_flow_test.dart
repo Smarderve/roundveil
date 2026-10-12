@@ -71,6 +71,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(844, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const RoundveilApp());
+    await tester.pump(const Duration(milliseconds: 1200));
     await tester.pumpAndSettle();
     expect(find.text('CREATE GAME'), findsOneWidget);
     await tester.tap(find.text('CREATE GAME'));
@@ -85,6 +86,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const RoundveilApp());
+    await tester.pump(const Duration(milliseconds: 1200));
     await tester.pumpAndSettle();
     expect(find.text('RIDDLES'), findsNothing);
     expect(find.text('MEMORY'), findsNothing);
@@ -113,6 +115,7 @@ void main() {
     await tester.binding.setSurfaceSize(const Size(960, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const RoundveilApp());
+    await tester.pump(const Duration(milliseconds: 1200));
     await tester.pumpAndSettle();
     expect(find.text('CREATE GAME'), findsOneWidget);
     expect(tester.takeException(), isNull);
@@ -250,33 +253,36 @@ void main() {
     expect(draft.name, 'Family night');
   });
 
-  test('editing a legacy mixed draft drops retired IDs but retains active IDs', () {
-    final legacy = SessionDraft(
-      id: 'legacy-mix',
-      name: 'Family night',
-      configuration: SessionConfiguration(
-        players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
-        selectedModuleIds: const <String>['quiz', 'memory', 'riddles'],
-        roundCount: 4,
-        isMixed: true,
-      ),
-      updatedAt: DateTime.utc(2026, 10, 11),
-      templateId: 'quick_party_mix',
-    );
-    final controller = SessionBuilderController(
-      drafts: _MemoryDraftRepository(),
-      initial: legacy.configuration,
-      draftId: legacy.id,
-      templateId: legacy.templateId,
-      name: legacy.name,
-    );
-    expect(controller.configuration.selectedModuleIds, <String>['quiz']);
-    expect(controller.configuration.players.single.displayName, 'Player 1');
-    expect(controller.configuration.roundCount, 4);
-    expect(controller.configuration.isMixed, isTrue);
-    expect(legacy.needsEditing, isTrue);
-    controller.dispose();
-  });
+  test(
+    'editing a legacy mixed draft drops retired IDs but retains active IDs',
+    () {
+      final legacy = SessionDraft(
+        id: 'legacy-mix',
+        name: 'Family night',
+        configuration: SessionConfiguration(
+          players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+          selectedModuleIds: const <String>['quiz', 'memory', 'riddles'],
+          roundCount: 4,
+          isMixed: true,
+        ),
+        updatedAt: DateTime.utc(2026, 10, 11),
+        templateId: 'quick_party_mix',
+      );
+      final controller = SessionBuilderController(
+        drafts: _MemoryDraftRepository(),
+        initial: legacy.configuration,
+        draftId: legacy.id,
+        templateId: legacy.templateId,
+        name: legacy.name,
+      );
+      expect(controller.configuration.selectedModuleIds, <String>['quiz']);
+      expect(controller.configuration.players.single.displayName, 'Player 1');
+      expect(controller.configuration.roundCount, 4);
+      expect(controller.configuration.isMixed, isTrue);
+      expect(legacy.needsEditing, isTrue);
+      controller.dispose();
+    },
+  );
 
   test(
     'local draft repository survives reload and supports deletion',

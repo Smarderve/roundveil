@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/app/branded_opening_screen.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 import 'package:roundveil/features/platform_shell/presentation/roundveil_shell.dart';
 
@@ -31,6 +32,7 @@ class RoundveilApp extends StatefulWidget {
 class _RoundveilAppState extends State<RoundveilApp> {
   ThemeMode _themeMode = ThemeMode.dark;
   Locale _locale = const Locale('en');
+  bool _openingComplete = false;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -47,12 +49,17 @@ class _RoundveilAppState extends State<RoundveilApp> {
       GlobalWidgetsLocalizations.delegate,
       GlobalCupertinoLocalizations.delegate,
     ],
-    home: RoundveilShell(
-      onThemeChanged: (dark) =>
-          setState(() => _themeMode = dark ? ThemeMode.dark : ThemeMode.light),
-      onLocaleChanged: (locale) => setState(() => _locale = locale),
-      isDark: _themeMode != ThemeMode.light,
-      locale: _locale,
-    ),
+    home: _openingComplete
+        ? RoundveilShell(
+            onThemeChanged: (dark) => setState(
+              () => _themeMode = dark ? ThemeMode.dark : ThemeMode.light,
+            ),
+            onLocaleChanged: (locale) => setState(() => _locale = locale),
+            isDark: _themeMode != ThemeMode.light,
+            locale: _locale,
+          )
+        : BrandedOpeningScreen(
+            onFinished: () => setState(() => _openingComplete = true),
+          ),
   );
 }

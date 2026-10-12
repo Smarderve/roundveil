@@ -10,6 +10,8 @@ ROUNDVEIL is an offline-first, host-configured, shared-screen, multi-game family
 
 ## Never violate these product boundaries
 - **No Mystery or investigation game**, evidence, crime, detective, suspect-case or mystery module. Historical sources may mention these: they are superseded.
+- The active game roster is exactly **Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country**. **Memory and Riddles are discontinued** under ADR 0005; never restore their modules, routes, templates, content, tests, or UI. Preserve and flag legacy drafts rather than deleting unrelated user data.
+- Keep the approved supplied ROUNDVEIL logo and mascot artwork unchanged when integrating platform branding. Never generate or substitute replacement branding.
 - Never use invented sample names; use `Player 1`, `Player 2`, `Player 3` and so forth until the host customizes them.
 - The **host configures** players, selected game types, categories, rounds, applicable rules, challenge timers and Win Countdown. A game *type* is not a premade game session.
 - Guess the Character: **active player physically turns away before reveal**; name-only or image-only is shown to the other people and **stays visible during clues AND final guess**; player stays turned away until judgement; correct -> immediate Win Countdown.

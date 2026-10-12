@@ -210,6 +210,8 @@ void main() {
 
   testWidgets('app boots into the branded platform home', (tester) async {
     await tester.pumpWidget(const ProviderScope(child: RoundveilApp()));
+    expect(find.text('CREATE GAME'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 1200));
     await tester.pumpAndSettle();
     expect(find.text('CREATE GAME'), findsOneWidget);
     expect(find.text('QUICK GAME'), findsOneWidget);
