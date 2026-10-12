@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
@@ -10,6 +11,7 @@ class SessionBuilderPage extends StatefulWidget {
   const SessionBuilderPage({
     required this.drafts,
     required this.onBack,
+    this.profileRepository,
     this.initial,
     this.initialName = '',
     this.templateId,
@@ -18,6 +20,7 @@ class SessionBuilderPage extends StatefulWidget {
   });
 
   final DraftRepository drafts;
+  final PlayerProfileRepository? profileRepository;
   final VoidCallback onBack;
   final SessionConfiguration? initial;
   final String initialName;
@@ -365,7 +368,10 @@ class _SessionBuilderPageState extends State<SessionBuilderPage> {
     if (!mounted || configuration == null) return;
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => ActiveMatchPage(configuration: configuration),
+        builder: (_) => ActiveMatchPage(
+          configuration: configuration,
+          profileRepository: widget.profileRepository,
+        ),
       ),
     );
   }

@@ -1,15 +1,16 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
 class V5LobbyPage extends StatelessWidget {
   const V5LobbyPage({
     required this.players,
+    required this.profiles,
     required this.onPlayersChanged,
     required this.onCreate,
     required this.onQuick,
@@ -20,6 +21,7 @@ class V5LobbyPage extends StatelessWidget {
   });
 
   final List<PlayerConfiguration> players;
+  final List<PlayerProfile> profiles;
   final ValueChanged<List<PlayerConfiguration>> onPlayersChanged;
   final ValueChanged<List<PlayerConfiguration>> onCreate;
   final VoidCallback onQuick;
@@ -29,16 +31,23 @@ class V5LobbyPage extends StatelessWidget {
 
   void _addPlayer() {
     if (players.length >= 12) return;
+    final usedNumbers = players
+        .map((player) => int.tryParse(player.id.replaceFirst('player-', '')))
+        .whereType<int>()
+        .toSet();
+    var nextNumber = 1;
+    while (usedNumbers.contains(nextNumber)) {
+      nextNumber++;
+    }
     onPlayersChanged(<PlayerConfiguration>[
       ...players,
-      PlayerConfiguration.placeholder(players.length + 1),
+      PlayerConfiguration.placeholder(nextNumber),
     ]);
   }
 
-  void _removePlayer() {
-    if (players.isEmpty) return;
-    onPlayersChanged(players.take(players.length - 1).toList());
-  }
+  void _removePlayer(String playerId) => onPlayersChanged(
+    players.where((player) => player.id != playerId).toList(),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +56,7 @@ class V5LobbyPage extends StatelessWidget {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final side = compact ? 136.0 : 208.0;
+        final side = compact ? 150.0 : 218.0;
         final right = compact
             ? (constraints.maxWidth * .34).clamp(260.0, 360.0)
             : (constraints.maxWidth * .27).clamp(350.0, 450.0);
@@ -55,7 +64,14 @@ class V5LobbyPage extends StatelessWidget {
         return Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            const V5SceneArt(),
+            const V5SceneArt(animate: true),
+            Positioned(
+              left: side + 8,
+              right: right + 8,
+              top: compact ? 10 : 22,
+              bottom: bottom + (compact ? 10 : 20),
+              child: const _HeroMascot(),
+            ),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -76,6 +92,7 @@ class V5LobbyPage extends StatelessWidget {
               width: side,
               child: _SquadDock(
                 players: players,
+                profiles: profiles,
                 compact: compact,
                 onAdd: _addPlayer,
                 onRemove: _removePlayer,
@@ -93,7 +110,7 @@ class V5LobbyPage extends StatelessWidget {
                     child: _CommandCard(
                       title: AppLocalizations.of(context)!.createGame,
                       subtitle: 'BUILD YOUR MATCH',
-                      imageSource: const Rect.fromLTWH(.79, .18, .14, .14),
+                      icon: Icons.sports_esports_rounded,
                       color: tokens.orange,
                       onTap: () => onCreate(players),
                       compact: compact,
@@ -104,7 +121,7 @@ class V5LobbyPage extends StatelessWidget {
                     child: _CommandCard(
                       title: AppLocalizations.of(context)!.quickGame,
                       subtitle: 'JUMP STRAIGHT IN',
-                      imageSource: const Rect.fromLTWH(.875, .505, .075, .08),
+                      icon: Icons.bolt_rounded,
                       color: tokens.cyan,
                       onTap: onQuick,
                       compact: compact,
@@ -154,38 +171,291 @@ class V5LobbyPage extends StatelessWidget {
   }
 }
 
-class V5SceneArt extends StatelessWidget {
-  const V5SceneArt({super.key});
+class V5SceneArt extends StatefulWidget {
+  const V5SceneArt({this.animate = false, super.key});
+  final bool animate;
 
   @override
-  Widget build(BuildContext context) => Image.asset(
-    'assets/brand/v5/v5_arena_scene_reconstruction.jpg',
-    fit: BoxFit.cover,
-    alignment: const Alignment(.03, -1),
-    errorBuilder: (context, error, stack) => const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: <Color>[Color(0xFF132D4A), Color(0xFF061226)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+  State<V5SceneArt> createState() => _V5SceneArtState();
+}
+
+class _V5SceneArtState extends State<V5SceneArt>
+    with SingleTickerProviderStateMixin {
+  AnimationController? _ambience;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.animate) _startAmbience();
+  }
+
+  @override
+  void didUpdateWidget(V5SceneArt oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.animate == oldWidget.animate) return;
+    if (widget.animate) {
+      _startAmbience();
+    } else {
+      _ambience?.dispose();
+      _ambience = null;
+    }
+  }
+
+  void _startAmbience() {
+    _ambience = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 14),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ambience?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final ambience = _ambience;
+    if (ambience == null) {
+      return CustomPaint(
+        painter: const _CommandRoomPainter(.35),
+        child: const SizedBox.expand(),
+      );
+    }
+    return AnimatedBuilder(
+      animation: ambience,
+      builder: (context, _) => CustomPaint(
+        painter: _CommandRoomPainter(ambience.value),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+class _HeroMascot extends StatefulWidget {
+  const _HeroMascot();
+
+  @override
+  State<_HeroMascot> createState() => _HeroMascotState();
+}
+
+class _HeroMascotState extends State<_HeroMascot>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _idle = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 4800),
+  )..repeat(reverse: true);
+
+  @override
+  void dispose() {
+    _idle.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: _idle,
+    builder: (context, _) => Transform.translate(
+      offset: Offset(0, -3.5 * Curves.easeInOut.transform(_idle.value)),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).height * .9,
+            maxHeight: MediaQuery.sizeOf(context).height * .96,
+          ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: <Widget>[
+              Container(
+                width: MediaQuery.sizeOf(context).height * .68,
+                height: MediaQuery.sizeOf(context).height * .68,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  boxShadow: <BoxShadow>[
+                    BoxShadow(
+                      color: const Color(0xFF4CCBFF)
+                          .withValues(alpha: .1 + .05 * _idle.value),
+                      blurRadius: 100,
+                      spreadRadius: 14,
+                    ),
+                  ],
+                ),
+              ),
+              ColorFiltered(
+                colorFilter: const ColorFilter.matrix(<double>[
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  0,
+                  0,
+                  0,
+                  1,
+                  0,
+                  0,
+                  .5,
+                  .5,
+                  .5,
+                  0,
+                  0,
+                ]),
+                child: Image.asset(
+                  'assets/brand/roundveil_mascot_portrait.webp',
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  semanticLabel: 'ROUNDVEIL hooded mascot',
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     ),
   );
 }
 
+class _CommandRoomPainter extends CustomPainter {
+  const _CommandRoomPainter(this.phase);
+  final double phase;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final bounds = Offset.zero & size;
+    final horizon = size.height * .62;
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF091421),
+            Color(0xFF10253A),
+            Color(0xFF07111D),
+          ],
+          stops: <double>[0, .56, 1],
+        ).createShader(bounds),
+    );
+    canvas.drawRect(
+      bounds,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-.04, -.08),
+          radius: 1.04,
+          colors: <Color>[
+            const Color(0xFF276084).withValues(alpha: .24),
+            const Color(0xFF091421).withValues(alpha: .01),
+          ],
+        ).createShader(bounds),
+    );
+
+    final wall = Paint()..color = const Color(0xFF0B1928);
+    final architecture = Paint()
+      ..color = const Color(0xFF183148).withValues(alpha: .58);
+    final edge = Paint()
+      ..color = const Color(0xFF5BCDF1).withValues(alpha: .22)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final panelPath = Path()
+      ..moveTo(0, 0)
+      ..lineTo(size.width * .24, 0)
+      ..lineTo(size.width * .16, horizon)
+      ..lineTo(0, horizon + 24)
+      ..close();
+    canvas.drawPath(panelPath, wall);
+    final rightPanel = Path()
+      ..moveTo(size.width, 0)
+      ..lineTo(size.width * .78, 0)
+      ..lineTo(size.width * .85, horizon)
+      ..lineTo(size.width, horizon + 18)
+      ..close();
+    canvas.drawPath(rightPanel, wall);
+
+    for (var index = 0; index < 5; index++) {
+      final x = size.width * (.035 + index * .047);
+      canvas.drawLine(
+        Offset(x, 12),
+        Offset(x + size.width * .12, horizon),
+        edge,
+      );
+      final rx = size.width * (.965 - index * .047);
+      canvas.drawLine(
+        Offset(rx, 12),
+        Offset(rx - size.width * .12, horizon),
+        edge,
+      );
+    }
+    canvas.drawRect(
+      Rect.fromLTWH(0, horizon - 1, size.width, 2),
+      Paint()..color = const Color(0xFF55D5FF).withValues(alpha: .28),
+    );
+    canvas.drawRect(
+      Rect.fromLTWH(0, horizon, size.width, size.height - horizon),
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Color(0xFF0C1D2C), Color(0xFF040A12)],
+        ).createShader(Rect.fromLTWH(0, horizon, size.width, size.height)),
+    );
+
+    final floor = Paint()
+      ..color = const Color(0xFF69D9FF).withValues(alpha: .17)
+      ..strokeWidth = 1;
+    final vanishingPoint = Offset(size.width * .51, horizon);
+    for (var index = -5; index <= 5; index++) {
+      canvas.drawLine(
+        vanishingPoint,
+        Offset(size.width * (.5 + index * .12), size.height),
+        floor,
+      );
+    }
+    for (var index = 1; index <= 4; index++) {
+      final t = index / 5;
+      final y = horizon + (size.height - horizon) * t * t;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), floor);
+    }
+
+    final sweepX = (phase * 1.3 % 1) * size.width;
+    canvas.drawRect(
+      Rect.fromLTWH(sweepX, 0, size.width * .12, horizon),
+      Paint()
+        ..shader = LinearGradient(
+          colors: <Color>[
+            Colors.transparent,
+            const Color(0xFF50D8FF).withValues(alpha: .035),
+            Colors.transparent,
+          ],
+        ).createShader(Rect.fromLTWH(sweepX, 0, size.width * .12, horizon)),
+    );
+
+    canvas.drawPath(panelPath, architecture..style = PaintingStyle.stroke);
+    canvas.drawPath(rightPanel, architecture);
+  }
+
+  @override
+  bool shouldRepaint(_CommandRoomPainter oldDelegate) =>
+      oldDelegate.phase != phase;
+}
+
 class _CommandCard extends StatefulWidget {
   const _CommandCard({
     required this.title,
     required this.subtitle,
-    required this.imageSource,
+    required this.icon,
     required this.color,
     required this.onTap,
     required this.compact,
   });
   final String title;
   final String subtitle;
-  final Rect imageSource;
+  final IconData icon;
   final Color color;
   final VoidCallback onTap;
   final bool compact;
@@ -225,7 +495,6 @@ class _CommandCardState extends State<_CommandCard> {
               child: Stack(
                 fit: StackFit.expand,
                 children: <Widget>[
-                  _SourceArtwork(source: widget.imageSource),
                   DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -237,6 +506,18 @@ class _CommandCardState extends State<_CommandCard> {
                           widget.color.withValues(alpha: .25),
                         ],
                         stops: const <double>[0, .58, 1],
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    right: widget.compact ? 18 : 40,
+                    top: 0,
+                    bottom: 0,
+                    child: Center(
+                      child: Icon(
+                        widget.icon,
+                        size: widget.compact ? 54 : 105,
+                        color: widget.color.withValues(alpha: .19),
                       ),
                     ),
                   ),
@@ -336,26 +617,22 @@ class _AngularClipper extends CustomClipper<Path> {
 class _SquadDock extends StatelessWidget {
   const _SquadDock({
     required this.players,
+    required this.profiles,
     required this.compact,
     required this.onAdd,
     required this.onRemove,
     required this.onPortraits,
   });
   final List<PlayerConfiguration> players;
+  final List<PlayerProfile> profiles;
   final bool compact;
   final VoidCallback onAdd;
-  final VoidCallback onRemove;
+  final ValueChanged<String> onRemove;
   final VoidCallback onPortraits;
 
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
-    final portraitRects = <Rect>[
-      const Rect.fromLTWH(.034, .255, .048, .061),
-      const Rect.fromLTWH(.034, .355, .048, .061),
-      const Rect.fromLTWH(.034, .455, .048, .061),
-      const Rect.fromLTWH(.034, .555, .048, .061),
-    ];
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
@@ -396,18 +673,25 @@ class _SquadDock extends StatelessWidget {
                 _PlayerSlot(
                   number: index + 1,
                   name: players[index].displayName,
+                  playerId: players[index].id,
                   filled: true,
                   compact: compact,
-                  source: portraitRects[index % portraitRects.length],
-                  onTap: onRemove,
+                  appearance:
+                      profiles
+                          .where((profile) => profile.id == players[index].id)
+                          .firstOrNull
+                          ?.avatar ??
+                      PlayerAvatarAppearance.forPlayer(index + 1),
+                  onTap: () => onRemove(players[index].id),
                 ),
               if (players.length < 12)
                 _PlayerSlot(
                   number: players.length + 1,
                   name: 'ADD PLAYER',
+                  playerId: null,
                   filled: false,
                   compact: compact,
-                  source: null,
+                  appearance: null,
                   onTap: onAdd,
                 ),
             ],
@@ -417,7 +701,7 @@ class _SquadDock extends StatelessWidget {
           Align(
             alignment: Alignment.centerLeft,
             child: TextButton.icon(
-              onPressed: onRemove,
+              onPressed: () => onRemove(players.last.id),
               icon: const Icon(Icons.remove_circle_outline_rounded, size: 14),
               label: const Text('REMOVE LAST'),
               style: TextButton.styleFrom(
@@ -453,16 +737,18 @@ class _PlayerSlot extends StatelessWidget {
   const _PlayerSlot({
     required this.number,
     required this.name,
+    required this.playerId,
     required this.filled,
     required this.compact,
-    required this.source,
+    required this.appearance,
     required this.onTap,
   });
   final int number;
   final String name;
+  final String? playerId;
   final bool filled;
   final bool compact;
-  final Rect? source;
+  final PlayerAvatarAppearance? appearance;
   final VoidCallback onTap;
 
   @override
@@ -474,16 +760,20 @@ class _PlayerSlot extends StatelessWidget {
       child: Material(
         color: const Color(0x7A07152A),
         child: InkWell(
-          onTap: onTap,
+          onTap: filled ? null : onTap,
           child: SizedBox(
             height: compact ? 45 : 70,
             child: Row(
               children: <Widget>[
-                if (filled && source != null)
+                if (filled && appearance != null)
                   SizedBox(
                     width: portraitSize,
                     height: portraitSize,
-                    child: _SourceArtwork(source: source!, fit: BoxFit.cover),
+                    child: PlayerAvatarFigure(
+                      appearance: appearance!,
+                      width: portraitSize,
+                      height: portraitSize,
+                    ),
                   )
                 else
                   SizedBox(
@@ -535,6 +825,17 @@ class _PlayerSlot extends StatelessWidget {
                     ],
                   ),
                 ),
+                if (filled)
+                  IconButton(
+                    tooltip: 'Remove $name',
+                    onPressed: onTap,
+                    visualDensity: VisualDensity.compact,
+                    icon: Icon(
+                      Icons.close_rounded,
+                      color: Colors.white54,
+                      size: compact ? 14 : 18,
+                    ),
+                  ),
               ],
             ),
           ),
@@ -599,14 +900,6 @@ class _GameModeRail extends StatelessWidget {
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final l10n = AppLocalizations.of(context)!;
-    final artRects = <Rect>[
-      const Rect.fromLTWH(.275, .817, .070, .083),
-      const Rect.fromLTWH(.350, .817, .070, .083),
-      const Rect.fromLTWH(.425, .817, .070, .083),
-      const Rect.fromLTWH(.500, .817, .070, .083),
-      const Rect.fromLTWH(.575, .817, .070, .083),
-      const Rect.fromLTWH(.650, .817, .075, .083),
-    ];
     return Row(
       children: <Widget>[
         SizedBox(
@@ -662,8 +955,9 @@ class _GameModeRail extends StatelessWidget {
                     child: Stack(
                       fit: StackFit.expand,
                       children: <Widget>[
-                        _SourceArtwork(
-                          source: artRects[index % artRects.length],
+                        _GameModeArtwork(
+                          gameId: game.id,
+                          color: game.playable ? tokens.orange : tokens.cyan,
                         ),
                         const DecoratedBox(
                           decoration: BoxDecoration(
@@ -741,8 +1035,10 @@ class _PlayTogetherAction extends StatelessWidget {
           SizedBox(
             width: compact ? 36 : 62,
             height: double.infinity,
-            child: const _SourceArtwork(
-              source: Rect.fromLTWH(.015, .858, .09, .105),
+            child: Icon(
+              Icons.groups_rounded,
+              color: const Color(0xFFFFAB3D),
+              size: compact ? 29 : 48,
             ),
           ),
           SizedBox(width: compact ? 5 : 9),
@@ -782,80 +1078,67 @@ class _PlayTogetherAction extends StatelessWidget {
   );
 }
 
-Future<ui.Image?>? _sourceArtworkFuture;
-
-class _SourceArtwork extends StatefulWidget {
-  const _SourceArtwork({required this.source, this.fit = BoxFit.cover});
-  final Rect source;
-  final BoxFit fit;
+class _GameModeArtwork extends StatelessWidget {
+  const _GameModeArtwork({required this.gameId, required this.color});
+  final String gameId;
+  final Color color;
 
   @override
-  State<_SourceArtwork> createState() => _SourceArtworkState();
+  Widget build(BuildContext context) {
+    final icon = switch (gameId) {
+      'quiz' => Icons.psychology_alt_rounded,
+      'word_play' => Icons.abc_rounded,
+      'guess_character' => Icons.person_search_rounded,
+      'guess_country_flags' => Icons.flag_rounded,
+      _ => Icons.sports_esports_rounded,
+    };
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[const Color(0xFF16334A), const Color(0xFF06101C)],
+        ),
+      ),
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          CustomPaint(painter: _ModeGlyphPainter(color)),
+          Align(
+            alignment: const Alignment(.15, -.12),
+            child: Icon(icon, size: 45, color: color.withValues(alpha: .9)),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _SourceArtworkState extends State<_SourceArtwork> {
-  late final Future<ui.Image?> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _sourceArtworkFuture ??= _loadSourceArtwork();
-  }
-
-  Future<ui.Image?> _loadSourceArtwork() async {
-    try {
-      final data = await rootBundle.load(
-        'assets/brand/approved_home_v5_scene_source.webp',
-      );
-      final codec = await ui.instantiateImageCodec(Uint8List.sublistView(data));
-      final frame = await codec.getNextFrame();
-      codec.dispose();
-      return frame.image;
-    } on FlutterError {
-      return null;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<ui.Image?>(
-    future: _future,
-    builder: (context, snapshot) => CustomPaint(
-      painter: _SourceArtworkPainter(snapshot.data, widget.source, widget.fit),
-      child: const SizedBox.expand(),
-    ),
-  );
-}
-
-class _SourceArtworkPainter extends CustomPainter {
-  const _SourceArtworkPainter(this.image, this.normalizedSource, this.fit);
-  final ui.Image? image;
-  final Rect normalizedSource;
-  final BoxFit fit;
+class _ModeGlyphPainter extends CustomPainter {
+  const _ModeGlyphPainter(this.color);
+  final Color color;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final artwork = image;
-    if (artwork == null || size.isEmpty) return;
-    final source = Rect.fromLTWH(
-      normalizedSource.left * artwork.width,
-      normalizedSource.top * artwork.height,
-      normalizedSource.width * artwork.width,
-      normalizedSource.height * artwork.height,
-    );
-    final fitted = applyBoxFit(fit, source.size, size);
-    canvas.drawImageRect(
-      artwork,
-      Alignment.center.inscribe(fitted.source, source),
-      Alignment.center.inscribe(fitted.destination, Offset.zero & size),
-      Paint()..filterQuality = FilterQuality.high,
+    final stroke = Paint()
+      ..color = color.withValues(alpha: .24)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1;
+    final path = Path()
+      ..moveTo(0, size.height * .8)
+      ..lineTo(size.width * .44, size.height * .15)
+      ..lineTo(size.width, size.height * .52);
+    canvas.drawPath(path, stroke);
+    canvas.drawCircle(
+      Offset(size.width * .78, size.height * .22),
+      size.shortestSide * .28,
+      stroke,
     );
   }
 
   @override
-  bool shouldRepaint(_SourceArtworkPainter oldDelegate) =>
-      oldDelegate.image != image ||
-      oldDelegate.normalizedSource != normalizedSource ||
-      oldDelegate.fit != fit;
+  bool shouldRepaint(_ModeGlyphPainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 String _gameTitle(AppLocalizations l10n, String key) => switch (key) {

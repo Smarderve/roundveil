@@ -274,6 +274,12 @@ class SessionBuilderController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setPointsPerCorrectAnswer(int value) {
+    if (value < 1) return;
+    _configuration = _configuration.copyWith(pointsPerCorrectAnswer: value);
+    notifyListeners();
+  }
+
   void setCountryRegion(String value) {
     _configuration = _configuration.copyWith(countryRegion: value);
     notifyListeners();

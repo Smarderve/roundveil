@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
@@ -11,9 +12,11 @@ class V5QuickGamesPage extends StatefulWidget {
   const V5QuickGamesPage({
     required this.drafts,
     required this.onBack,
+    this.profileRepository,
     super.key,
   });
   final DraftRepository drafts;
+  final PlayerProfileRepository? profileRepository;
   final VoidCallback onBack;
   @override
   State<V5QuickGamesPage> createState() => _V5QuickGamesPageState();
@@ -118,6 +121,7 @@ class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
                           MaterialPageRoute<void>(
                             builder: (_) => ActiveMatchPage(
                               configuration: selected.configuration,
+                              profileRepository: widget.profileRepository,
                             ),
                           ),
                         );
@@ -130,6 +134,7 @@ class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
                                 body: SafeArea(
                                   child: CinematicSessionBuilderPage(
                                     drafts: widget.drafts,
+                                    profileRepository: widget.profileRepository,
                                     initial: selected.configuration,
                                     initialName: _title(
                                       l10n,

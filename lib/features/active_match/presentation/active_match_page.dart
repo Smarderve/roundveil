@@ -1,34 +1,65 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/application/active_match_controller.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
 
 class ActiveMatchPage extends StatefulWidget {
   const ActiveMatchPage({
     required this.configuration,
     this.enableTimers = true,
+    this.profileRepository,
     super.key,
   });
 
   final SessionConfiguration configuration;
   final bool enableTimers;
+  final PlayerProfileRepository? profileRepository;
 
   @override
   State<ActiveMatchPage> createState() => _ActiveMatchPageState();
 }
 
 class _ActiveMatchPageState extends State<ActiveMatchPage> {
-  late final ActiveMatchController _match = ActiveMatchController(
-    configuration: widget.configuration,
-    enableTimers: widget.enableTimers,
-  );
+  ActiveMatchController? _match;
+  ActiveMatchController get _activeMatch => _match!;
+  late final PlayerProfileRepository _profileRepository;
+  late final Future<void> _startup;
   final TextEditingController _answer = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    _profileRepository =
+        widget.profileRepository ?? InMemoryPlayerProfileRepository();
+    _startup = _startMatch();
+  }
+
+  Future<void> _startMatch() async {
+    final profiles = await _profileRepository.ensureProfiles(
+      widget.configuration.players,
+    );
+    if (!mounted) return;
+    final match = ActiveMatchController(
+      configuration: widget.configuration,
+      enableTimers: widget.enableTimers,
+      profileRepository: _profileRepository,
+      profiles: <String, PlayerProfile>{
+        for (final profile in profiles) profile.id: profile,
+      },
+    );
+    _match = match;
+    match.start();
+    setState(() {});
+  }
+
+  @override
   void dispose() {
-    _match.dispose();
+    _match?.dispose();
     _answer.dispose();
     super.dispose();
   }
@@ -37,71 +68,155 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final compactLandscape = MediaQuery.sizeOf(context).height < 500;
+    final match = _match;
+    if (match == null) {
+      return FutureBuilder<void>(
+        future: _startup,
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Scaffold(
+              backgroundColor: const Color(0xFF05030D),
+              body: Center(
+                child: Text('Could not load local player profiles.'),
+              ),
+            );
+          }
+          return const Scaffold(
+            backgroundColor: Color(0xFF05030D),
+            body: Center(child: CircularProgressIndicator()),
+          );
+        },
+      );
+    }
     return AnimatedBuilder(
-      animation: _match,
-      builder: (context, _) => Scaffold(
-        backgroundColor: const Color(0xFF05030D),
-        body: SafeArea(
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              const Positioned.fill(child: V5SceneArt()),
-              const Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: <Color>[
-                        Color(0xE8051022),
-                        Color(0xDD0A1C33),
-                        Color(0xF205030D),
-                      ],
+      animation: match,
+      builder: (context, _) {
+        if (match.state.phase == MatchPhase.winCountdown) {
+          return _countdownScreen(match.state.secondsRemaining);
+        }
+        return Scaffold(
+          backgroundColor: const Color(0xFF05030D),
+          body: SafeArea(
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                const Positioned.fill(child: V5SceneArt()),
+                const Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: <Color>[
+                          Color(0xE8051022),
+                          Color(0xDD0A1C33),
+                          Color(0xF205030D),
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: compactLandscape ? 8 : 20,
+                Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: compactLandscape ? 8 : 20,
+                  ),
+                  child: Column(
+                    children: <Widget>[
+                      _header(tokens),
+                      SizedBox(height: compactLandscape ? 8 : 16),
+                      Expanded(child: _body(tokens)),
+                      SizedBox(height: compactLandscape ? 8 : 12),
+                      _footer(tokens),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  children: <Widget>[
-                    _header(tokens),
-                    SizedBox(height: compactLandscape ? 8 : 16),
-                    Expanded(child: _body(tokens)),
-                    SizedBox(height: compactLandscape ? 8 : 12),
-                    _footer(tokens),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _countdownScreen(int seconds) => Scaffold(
+    backgroundColor: const Color(0xFF030916),
+    body: SafeArea(
+      child: Stack(
+        fit: StackFit.expand,
+        children: <Widget>[
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: RadialGradient(
+                center: Alignment(0, -.08),
+                radius: .9,
+                colors: <Color>[
+                  Color(0xFF162E4A),
+                  Color(0xFF091626),
+                  Color(0xFF030916),
+                ],
+              ),
+            ),
+          ),
+          Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 280),
+              transitionBuilder: (child, animation) => ScaleTransition(
+                scale: CurvedAnimation(
+                  parent: animation,
+                  curve: Curves.easeOut,
+                ),
+                child: FadeTransition(opacity: animation, child: child),
+              ),
+              child: Text(
+                '$seconds',
+                key: ValueKey<int>(seconds),
+                style: TextStyle(
+                  color: seconds == 0 ? const Color(0xFFFF963D) : Colors.white,
+                  fontSize: MediaQuery.sizeOf(context).height * .42,
+                  height: .9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -2,
+                  shadows: const <Shadow>[
+                    Shadow(color: Color(0x9958D7FF), blurRadius: 42),
                   ],
                 ),
               ),
-            ],
+            ),
           ),
-        ),
+        ],
       ),
-    );
-  }
+    ),
+  );
 
   Widget _header(RoundveilBrandTokens tokens) => Row(
     children: <Widget>[
       IconButton(
         tooltip: 'Pause match',
-        onPressed: _match.state.phase == MatchPhase.complete
+        onPressed: _activeMatch.state.phase == MatchPhase.complete
             ? null
-            : _match.state.phase == MatchPhase.paused
-            ? _match.resume
-            : _match.pause,
+            : _activeMatch.state.phase == MatchPhase.paused
+            ? _activeMatch.resume
+            : _activeMatch.pause,
         icon: Icon(
-          _match.state.phase == MatchPhase.paused
+          _activeMatch.state.phase == MatchPhase.paused
               ? Icons.play_arrow_rounded
               : Icons.pause_rounded,
         ),
       ),
       const SizedBox(width: 8),
+      PlayerAvatarFigure(
+        appearance: _activeMatch
+            .state
+            .profiles[_activeMatch.state.activePlayer.id]!
+            .avatar,
+        width: 34,
+        height: 50,
+      ),
+      const SizedBox(width: 8),
       Expanded(
         child: Text(
-          _moduleTitle(_match.state.challenge.moduleId).toUpperCase(),
+          _moduleTitle(_activeMatch.state.challenge.moduleId).toUpperCase(),
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -112,31 +227,130 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
         ),
       ),
       Text(
-        'ROUND ${_match.state.round}  ·  ${_match.state.activePlayer.displayName.toUpperCase()}',
+        'ROUND ${_activeMatch.state.round}  ·  ${_activeMatch.state.activePlayer.displayName.toUpperCase()}',
         style: TextStyle(color: tokens.cyan, fontWeight: FontWeight.w800),
       ),
-      const SizedBox(width: 14),
+      const SizedBox(width: 12),
       Text(
-        '${_match.state.secondsRemaining}s',
+        '${_activeMatch.state.scores[_activeMatch.state.activePlayer.id] ?? 0} PTS',
+        style: TextStyle(color: tokens.orange, fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(width: 10),
+      Text(
+        '${_activeMatch.state.secondsRemaining}s',
         style: TextStyle(color: tokens.orange),
       ),
     ],
   );
 
   Widget _body(RoundveilBrandTokens tokens) {
-    final state = _match.state;
+    final state = _activeMatch.state;
     if (state.phase == MatchPhase.complete) return _results(tokens);
+    if (state.phase == MatchPhase.completing) {
+      return _centerMessage('MATCH COMPLETE', 'Recording final standings…');
+    }
+    if (state.phase == MatchPhase.playerIntro) return _playerIntro(tokens);
     if (state.phase == MatchPhase.paused) {
       return _centerMessage('MATCH PAUSED', 'Resume when your squad is ready.');
     }
-    if (state.phase == MatchPhase.winCountdown) {
-      return _centerMessage('WIN COUNTDOWN', '${state.secondsRemaining}');
+    if (state.phase == MatchPhase.scoreAward) {
+      return _scoreAward(tokens);
     }
     return _challenge(tokens);
   }
 
+  Widget _playerIntro(RoundveilBrandTokens tokens) {
+    final state = _activeMatch.state;
+    final profile = state.profiles[state.activePlayer.id]!;
+    final compact = MediaQuery.sizeOf(context).height < 500;
+    return Center(
+      child: SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'PLAYER ${state.turnIndex + 1} · ROUND ${state.round}',
+                style: TextStyle(
+                  color: tokens.cyan,
+                  letterSpacing: 2,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: compact ? 4 : 12),
+              PlayerAvatarFigure(
+                appearance: profile.avatar,
+                width: compact ? 70 : 118,
+                height: compact ? 104 : 174,
+              ),
+              Text(
+                profile.displayName.toUpperCase(),
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 20 : 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              SizedBox(height: compact ? 4 : 8),
+              Text(
+                '${state.scores[profile.id] ?? 0} MATCH POINTS   ·   ${profile.hintCredits} HINT CREDITS',
+                style: TextStyle(
+                  color: tokens.orange,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .8,
+                ),
+              ),
+              SizedBox(height: compact ? 8 : 18),
+              FilledButton.icon(
+                onPressed: _activeMatch.beginChallenge,
+                icon: const Icon(Icons.play_arrow_rounded),
+                label: const Text('START TURN'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _scoreAward(RoundveilBrandTokens tokens) => Center(
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: <Widget>[
+        const Text(
+          'CORRECT',
+          style: TextStyle(
+            color: Color(0xFF6EE7FF),
+            fontSize: 28,
+            letterSpacing: 3,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: 1),
+          duration: const Duration(milliseconds: 420),
+          builder: (context, value, child) => Transform.translate(
+            offset: Offset(0, -24 * value),
+            child: Opacity(opacity: value, child: child),
+          ),
+          child: Text(
+            '+${_activeMatch.state.pointsAwarded}',
+            style: TextStyle(
+              color: tokens.orange,
+              fontSize: 62,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+
   Widget _challenge(RoundveilBrandTokens tokens) {
-    final state = _match.state;
+    final state = _activeMatch.state;
     final challenge = state.challenge;
     final color = tokens.cyan;
     final viewportHeight = MediaQuery.sizeOf(context).height;
@@ -150,6 +364,50 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  Text(
+                    'CHALLENGE TIMER',
+                    style: TextStyle(
+                      color: tokens.muted,
+                      fontSize: 10,
+                      letterSpacing: 1.3,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  SizedBox(
+                    width: 180,
+                    child: ClipRect(
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        widthFactor:
+                            (state.secondsRemaining /
+                                    widget.configuration.challengeSeconds)
+                                .clamp(0.0, 1.0),
+                        child: Container(
+                          height: 4,
+                          color: state.secondsRemaining <= 5
+                              ? tokens.orange
+                              : tokens.cyan,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '${state.secondsRemaining}s',
+                    style: TextStyle(
+                      color: state.secondsRemaining <= 5
+                          ? tokens.orange
+                          : Colors.white,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
               if (challenge.moduleId == 'guess_country_flags') ...<Widget>[
                 if (challenge.flagAssetPath case final asset?)
                   ConstrainedBox(
@@ -188,7 +446,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   _judgementButtons(tokens),
                 ] else
                   FilledButton(
-                    onPressed: _match.revealAnswer,
+                    onPressed: _activeMatch.revealAnswer,
                     child: const Text('REVEAL ANSWER'),
                   ),
               ] else if (challenge.moduleId == 'guess_character') ...<Widget>[
@@ -203,7 +461,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   ),
                   const SizedBox(height: 18),
                   FilledButton(
-                    onPressed: _match.revealCharacterAfterPlayerTurnsAway,
+                    onPressed: _activeMatch.revealCharacterAfterPlayerTurnsAway,
                     child: const Text('PLAYER IS TURNED AWAY · REVEAL'),
                   ),
                 ] else ...<Widget>[
@@ -250,7 +508,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                         SizedBox(
                           width: 260,
                           child: OutlinedButton(
-                            onPressed: () => _match.answer(choice),
+                            onPressed: () => _activeMatch.answer(choice),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Text(choice, textAlign: TextAlign.center),
@@ -264,7 +522,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     controller: _answer,
                     textInputAction: TextInputAction.done,
                     onSubmitted: (value) {
-                      _match.answer(value);
+                      _activeMatch.answer(value);
                       _answer.clear();
                     },
                     decoration: const InputDecoration(
@@ -275,7 +533,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   const SizedBox(height: 10),
                   FilledButton(
                     onPressed: () {
-                      _match.answer(_answer.text);
+                      _activeMatch.answer(_answer.text);
                       _answer.clear();
                     },
                     child: const Text('SUBMIT WORD'),
@@ -301,12 +559,12 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       spacing: 12,
       children: <Widget>[
         FilledButton.icon(
-          onPressed: () => _match.judge(correct: true),
+          onPressed: () => _activeMatch.judge(correct: true),
           icon: const Icon(Icons.check),
           label: const Text('CORRECT'),
         ),
         OutlinedButton.icon(
-          onPressed: () => _match.judge(correct: false),
+          onPressed: () => _activeMatch.judge(correct: false),
           icon: const Icon(Icons.close),
           label: const Text('WRONG'),
         ),
@@ -316,23 +574,37 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
 
   Widget _footer(RoundveilBrandTokens tokens) => Row(
     children: <Widget>[
-      if (widget.configuration.hintsEnabled)
+      if (widget.configuration.hintsEnabled) ...<Widget>[
         TextButton.icon(
-          onPressed: _match.revealHint,
+          onPressed:
+              !_activeMatch.state.hintVisible &&
+                  _activeMatch.state.challenge.hint.trim().isNotEmpty &&
+                  (_activeMatch
+                              .state
+                              .profiles[_activeMatch.state.activePlayer.id]
+                              ?.hintCredits ??
+                          0) >
+                      0 &&
+                  (_activeMatch.state.phase == MatchPhase.challenge ||
+                      _activeMatch.state.phase == MatchPhase.awaitingJudgement)
+              ? _activeMatch.revealHint
+              : null,
           icon: const Icon(Icons.lightbulb_outline),
-          label: const Text('HINT'),
+          label: Text(
+            'HINT · ${_activeMatch.state.profiles[_activeMatch.state.activePlayer.id]?.hintCredits ?? 0}',
+          ),
         ),
+      ],
       const Spacer(),
       Text(
-        'TURN ${_match.state.turnIndex + 1} / ${_match.state.totalTurns}',
+        'TURN ${_activeMatch.state.turnIndex + 1} / ${_activeMatch.state.totalTurns}',
         style: TextStyle(color: tokens.muted, fontWeight: FontWeight.w800),
       ),
     ],
   );
 
   Widget _results(RoundveilBrandTokens tokens) {
-    final ordered = _match.state.scores.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final rankings = _activeMatch.state.rankings;
     return Center(
       child: SingleChildScrollView(
         child: Column(
@@ -348,14 +620,76 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
               ),
             ),
             const SizedBox(height: 8),
-            for (final row in ordered)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2, horizontal: 6),
-                child: Text(
-                  '${_playerName(row.key)}  ·  ${row.value} WINS',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
+            for (final row in rankings)
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 760),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 5,
+                    horizontal: 8,
+                  ),
+                  child: Row(
+                    children: <Widget>[
+                      SizedBox(
+                        width: 44,
+                        child: Text(
+                          '#${row.rank}',
+                          style: TextStyle(
+                            color: row.rank == 1 ? tokens.orange : tokens.cyan,
+                            fontSize: row.rank == 1 ? 22 : 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                      PlayerAvatarFigure(
+                        appearance:
+                            _activeMatch.state.profiles[row.playerId]!.avatar,
+                        width: 28,
+                        height: 40,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              _playerName(row.playerId).toUpperCase(),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            Text(
+                              '${row.correctAnswers} CORRECT  ·  ${row.wrongAnswers} WRONG  ·  ${row.timeouts} TIMEOUTS',
+                              style: TextStyle(
+                                color: tokens.muted,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        '${row.matchPoints} PTS',
+                        style: TextStyle(
+                          color: tokens.orange,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 17,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '+${row.hintCreditsAwarded} HINTS',
+                        style: TextStyle(
+                          color: tokens.cyan,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 10,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

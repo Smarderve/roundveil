@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/app/branded_opening_screen.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
@@ -21,7 +22,9 @@ const _roundveilLocales = <Locale>[
 ];
 
 class RoundveilApp extends StatefulWidget {
-  const RoundveilApp({super.key});
+  const RoundveilApp({this.profileRepository, super.key});
+
+  final PlayerProfileRepository? profileRepository;
 
   static const supportedLocales = _roundveilLocales;
 
@@ -57,6 +60,7 @@ class _RoundveilAppState extends State<RoundveilApp> {
             onLocaleChanged: (locale) => setState(() => _locale = locale),
             isDark: _themeMode != ThemeMode.light,
             locale: _locale,
+            profileRepository: widget.profileRepository,
           )
         : BrandedOpeningScreen(
             onFinished: () => setState(() => _openingComplete = true),

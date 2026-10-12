@@ -33,6 +33,7 @@ class SessionConfiguration {
     this.winCountdownSeconds = 3,
     this.hintsEnabled = true,
     this.scoringEnabled = true,
+    this.pointsPerCorrectAnswer = 1,
     this.countryRegion = 'worldwide',
     this.countryDifficulty = 'mixed',
   });
@@ -45,6 +46,7 @@ class SessionConfiguration {
   final int winCountdownSeconds;
   final bool hintsEnabled;
   final bool scoringEnabled;
+  final int pointsPerCorrectAnswer;
   final String countryRegion;
   final String countryDifficulty;
 
@@ -57,6 +59,7 @@ class SessionConfiguration {
     int? winCountdownSeconds,
     bool? hintsEnabled,
     bool? scoringEnabled,
+    int? pointsPerCorrectAnswer,
     String? countryRegion,
     String? countryDifficulty,
   }) => SessionConfiguration(
@@ -68,6 +71,8 @@ class SessionConfiguration {
     winCountdownSeconds: winCountdownSeconds ?? this.winCountdownSeconds,
     hintsEnabled: hintsEnabled ?? this.hintsEnabled,
     scoringEnabled: scoringEnabled ?? this.scoringEnabled,
+    pointsPerCorrectAnswer:
+        pointsPerCorrectAnswer ?? this.pointsPerCorrectAnswer,
     countryRegion: countryRegion ?? this.countryRegion,
     countryDifficulty: countryDifficulty ?? this.countryDifficulty,
   );
@@ -96,6 +101,7 @@ class SessionConfiguration {
     'winCountdownSeconds': winCountdownSeconds,
     'hintsEnabled': hintsEnabled,
     'scoringEnabled': scoringEnabled,
+    'pointsPerCorrectAnswer': pointsPerCorrectAnswer,
     'countryRegion': countryRegion,
     'countryDifficulty': countryDifficulty,
   };
@@ -119,6 +125,7 @@ class SessionConfiguration {
         winCountdownSeconds: json['winCountdownSeconds'] as int? ?? 3,
         hintsEnabled: json['hintsEnabled'] as bool? ?? true,
         scoringEnabled: json['scoringEnabled'] as bool? ?? true,
+        pointsPerCorrectAnswer: json['pointsPerCorrectAnswer'] as int? ?? 1,
         countryRegion: json['countryRegion'] as String? ?? 'worldwide',
         countryDifficulty: json['countryDifficulty'] as String? ?? 'mixed',
       );

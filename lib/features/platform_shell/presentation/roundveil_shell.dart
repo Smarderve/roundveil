@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
@@ -18,6 +22,7 @@ class RoundveilShell extends StatefulWidget {
     required this.onLocaleChanged,
     required this.isDark,
     required this.locale,
+    this.profileRepository,
     super.key,
   });
 
@@ -25,6 +30,7 @@ class RoundveilShell extends StatefulWidget {
   final ValueChanged<Locale> onLocaleChanged;
   final bool isDark;
   final Locale locale;
+  final PlayerProfileRepository? profileRepository;
 
   @override
   State<RoundveilShell> createState() => _RoundveilShellState();
@@ -33,7 +39,39 @@ class RoundveilShell extends StatefulWidget {
 class _RoundveilShellState extends State<RoundveilShell> {
   _ShellDestination _destination = _ShellDestination.home;
   final DraftRepository _drafts = LocalDraftRepository();
-  List<PlayerConfiguration> _lobbyPlayers = const <PlayerConfiguration>[];
+  late final PlayerProfileRepository _playerProfiles =
+      widget.profileRepository ?? LocalPlayerProfileRepository();
+  List<PlayerConfiguration> _lobbyPlayers = <PlayerConfiguration>[
+    PlayerConfiguration.placeholder(1),
+    PlayerConfiguration.placeholder(2),
+  ];
+  List<PlayerProfile> _profiles = const <PlayerProfile>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _refreshProfiles();
+  }
+
+  Future<void> _refreshProfiles() async {
+    try {
+      final profiles = await _playerProfiles.ensureProfiles(_lobbyPlayers);
+      if (mounted) setState(() => _profiles = profiles);
+    } on Object {
+      // Keep the playable lobby available if local profile storage fails.
+    }
+  }
+
+  Future<void> _saveProfile(PlayerProfile profile) async {
+    await _playerProfiles.updateProfile(profile);
+    if (!mounted) return;
+    setState(() {
+      _profiles = <PlayerProfile>[
+        for (final existing in _profiles)
+          if (existing.id == profile.id) profile else existing,
+      ];
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,10 +86,15 @@ class _RoundveilShellState extends State<RoundveilShell> {
         onGames: () => _select(_ShellDestination.games),
         onAvatars: () => _select(_ShellDestination.avatars),
         players: _lobbyPlayers,
-        onPlayersChanged: (players) => setState(() => _lobbyPlayers = players),
+        profiles: _profiles,
+        onPlayersChanged: (players) {
+          setState(() => _lobbyPlayers = players);
+          _refreshProfiles();
+        },
       ),
       _ShellDestination.create => CinematicSessionBuilderPage(
         drafts: _drafts,
+        profileRepository: _playerProfiles,
         initial: _lobbyPlayers.isEmpty
             ? null
             : SessionConfiguration(players: _lobbyPlayers),
@@ -59,6 +102,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
       ),
       _ShellDestination.quick => V5QuickGamesPage(
         drafts: _drafts,
+        profileRepository: _playerProfiles,
         onBack: () => _select(_ShellDestination.home),
       ),
       _ShellDestination.drafts => _DraftsPage(
@@ -76,7 +120,10 @@ class _RoundveilShellState extends State<RoundveilShell> {
         onThemeChanged: widget.onThemeChanged,
         onLocaleChanged: widget.onLocaleChanged,
       ),
-      _ShellDestination.avatars => const _AvatarWorkshopPage(),
+      _ShellDestination.avatars => _AvatarWorkshopPage(
+        profiles: _profiles,
+        onProfileChanged: _saveProfile,
+      ),
     };
     final motion = MediaQuery.disableAnimationsOf(context)
         ? Duration.zero
@@ -128,6 +175,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
       MaterialPageRoute<void>(
         builder: (_) => _StandaloneBuilderRoute(
           drafts: _drafts,
+          profileRepository: _playerProfiles,
           initial: draft.configuration,
           name: draft.name,
           templateId: draft.templateId,
@@ -148,7 +196,10 @@ class _RoundveilShellState extends State<RoundveilShell> {
     );
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => ActiveMatchPage(configuration: configuration),
+        builder: (_) => ActiveMatchPage(
+          configuration: configuration,
+          profileRepository: _playerProfiles,
+        ),
       ),
     );
   }
@@ -157,6 +208,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
 class _StandaloneBuilderRoute extends StatelessWidget {
   const _StandaloneBuilderRoute({
     required this.drafts,
+    required this.profileRepository,
     required this.initial,
     required this.name,
     this.templateId,
@@ -164,6 +216,7 @@ class _StandaloneBuilderRoute extends StatelessWidget {
   });
 
   final DraftRepository drafts;
+  final PlayerProfileRepository profileRepository;
   final SessionConfiguration initial;
   final String name;
   final String? templateId;
@@ -174,6 +227,7 @@ class _StandaloneBuilderRoute extends StatelessWidget {
     body: SafeArea(
       child: CinematicSessionBuilderPage(
         drafts: drafts,
+        profileRepository: profileRepository,
         initial: initial,
         initialName: name,
         templateId: templateId,
@@ -229,11 +283,35 @@ class _GameNavigationBar extends StatelessWidget {
       child: Row(
         children: <Widget>[
           SizedBox(
-            width: compact ? 132 : 250,
-            child: Image.asset(
-              'assets/brand/roundveil_logo_lockup.webp',
-              fit: BoxFit.contain,
-              alignment: Alignment.centerLeft,
+            width: compact ? 190 : 330,
+            child: ColorFiltered(
+              colorFilter: const ColorFilter.matrix(<double>[
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                0,
+                0,
+                0,
+                1,
+                0,
+                0,
+                .5,
+                .5,
+                .5,
+                0,
+                0,
+              ]),
+              child: Image.asset(
+                'assets/brand/roundveil_logo_lockup.webp',
+                fit: BoxFit.contain,
+                alignment: Alignment.centerLeft,
+              ),
             ),
           ),
           Expanded(
@@ -788,89 +866,302 @@ class _QuickGamePageState extends State<_QuickGamePage> {
   }
 }
 
-class _AvatarWorkshopPage extends StatelessWidget {
-  const _AvatarWorkshopPage();
+class _AvatarWorkshopPage extends StatefulWidget {
+  const _AvatarWorkshopPage({
+    required this.profiles,
+    required this.onProfileChanged,
+  });
+  final List<PlayerProfile> profiles;
+  final ValueChanged<PlayerProfile> onProfileChanged;
+
+  @override
+  State<_AvatarWorkshopPage> createState() => _AvatarWorkshopPageState();
+}
+
+class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
+  String? _selectedPlayerId;
 
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
-    return LayoutBuilder(
-      builder: (context, constraints) => Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: <Color>[Color(0xFF07172D), Color(0xFF030812)],
-              ),
-            ),
-          ),
-          Positioned(
-            right: constraints.maxWidth * .08,
-            top: 0,
-            bottom: 0,
-            child: Opacity(
-              opacity: .55,
-              child: Image.asset(
-                'assets/brand/roundveil_mascot_portrait.webp',
-                width: constraints.maxWidth * .38,
-                fit: BoxFit.contain,
-              ),
-            ),
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: ConstrainedBox(
-              constraints: BoxConstraints(maxWidth: constraints.maxWidth * .62),
-              child: Padding(
-                padding: EdgeInsets.all(constraints.maxWidth < 800 ? 24 : 64),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Text(
-                      'AVATAR WORKSHOP',
-                      style: TextStyle(
-                        color: tokens.cyan,
-                        letterSpacing: 2,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < 850;
+    if (widget.profiles.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    final selectedId =
+        widget.profiles.any((profile) => profile.id == _selectedPlayerId)
+        ? _selectedPlayerId!
+        : widget.profiles.first.id;
+    final profile = widget.profiles.firstWhere((item) => item.id == selectedId);
+    final editor = _appearanceEditor(profile);
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: <Color>[Color(0xFF0C2033), Color(0xFF030812)],
+        ),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(compact ? 12 : 28),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: <Widget>[
+            Row(
+              children: <Widget>[
+                Icon(Icons.face_retouching_natural, color: tokens.orange),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'SQUAD ARMORY',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: compact ? 17 : 24,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
                     ),
-                    const SizedBox(height: 14),
-                    Text(
-                      'The character renderer is still being verified.',
-                      style: Theme.of(context).textTheme.headlineMedium,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      'This is approved 2D ROUNDVEIL artwork for temporary presentation, not a rendered or customizable 3D avatar. Avatar editing will unlock after real Windows and Android rendering passes.',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 18),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: 9,
-                      ),
-                      decoration: BoxDecoration(
-                        border: Border(
-                          left: BorderSide(color: tokens.orange, width: 3),
-                        ),
-                        color: tokens.surface,
-                      ),
-                      child: const Text('3D AVATAR CUSTOMIZATION · PENDING'),
-                    ),
-                  ],
+                  ),
                 ),
+                Text(
+                  '2D LOOK · SAVED LOCALLY',
+                  style: TextStyle(
+                    color: tokens.cyan,
+                    fontSize: compact ? 8 : 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .8,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 10),
+            DropdownButtonFormField<String>(
+              initialValue: selectedId,
+              decoration: const InputDecoration(
+                labelText: 'SQUAD PLAYER',
+                isDense: true,
+              ),
+              items: widget.profiles
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item.id,
+                      child: Text(item.displayName.toUpperCase()),
+                    ),
+                  )
+                  .toList(),
+              onChanged: (value) => setState(() => _selectedPlayerId = value),
+            ),
+            const SizedBox(height: 10),
+            Expanded(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final stage = Container(
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      gradient: RadialGradient(
+                        colors: <Color>[
+                          Color(profile.avatar.accentColor)
+                              .withValues(alpha: .3),
+                          const Color(0xFF071321),
+                        ],
+                      ),
+                      border: Border.all(
+                        color: Color(profile.avatar.accentColor)
+                            .withValues(alpha: .5),
+                      ),
+                    ),
+                    child: PlayerAvatarFigure(
+                      appearance: profile.avatar,
+                      width: compact ? 105 : 220,
+                      height: compact ? 145 : 300,
+                    ),
+                  );
+                  if (compact) {
+                    return Column(
+                      children: <Widget>[
+                        SizedBox(height: 120, child: stage),
+                        const SizedBox(height: 8),
+                        Expanded(child: editor),
+                      ],
+                    );
+                  }
+                  return Row(
+                    children: <Widget>[
+                      SizedBox(width: constraints.maxWidth * .34, child: stage),
+                      const SizedBox(width: 20),
+                      Expanded(child: editor),
+                    ],
+                  );
+                },
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _appearanceEditor(PlayerProfile profile) {
+    final appearance = profile.avatar;
+    const skinTones = <int>[
+      0xFFF4D1B5,
+      0xFFE7B99A,
+      0xFFC98B69,
+      0xFF9E654F,
+      0xFF684637,
+    ];
+    const hairColors = <int>[
+      0xFF263449,
+      0xFF6B4634,
+      0xFFB97A38,
+      0xFFCFD5DE,
+      0xFF40254E,
+    ];
+    const outfitColors = <int>[
+      0xFF2879BA,
+      0xFF7357A5,
+      0xFFB84D48,
+      0xFF26796F,
+      0xFF263449,
+    ];
+    const accents = <int>[0xFFF4A62C, 0xFF55C4B2, 0xFFFF865D, 0xFFB6D9F5];
+    return SingleChildScrollView(
+      child: Wrap(
+        spacing: 18,
+        runSpacing: 10,
+        children: <Widget>[
+          _choiceGroup<AvatarFaceStyle>(
+            'FACE',
+            AvatarFaceStyle.values,
+            appearance.faceStyle,
+            (value) => value.name.toUpperCase(),
+            (value) => _update(profile, appearance.copyWith(faceStyle: value)),
+          ),
+          _colorGroup(
+            'SKIN TONE',
+            skinTones,
+            appearance.skinTone,
+            (value) => _update(profile, appearance.copyWith(skinTone: value)),
+          ),
+          _choiceGroup<AvatarHairStyle>(
+            'HAIR STYLE',
+            AvatarHairStyle.values,
+            appearance.hairStyle,
+            (value) => value.name.toUpperCase(),
+            (value) => _update(profile, appearance.copyWith(hairStyle: value)),
+          ),
+          _colorGroup(
+            'HAIR COLOR',
+            hairColors,
+            appearance.hairColor,
+            (value) => _update(profile, appearance.copyWith(hairColor: value)),
+          ),
+          _choiceGroup<AvatarOutfitStyle>(
+            'OUTFIT',
+            AvatarOutfitStyle.values,
+            appearance.outfitStyle,
+            (value) => value.name.toUpperCase(),
+            (value) =>
+                _update(profile, appearance.copyWith(outfitStyle: value)),
+          ),
+          _colorGroup(
+            'OUTFIT COLOR',
+            outfitColors,
+            appearance.outfitColor,
+            (value) =>
+                _update(profile, appearance.copyWith(outfitColor: value)),
+          ),
+          _colorGroup(
+            'ACCENT',
+            accents,
+            appearance.accentColor,
+            (value) =>
+                _update(profile, appearance.copyWith(accentColor: value)),
+          ),
+          _choiceGroup<AvatarAccessory>(
+            'ACCESSORY',
+            AvatarAccessory.values,
+            appearance.accessory,
+            (value) => value.name.toUpperCase(),
+            (value) => _update(profile, appearance.copyWith(accessory: value)),
           ),
         ],
       ),
     );
+  }
+
+  Widget _choiceGroup<T>(
+    String title,
+    List<T> values,
+    T selected,
+    String Function(T) label,
+    ValueChanged<T> onSelected,
+  ) => SizedBox(
+    width: 250,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF70D9FF),
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
+        ),
+        Wrap(
+          spacing: 4,
+          children: <Widget>[
+            for (final value in values)
+              ChoiceChip(
+                label: Text(label(value)),
+                selected: value == selected,
+                onSelected: (_) => onSelected(value),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  Widget _colorGroup(
+    String title,
+    List<int> colors,
+    int selected,
+    ValueChanged<int> onSelected,
+  ) => SizedBox(
+    width: 190,
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          title,
+          style: const TextStyle(
+            color: Color(0xFF70D9FF),
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
+        ),
+        Wrap(
+          spacing: 8,
+          children: <Widget>[
+            for (final color in colors)
+              ChoiceChip(
+                label: const SizedBox(width: 16, height: 16),
+                selected: selected == color,
+                avatar: CircleAvatar(backgroundColor: Color(color)),
+                onSelected: (_) => onSelected(color),
+              ),
+          ],
+        ),
+      ],
+    ),
+  );
+
+  void _update(PlayerProfile profile, PlayerAvatarAppearance appearance) {
+    widget.onProfileChanged(profile.copyWith(avatar: appearance));
   }
 }
 

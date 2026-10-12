@@ -5,15 +5,26 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/app/roundveil_app.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
+
+Future<void> _startVisibleTurn(WidgetTester tester) async {
+  final startTurn = find.text('START TURN');
+  if (startTurn.evaluate().isNotEmpty) {
+    await tester.ensureVisible(startTurn);
+    await tester.tap(startTurn);
+    await tester.pumpAndSettle();
+  }
+}
 
 void main() {
   test(
@@ -91,9 +102,11 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(844, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const RoundveilApp());
+    await tester.pumpWidget(
+      RoundveilApp(profileRepository: InMemoryPlayerProfileRepository()),
+    );
     await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     expect(find.text('CREATE GAME'), findsOneWidget);
     await tester.tap(find.text('CREATE GAME'));
     await tester.pumpAndSettle();
@@ -106,9 +119,11 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(1280, 900));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const RoundveilApp());
+    await tester.pumpWidget(
+      RoundveilApp(profileRepository: InMemoryPlayerProfileRepository()),
+    );
     await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     expect(find.text('RIDDLES'), findsNothing);
     expect(find.text('MEMORY'), findsNothing);
     await tester.tap(find.text('CREATE GAME'));
@@ -116,13 +131,13 @@ void main() {
     expect(find.text('RIDDLES'), findsNothing);
     expect(find.text('MEMORY'), findsNothing);
     await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('QUICK GAME'));
     await tester.pumpAndSettle();
     expect(find.text('QUICK RIDDLES'), findsNothing);
     expect(find.text('QUICK MEMORY'), findsNothing);
     await tester.tap(find.byTooltip('Back'));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     await tester.tap(find.text('GAMES'));
     await tester.pumpAndSettle();
     expect(find.text('RIDDLES'), findsNothing);
@@ -135,14 +150,38 @@ void main() {
   ) async {
     await tester.binding.setSurfaceSize(const Size(960, 390));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(const RoundveilApp());
+    await tester.pumpWidget(
+      RoundveilApp(profileRepository: InMemoryPlayerProfileRepository()),
+    );
     await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     expect(find.text('CREATE GAME'), findsOneWidget);
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('CREATE GAME'));
     await tester.pumpAndSettle();
     expect(find.text('SQUAD & ROUNDS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('avatar workshop edits and persists the selected squad look', (
+    tester,
+  ) async {
+    final profiles = InMemoryPlayerProfileRepository();
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(RoundveilApp(profileRepository: profiles));
+    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump(const Duration(milliseconds: 280));
+    await tester.tap(find.text('AVATARS').first);
+    await tester.pump(const Duration(milliseconds: 300));
+
+    expect(find.text('SQUAD ARMORY'), findsOneWidget);
+    await tester.tap(find.text('CURLS'));
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(
+      (await profiles.loadAll()).first.avatar.hairStyle,
+      AvatarHairStyle.curls,
+    );
     expect(tester.takeException(), isNull);
   });
 
@@ -169,6 +208,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('PREPARE MATCH'));
       await tester.pumpAndSettle();
+      await _startVisibleTurn(tester);
 
       expect(
         find.text('Which planet is the largest in our solar system?'),
@@ -177,8 +217,10 @@ void main() {
       expect(repository.items, isEmpty);
       await tester.tap(find.text('Jupiter'));
       await tester.pump();
-      expect(find.text('WIN COUNTDOWN'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 3));
+      await tester.pump(const Duration(milliseconds: 550));
+      expect(find.text('3'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 4));
+      await _startVisibleTurn(tester);
       expect(find.text('Unscramble: T E N A L P'), findsOneWidget);
       expect(repository.items, isEmpty);
     },
@@ -222,6 +264,7 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.text('START MATCH'));
     await tester.pumpAndSettle();
+    await _startVisibleTurn(tester);
 
     expect(
       find.text('Which planet is the largest in our solar system?'),
@@ -257,7 +300,6 @@ void main() {
       await tester.pumpWidget(
         _TestApp(
           child: ActiveMatchPage(
-            enableTimers: false,
             configuration: SessionConfiguration(
               players: <PlayerConfiguration>[
                 PlayerConfiguration.placeholder(1),
@@ -269,18 +311,22 @@ void main() {
         ),
       );
       await tester.pumpAndSettle();
+      await _startVisibleTurn(tester);
 
       expect(find.text('SAY THE COUNTRY ALOUD'), findsOneWidget);
       expect(find.text('REVEAL ANSWER'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
       expect(find.text('Brazil'), findsNothing);
+      await tester.ensureVisible(find.text('REVEAL ANSWER'));
       await tester.tap(find.text('REVEAL ANSWER'));
       await tester.pump();
       expect(find.text('BRAZIL'), findsOneWidget);
       expect(find.text('CORRECT'), findsOneWidget);
+      await tester.ensureVisible(find.text('CORRECT'));
       await tester.tap(find.text('CORRECT'));
       await tester.pump();
-      expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 550));
+      expect(find.text('3'), findsOneWidget);
     },
   );
 
@@ -292,7 +338,6 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         child: ActiveMatchPage(
-          enableTimers: false,
           configuration: SessionConfiguration(
             players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
             selectedModuleIds: const <String>['guess_character'],
@@ -302,6 +347,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _startVisibleTurn(tester);
     expect(find.text('PLAYER — TURN AWAY'), findsOneWidget);
     expect(find.text('Sherlock Holmes'), findsNothing);
     await tester.tap(find.text('PLAYER IS TURNED AWAY · REVEAL'));
@@ -310,7 +356,8 @@ void main() {
     expect(find.text('CORRECT'), findsOneWidget);
     await tester.tap(find.text('CORRECT'));
     await tester.pump();
-    expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 550));
+    expect(find.text('3'), findsOneWidget);
   });
 
   testWidgets('word play accepts a typed offline answer', (tester) async {
@@ -319,7 +366,6 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         child: ActiveMatchPage(
-          enableTimers: false,
           configuration: SessionConfiguration(
             players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
             selectedModuleIds: const <String>['word_play'],
@@ -329,10 +375,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await _startVisibleTurn(tester);
     await tester.enterText(find.byType(TextField), 'planet');
     await tester.tap(find.text('SUBMIT WORD'));
     await tester.pump();
-    expect(find.text('WIN COUNTDOWN'), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 550));
+    expect(find.text('3'), findsOneWidget);
   });
 
   testWidgets('word challenge fits a compact landscape viewport', (
@@ -378,6 +426,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     for (final answer in <String>['Jupiter', 'H₂O', 'Africa', '56']) {
+      await _startVisibleTurn(tester);
       await tester.tap(find.text(answer));
       await tester.pump();
       await tester.pump(const Duration(seconds: 4));

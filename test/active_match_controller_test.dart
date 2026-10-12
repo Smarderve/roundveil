@@ -25,25 +25,30 @@ void main() {
         enableTimers: false,
       );
 
+      match.beginChallenge();
       expect(match.state.challenge.moduleId, 'quiz');
       match.answer('Jupiter');
-      expect(match.state.phase, MatchPhase.winCountdown);
+      expect(match.state.phase, MatchPhase.scoreAward);
+      match.beginWinCountdown();
       match.completeCountdown();
 
+      match.beginChallenge();
       expect(match.state.challenge.moduleId, 'word_play');
       match.answer(match.state.challenge.answer);
-      expect(match.state.phase, MatchPhase.winCountdown);
+      match.beginWinCountdown();
       match.completeCountdown();
 
+      match.beginChallenge();
       expect(match.state.challenge.moduleId, 'guess_character');
       expect(match.state.phase, MatchPhase.turnAway);
       match.revealCharacterAfterPlayerTurnsAway();
       expect(match.state.phase, MatchPhase.awaitingJudgement);
       expect(match.state.challenge.answer, 'Sherlock Holmes');
       match.judge(correct: true);
-      expect(match.state.phase, MatchPhase.winCountdown);
+      match.beginWinCountdown();
       match.completeCountdown();
 
+      match.beginChallenge();
       expect(match.state.challenge.moduleId, 'guess_country_flags');
       expect(match.state.phase, MatchPhase.awaitingJudgement);
       expect(match.state.challenge.choices, isEmpty);
@@ -70,6 +75,7 @@ void main() {
       enableTimers: false,
     );
 
+    match.beginChallenge();
     match.answer('not the answer');
 
     expect(match.state.phase, MatchPhase.complete);
@@ -77,6 +83,27 @@ void main() {
       match.state.scores.values.fold<int>(0, (sum, score) => sum + score),
       0,
     );
+    match.dispose();
+  });
+
+  test('correct answers apply the host-configured match point value', () {
+    final match = ActiveMatchController(
+      configuration: SessionConfiguration(
+        players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+        selectedModuleIds: const <String>['quiz'],
+        roundCount: 1,
+        pointsPerCorrectAnswer: 7,
+      ),
+      enableTimers: false,
+    );
+
+    match.beginChallenge();
+    match.answer('Jupiter');
+
+    expect(match.state.scores['player-1'], 7);
+    expect(match.state.phase, MatchPhase.scoreAward);
+    match.beginWinCountdown();
+    expect(match.state.phase, MatchPhase.winCountdown);
     match.dispose();
   });
 
@@ -92,12 +119,15 @@ void main() {
       ),
       enableTimers: false,
     );
+    match.beginChallenge();
     final firstChallengeId = match.state.challenge.id;
 
     match.answer(match.state.challenge.answer);
+    match.beginWinCountdown();
     match.completeCountdown();
 
     expect(match.state.activePlayer.displayName, 'Player 2');
+    match.beginChallenge();
     expect(match.state.challenge.id, isNot(firstChallengeId));
     expect(match.state.challenge.answer, 'H₂O');
     match.dispose();
@@ -170,6 +200,7 @@ void main() {
         ),
         enableTimers: false,
       );
+      match.beginChallenge();
       final challengeId = match.state.challenge.id;
       match.pause();
       expect(match.state.phase, MatchPhase.paused);

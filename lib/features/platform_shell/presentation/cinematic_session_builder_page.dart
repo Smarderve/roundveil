@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
@@ -10,6 +11,7 @@ import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dar
 class CinematicSessionBuilderPage extends StatefulWidget {
   const CinematicSessionBuilderPage({
     required this.drafts,
+    this.profileRepository,
     required this.onBack,
     this.initial,
     this.initialName = '',
@@ -19,6 +21,7 @@ class CinematicSessionBuilderPage extends StatefulWidget {
   });
 
   final DraftRepository drafts;
+  final PlayerProfileRepository? profileRepository;
   final VoidCallback onBack;
   final SessionConfiguration? initial;
   final String initialName;
@@ -179,6 +182,8 @@ class _CinematicSessionBuilderPageState
                                 _controller.setWinCountdownSeconds,
                             onHints: _controller.setHintsEnabled,
                             onScoring: _controller.setScoringEnabled,
+                            onPointsPerCorrect:
+                                _controller.setPointsPerCorrectAnswer,
                             onCountryRegion: _controller.setCountryRegion,
                             onCountryDifficulty:
                                 _controller.setCountryDifficulty,
@@ -225,6 +230,8 @@ class _CinematicSessionBuilderPageState
                         onCountdownSeconds: _controller.setWinCountdownSeconds,
                         onHints: _controller.setHintsEnabled,
                         onScoring: _controller.setScoringEnabled,
+                        onPointsPerCorrect:
+                            _controller.setPointsPerCorrectAnswer,
                         onCountryRegion: _controller.setCountryRegion,
                         onCountryDifficulty: _controller.setCountryDifficulty,
                       ),
@@ -291,7 +298,10 @@ class _CinematicSessionBuilderPageState
     if (!mounted || configuration == null) return;
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (_) => ActiveMatchPage(configuration: configuration),
+        builder: (_) => ActiveMatchPage(
+          configuration: configuration,
+          profileRepository: widget.profileRepository,
+        ),
       ),
     );
   }
@@ -492,6 +502,7 @@ class _MatchRulesRail extends StatelessWidget {
     required this.onCountdownSeconds,
     required this.onHints,
     required this.onScoring,
+    required this.onPointsPerCorrect,
     required this.onCountryRegion,
     required this.onCountryDifficulty,
   });
@@ -501,6 +512,7 @@ class _MatchRulesRail extends StatelessWidget {
   final ValueChanged<int> onCountdownSeconds;
   final ValueChanged<bool> onHints;
   final ValueChanged<bool> onScoring;
+  final ValueChanged<int> onPointsPerCorrect;
   final ValueChanged<String> onCountryRegion;
   final ValueChanged<String> onCountryDifficulty;
   @override
@@ -626,6 +638,32 @@ class _MatchRulesRail extends StatelessWidget {
             value: config.scoringEnabled,
             onChanged: onScoring,
           ),
+          if (config.scoringEnabled)
+            Row(
+              children: <Widget>[
+                const Expanded(
+                  child: Text(
+                    'POINTS PER CORRECT ANSWER',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w800),
+                  ),
+                ),
+                DropdownButton<int>(
+                  key: const ValueKey<String>('points-per-correct'),
+                  value: config.pointsPerCorrectAnswer,
+                  items: const <int>[1, 2, 3, 5, 10, 25]
+                      .map(
+                        (value) => DropdownMenuItem<int>(
+                          value: value,
+                          child: Text('$value'),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    if (value != null) onPointsPerCorrect(value);
+                  },
+                ),
+              ],
+            ),
           if (config.selectedModuleIds.contains(
             'guess_country_flags',
           )) ...<Widget>[

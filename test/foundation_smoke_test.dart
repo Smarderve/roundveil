@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:roundveil/app/roundveil_app.dart';
+import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/responsive_layout.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
@@ -209,10 +210,16 @@ void main() {
   });
 
   testWidgets('app boots into the branded platform home', (tester) async {
-    await tester.pumpWidget(const ProviderScope(child: RoundveilApp()));
+    await tester.pumpWidget(
+      ProviderScope(
+        child: RoundveilApp(
+          profileRepository: InMemoryPlayerProfileRepository(),
+        ),
+      ),
+    );
     expect(find.text('CREATE GAME'), findsNothing);
     await tester.pump(const Duration(milliseconds: 1200));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 250));
     expect(find.text('CREATE GAME'), findsOneWidget);
     expect(find.text('QUICK GAME'), findsOneWidget);
   });
