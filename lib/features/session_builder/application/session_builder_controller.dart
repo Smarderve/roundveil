@@ -119,8 +119,8 @@ const quickGameTemplates = <QuickGameTemplate>[
       'guess_character',
       'guess_country_flags',
     ],
-    players: 4,
-    rounds: 6,
+    players: 3,
+    rounds: 4,
   ),
 ];
 
@@ -181,9 +181,12 @@ class SessionBuilderController extends ChangeNotifier {
   String? get startValidationMessage {
     final issue = validationMessage;
     if (issue != null) return issue;
-    final requiredChallenges = _configuration.isMixed
-        ? _configuration.roundCount
-        : _configuration.roundCount * _configuration.players.length;
+    final moduleCount = _configuration.selectedModuleIds.length;
+    final maxRoundsPerModule = _configuration.isMixed
+        ? (_configuration.roundCount + moduleCount - 1) ~/ moduleCount
+        : _configuration.roundCount;
+    final requiredChallenges =
+        maxRoundsPerModule * _configuration.players.length;
     for (final moduleId in _configuration.selectedModuleIds) {
       final available = challengesForModule(
         moduleId,

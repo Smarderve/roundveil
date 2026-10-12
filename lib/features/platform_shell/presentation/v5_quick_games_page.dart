@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/challenge_history_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
+import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -13,10 +16,12 @@ class V5QuickGamesPage extends StatefulWidget {
     required this.drafts,
     required this.onBack,
     this.profileRepository,
+    this.challengeHistoryRepository,
     super.key,
   });
   final DraftRepository drafts;
   final PlayerProfileRepository? profileRepository;
+  final ChallengeHistoryRepository? challengeHistoryRepository;
   final VoidCallback onBack;
   @override
   State<V5QuickGamesPage> createState() => _V5QuickGamesPageState();
@@ -25,6 +30,67 @@ class V5QuickGamesPage extends StatefulWidget {
 class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
   bool _mixed = false;
   QuickGameTemplate? _selected;
+  List<PlayerProfile> _savedProfiles = const <PlayerProfile>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedProfiles();
+  }
+
+  Future<void> _loadSavedProfiles() async {
+    final repository = widget.profileRepository;
+    if (repository == null) return;
+    final profiles = await repository.loadAll();
+    if (mounted) setState(() => _savedProfiles = profiles);
+  }
+
+  Future<void> _startTemplate(QuickGameTemplate template) async {
+    var configuration = template.configuration;
+    if (_savedProfiles.isNotEmpty) {
+      if (_savedProfiles.length < template.players) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'This template needs ${template.players} saved players; ${_savedProfiles.length} are available. Edit the template or add players first.',
+            ),
+          ),
+        );
+        return;
+      }
+      final selectedProfiles = await showDialog<List<PlayerProfile>>(
+        context: context,
+        builder: (context) => _SavedPlayerPickerDialog(
+          profiles: _savedProfiles,
+          requiredCount: template.players,
+        ),
+      );
+      if (!mounted || selectedProfiles == null) return;
+      configuration = configuration.copyWith(
+        players: selectedProfiles
+            .map(
+              (profile) => PlayerConfiguration(
+                id: profile.id,
+                displayName: profile.displayName,
+              ),
+            )
+            .toList(growable: false),
+      );
+    }
+    // Yield out of the button callback before pushing a route; this also keeps
+    // the no-saved-profile fallback behavior consistent with picker launches.
+    await Future<void>.delayed(Duration.zero);
+    if (!mounted) return;
+    Navigator.of(context, rootNavigator: true).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ActiveMatchPage(
+          configuration: configuration,
+          profileRepository: widget.profileRepository,
+          challengeHistoryRepository: widget.challengeHistoryRepository,
+        ),
+      ),
+    );
+  }
 
   List<QuickGameTemplate> get _templates => quickGameTemplates
       .where((template) => (template.moduleIds.length > 1) == _mixed)
@@ -116,15 +182,7 @@ class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
                     final preview = _TemplatePreview(
                       template: selected,
                       onStart: () {
-                        if (selected == null) return;
-                        Navigator.of(context).push<void>(
-                          MaterialPageRoute<void>(
-                            builder: (_) => ActiveMatchPage(
-                              configuration: selected.configuration,
-                              profileRepository: widget.profileRepository,
-                            ),
-                          ),
-                        );
+                        if (selected != null) _startTemplate(selected);
                       },
                       onEdit: () {
                         if (selected != null) {
@@ -423,6 +481,79 @@ class _TemplatePreview extends StatelessWidget {
       ],
     );
   }
+}
+
+class _SavedPlayerPickerDialog extends StatefulWidget {
+  const _SavedPlayerPickerDialog({
+    required this.profiles,
+    required this.requiredCount,
+  });
+
+  final List<PlayerProfile> profiles;
+  final int requiredCount;
+
+  @override
+  State<_SavedPlayerPickerDialog> createState() =>
+      _SavedPlayerPickerDialogState();
+}
+
+class _SavedPlayerPickerDialogState extends State<_SavedPlayerPickerDialog> {
+  final Set<String> _selectedIds = <String>{};
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('CHOOSE YOUR PLAYERS'),
+    content: SizedBox(
+      width: 420,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: <Widget>[
+          Text('Select exactly ${widget.requiredCount} saved players.'),
+          const SizedBox(height: 10),
+          Flexible(
+            child: ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                for (final profile in widget.profiles)
+                  CheckboxListTile(
+                    value: _selectedIds.contains(profile.id),
+                    title: Text(profile.displayName),
+                    subtitle: Text(
+                      '${profile.gamesPlayed} matches · ${profile.hintCredits} hint credits',
+                    ),
+                    onChanged: (checked) => setState(() {
+                      if (checked == true) {
+                        if (_selectedIds.length < widget.requiredCount) {
+                          _selectedIds.add(profile.id);
+                        }
+                      } else {
+                        _selectedIds.remove(profile.id);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('CANCEL'),
+      ),
+      FilledButton(
+        onPressed: _selectedIds.length != widget.requiredCount
+            ? null
+            : () => Navigator.of(context).pop(
+                widget.profiles
+                    .where((profile) => _selectedIds.contains(profile.id))
+                    .toList(growable: false),
+              ),
+        child: const Text('START WITH SELECTED'),
+      ),
+    ],
+  );
 }
 
 String _title(AppLocalizations l10n, String key) => switch (key) {

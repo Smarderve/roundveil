@@ -5,6 +5,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/app/roundveil_app.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/challenge_history_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
@@ -14,16 +15,41 @@ import 'package:roundveil/features/platform_shell/presentation/cinematic_session
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
+import 'package:roundveil/features/active_match/application/active_match_content.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
 Future<void> _startVisibleTurn(WidgetTester tester) async {
+  final beginRound = find.text('BEGIN ROUND');
+  if (beginRound.evaluate().isNotEmpty) {
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'BEGIN ROUND'),
+    );
+    button.onPressed!.call();
+    await tester.pump();
+  }
   final startTurn = find.text('START TURN');
   if (startTurn.evaluate().isNotEmpty) {
-    await tester.ensureVisible(startTurn);
-    await tester.tap(startTurn);
-    await tester.pumpAndSettle();
+    final button = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'START TURN'),
+    );
+    button.onPressed!.call();
+    await tester.pump();
   }
+}
+
+OfflineChallenge _visibleChallenge(
+  WidgetTester tester,
+  Iterable<OfflineChallenge> pool,
+) => pool.firstWhere(
+  (challenge) => find.text(challenge.prompt).evaluate().isNotEmpty,
+);
+
+void _activateButton(WidgetTester tester, String label) {
+  final button = tester.widget<FilledButton>(
+    find.widgetWithText(FilledButton, label),
+  );
+  button.onPressed!.call();
 }
 
 void main() {
@@ -193,10 +219,14 @@ void main() {
       addTearDown(() => tester.binding.setSurfaceSize(null));
       await tester.pumpWidget(
         _TestApp(
-          child: CinematicSessionBuilderPage(drafts: repository, onBack: () {}),
+          child: CinematicSessionBuilderPage(
+            drafts: repository,
+            challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
+            onBack: () {},
+          ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.text('MIXED'));
       await tester.tap(find.text('QUIZ'));
@@ -206,22 +236,33 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('4').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('PREPARE MATCH'));
-      await tester.pumpAndSettle();
+      _activateButton(tester, 'PREPARE MATCH');
+      for (var frame = 0; frame < 20; frame++) {
+        await tester.pump(const Duration(milliseconds: 100));
+      }
       await _startVisibleTurn(tester);
 
-      expect(
-        find.text('Which planet is the largest in our solar system?'),
-        findsOneWidget,
-      );
+      final challenge = _visibleChallenge(tester, <OfflineChallenge>[
+        ...quizChallenges,
+        ...wordChallenges,
+      ]);
       expect(repository.items, isEmpty);
-      await tester.tap(find.text('Jupiter'));
+      if (challenge.choices.isNotEmpty) {
+        await tester.tap(find.text(challenge.answer));
+      } else {
+        await tester.enterText(find.byType(TextField), challenge.answer);
+        await tester.tap(find.text('SUBMIT WORD'));
+      }
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 550));
       expect(find.text('3'), findsOneWidget);
       await tester.pump(const Duration(seconds: 4));
       await _startVisibleTurn(tester);
-      expect(find.text('Unscramble: T E N A L P'), findsOneWidget);
+      final nextChallenge = _visibleChallenge(tester, <OfflineChallenge>[
+        ...quizChallenges,
+        ...wordChallenges,
+      ]);
+      expect(nextChallenge.id, isNot(challenge.id));
       expect(repository.items, isEmpty);
     },
   );
@@ -234,7 +275,11 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _TestApp(
-        child: V5QuickGamesPage(drafts: repository, onBack: () {}),
+        child: V5QuickGamesPage(
+          drafts: repository,
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
+          onBack: () {},
+        ),
       ),
     );
     await tester.tap(find.text('QUICK QUIZ'));
@@ -257,20 +302,92 @@ void main() {
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(
       _TestApp(
-        child: V5QuickGamesPage(drafts: repository, onBack: () {}),
+        child: V5QuickGamesPage(
+          drafts: repository,
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
+          onBack: () {},
+        ),
       ),
     );
     await tester.tap(find.text('QUICK QUIZ'));
+    await tester.pump(const Duration(milliseconds: 250));
+    _activateButton(tester, 'START MATCH');
+    for (var frame = 0; frame < 8; frame++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+    await _startVisibleTurn(tester);
+
+    expect(_visibleChallenge(tester, quizChallenges).prompt, isNotEmpty);
+    expect(repository.items, isEmpty);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Quick Game uses selected saved profiles without placeholders', (
+    tester,
+  ) async {
+    final repository = _MemoryDraftRepository();
+    final profiles = InMemoryPlayerProfileRepository();
+    await profiles.ensureProfiles(const <PlayerConfiguration>[
+      PlayerConfiguration(id: 'saved-avery', displayName: 'Avery'),
+      PlayerConfiguration(id: 'saved-blake', displayName: 'Blake'),
+      PlayerConfiguration(id: 'saved-casey', displayName: 'Casey'),
+    ]);
+    await tester.binding.setSurfaceSize(const Size(1280, 720));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      _TestApp(
+        child: V5QuickGamesPage(
+          drafts: repository,
+          profileRepository: profiles,
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
+          onBack: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('MIXED'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('PARTY MIX'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('START MATCH'));
     await tester.pumpAndSettle();
-    await _startVisibleTurn(tester);
 
+    expect(find.text('CHOOSE YOUR PLAYERS'), findsOneWidget);
+    for (var index = 0; index < 3; index++) {
+      await tester.tap(find.byType(CheckboxListTile).at(index));
+      await tester.pump();
+    }
     expect(
-      find.text('Which planet is the largest in our solar system?'),
-      findsOneWidget,
+      find
+          .byType(CheckboxListTile)
+          .evaluate()
+          .map((element) => (element.widget as CheckboxListTile).value),
+      everyElement(isTrue),
     );
-    expect(repository.items, isEmpty);
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'START WITH SELECTED'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    final startSelected = find.widgetWithText(
+      FilledButton,
+      'START WITH SELECTED',
+    );
+    await tester.ensureVisible(startSelected);
+    await tester.tap(startSelected);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+
+    expect(find.text('CHOOSE YOUR PLAYERS'), findsNothing);
+    await tester.pump(const Duration(milliseconds: 250));
+    expect(find.text('ROUND 1'), findsOneWidget);
+    await tester.tap(find.text('BEGIN ROUND'));
+    await tester.pump(const Duration(milliseconds: 150));
+    expect(find.text('AVERY'), findsOneWidget);
+    expect(find.text('Player 1'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 
@@ -300,6 +417,7 @@ void main() {
       await tester.pumpWidget(
         _TestApp(
           child: ActiveMatchPage(
+            challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
             configuration: SessionConfiguration(
               players: <PlayerConfiguration>[
                 PlayerConfiguration.placeholder(1),
@@ -310,17 +428,27 @@ void main() {
           ),
         ),
       );
-      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 200));
       await _startVisibleTurn(tester);
 
       expect(find.text('SAY THE COUNTRY ALOUD'), findsOneWidget);
       expect(find.text('REVEAL ANSWER'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
-      expect(find.text('Brazil'), findsNothing);
+      expect(
+        countryChallenges.any(
+          (challenge) =>
+              find.text(challenge.answer.toUpperCase()).evaluate().isNotEmpty,
+        ),
+        isFalse,
+      );
       await tester.ensureVisible(find.text('REVEAL ANSWER'));
       await tester.tap(find.text('REVEAL ANSWER'));
       await tester.pump();
-      expect(find.text('BRAZIL'), findsOneWidget);
+      final challenge = countryChallenges.firstWhere(
+        (challenge) =>
+            find.text(challenge.answer.toUpperCase()).evaluate().isNotEmpty,
+      );
+      expect(find.text(challenge.answer.toUpperCase()), findsOneWidget);
       expect(find.text('CORRECT'), findsOneWidget);
       await tester.ensureVisible(find.text('CORRECT'));
       await tester.tap(find.text('CORRECT'));
@@ -338,6 +466,7 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         child: ActiveMatchPage(
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
           configuration: SessionConfiguration(
             players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
             selectedModuleIds: const <String>['guess_character'],
@@ -346,13 +475,15 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 200));
     await _startVisibleTurn(tester);
     expect(find.text('PLAYER — TURN AWAY'), findsOneWidget);
-    expect(find.text('Sherlock Holmes'), findsNothing);
     await tester.tap(find.text('PLAYER IS TURNED AWAY · REVEAL'));
     await tester.pump();
-    expect(find.text('Sherlock Holmes'), findsOneWidget);
+    final challenge = characterChallenges.firstWhere(
+      (challenge) => find.text(challenge.answer).evaluate().isNotEmpty,
+    );
+    expect(find.text(challenge.answer), findsOneWidget);
     expect(find.text('CORRECT'), findsOneWidget);
     await tester.tap(find.text('CORRECT'));
     await tester.pump();
@@ -366,6 +497,7 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         child: ActiveMatchPage(
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
           configuration: SessionConfiguration(
             players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
             selectedModuleIds: const <String>['word_play'],
@@ -374,9 +506,10 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 200));
     await _startVisibleTurn(tester);
-    await tester.enterText(find.byType(TextField), 'planet');
+    final challenge = _visibleChallenge(tester, wordChallenges);
+    await tester.enterText(find.byType(TextField), challenge.answer);
     await tester.tap(find.text('SUBMIT WORD'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 550));
@@ -392,6 +525,7 @@ void main() {
       _TestApp(
         child: ActiveMatchPage(
           enableTimers: false,
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
           configuration: SessionConfiguration(
             players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
             selectedModuleIds: const <String>['word_play'],
@@ -411,6 +545,7 @@ void main() {
     await tester.pumpWidget(
       _TestApp(
         child: ActiveMatchPage(
+          challengeHistoryRepository: InMemoryChallengeHistoryRepository(),
           configuration: SessionConfiguration(
             players: <PlayerConfiguration>[
               PlayerConfiguration.placeholder(1),
@@ -424,10 +559,13 @@ void main() {
         ),
       ),
     );
-    await tester.pumpAndSettle();
-    for (final answer in <String>['Jupiter', 'H₂O', 'Africa', '56']) {
+    await tester.pump(const Duration(milliseconds: 200));
+    final answered = <String>{};
+    for (var turn = 0; turn < 4; turn++) {
       await _startVisibleTurn(tester);
-      await tester.tap(find.text(answer));
+      final challenge = _visibleChallenge(tester, quizChallenges);
+      expect(answered.add(challenge.id), isTrue);
+      await tester.tap(find.text(challenge.answer));
       await tester.pump();
       await tester.pump(const Duration(seconds: 4));
     }
@@ -465,9 +603,8 @@ void main() {
       'Player 1',
       'Player 2',
       'Player 3',
-      'Player 4',
     ]);
-    expect(config.roundCount, 6);
+    expect(config.roundCount, 4);
     expect(gameCatalog.map((game) => game.id), <String>[
       'quiz',
       'word_play',

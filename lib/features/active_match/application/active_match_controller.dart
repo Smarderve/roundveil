@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 
 import 'package:flutter/foundation.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
@@ -9,6 +10,7 @@ import 'package:roundveil/features/active_match/application/active_match_content
 
 enum MatchPhase {
   playerIntro,
+  roundIntro,
   challenge,
   turnAway,
   awaitingJudgement,
@@ -21,6 +23,7 @@ enum MatchPhase {
 
 enum GameAudioCue {
   playerIntroduction,
+  roundIntroduction,
   questionStart,
   questionFinalSeconds,
   correctAnswer,
@@ -99,6 +102,9 @@ class ActiveMatchController extends ChangeNotifier {
     this.profileRepository,
     Map<String, PlayerProfile>? profiles,
     String? matchId,
+    Random? random,
+    Iterable<String> recentChallengeIds = const <String>[],
+    this.onChallengeDrawn,
     this.introductionDuration = const Duration(milliseconds: 1800),
     this.scoreAwardDuration = const Duration(milliseconds: 500),
   }) : _configuration = configuration,
@@ -110,20 +116,50 @@ class ActiveMatchController extends ChangeNotifier {
              },
        ),
        matchId = matchId ?? DateTime.now().microsecondsSinceEpoch.toString(),
+       _random = random ?? Random.secure(),
+       _recentChallengeIds = Set<String>.from(recentChallengeIds),
        challengeSeconds = challengeSeconds ?? configuration.challengeSeconds,
        winCountdownSeconds =
            winCountdownSeconds ?? configuration.winCountdownSeconds,
        scoringEnabled = scoringEnabled ?? configuration.scoringEnabled {
-    final issue = validateConfiguration(configuration);
+    final initialIssue = _validateBaseConfiguration(configuration);
+    if (initialIssue != null) {
+      throw ArgumentError.value(configuration, 'configuration', initialIssue);
+    }
+    _moduleSchedule = _buildModuleSchedule(configuration, _random);
+    final requiredByModule = <String, int>{
+      for (final moduleId in configuration.selectedModuleIds)
+        moduleId:
+            _moduleSchedule.where((id) => id == moduleId).length *
+            configuration.players.length,
+    };
+    final issue = validateConfigurationWithCounts(
+      configuration,
+      requiredByModule,
+    );
     if (issue != null) {
       throw ArgumentError.value(configuration, 'configuration', issue);
     }
+    _challengeDecks = <String, List<OfflineChallenge>>{
+      for (final moduleId in configuration.selectedModuleIds)
+        moduleId: _buildChallengeDeck(
+          challengesForModule(moduleId, configuration: configuration),
+          _recentChallengeIds,
+          _random,
+        ),
+    };
     _state = _stateForTurn(0, <String, int>{
       for (final player in configuration.players) player.id: 0,
     });
   }
 
   final SessionConfiguration _configuration;
+  final Random _random;
+  final Set<String> _recentChallengeIds;
+  final void Function(String challengeId)? onChallengeDrawn;
+  late final List<String> _moduleSchedule;
+  late final Map<String, List<OfflineChallenge>> _challengeDecks;
+  final Set<String> _reportedChallengeIds = <String>{};
   final bool enableTimers;
   final PlayerProfileRepository? profileRepository;
   final String matchId;
@@ -147,15 +183,60 @@ class ActiveMatchController extends ChangeNotifier {
 
   ActiveMatchState get state => _state;
   Stream<GameAudioCue> get effects => _effects.stream;
+  List<String> get moduleSchedule => List<String>.unmodifiable(_moduleSchedule);
 
   void start() {
     if (_started) return;
     _started = true;
+    _state = _stateForTurn(0, _state.scores, phase: MatchPhase.roundIntro);
+    notifyListeners();
+    _rememberCurrentChallenge();
+    _emit(GameAudioCue.roundIntroduction);
+  }
+
+  void beginRound() {
+    if (_state.phase != MatchPhase.roundIntro) return;
+    _set(_stateForTurn(_state.turnIndex, _state.scores));
     _emit(GameAudioCue.playerIntroduction);
     _scheduleIntroduction();
   }
 
   static String? validateConfiguration(SessionConfiguration configuration) {
+    final baseIssue = _validateBaseConfiguration(configuration);
+    if (baseIssue != null) return baseIssue;
+    final modules = configuration.selectedModuleIds;
+    final players = configuration.players.length;
+    final maximumRoundsPerModule = configuration.isMixed
+        ? (configuration.roundCount + modules.length - 1) ~/ modules.length
+        : configuration.roundCount;
+    return validateConfigurationWithCounts(configuration, <String, int>{
+      for (final moduleId in modules)
+        moduleId: maximumRoundsPerModule * players,
+    });
+  }
+
+  static String? validateConfigurationWithCounts(
+    SessionConfiguration configuration,
+    Map<String, int> requiredByModule,
+  ) {
+    final baseIssue = _validateBaseConfiguration(configuration);
+    if (baseIssue != null) return baseIssue;
+    for (final moduleId in configuration.selectedModuleIds) {
+      final count = challengesForModule(
+        moduleId,
+        configuration: configuration,
+      ).length;
+      final required = requiredByModule[moduleId] ?? 0;
+      if (count < required) {
+        return '$moduleId has $count unique offline challenges; $required are required for this session. Reduce rounds or players.';
+      }
+    }
+    return null;
+  }
+
+  static String? _validateBaseConfiguration(
+    SessionConfiguration configuration,
+  ) {
     if (!configuration.canStart) {
       return 'Complete the player, game, and round selections first.';
     }
@@ -166,18 +247,6 @@ class ActiveMatchController extends ChangeNotifier {
     if (configuration.scoringEnabled &&
         configuration.pointsPerCorrectAnswer < 1) {
       return 'Points per correct answer must be at least one when scoring is enabled.';
-    }
-    final required = configuration.isMixed
-        ? configuration.roundCount
-        : configuration.roundCount * configuration.players.length;
-    for (final moduleId in configuration.selectedModuleIds) {
-      final count = challengesForModule(
-        moduleId,
-        configuration: configuration,
-      ).length;
-      if (count < required) {
-        return '$moduleId has $count unique offline challenges; $required are required for this session. Reduce rounds or players.';
-      }
     }
     return null;
   }
@@ -197,6 +266,7 @@ class ActiveMatchController extends ChangeNotifier {
         secondsRemaining: phase == MatchPhase.turnAway ? 0 : challengeSeconds,
       ),
     );
+    _rememberCurrentChallenge();
     if (phase == MatchPhase.challenge ||
         phase == MatchPhase.awaitingJudgement) {
       _emit(GameAudioCue.questionStart);
@@ -319,6 +389,7 @@ class ActiveMatchController extends ChangeNotifier {
       case MatchPhase.playerIntro:
         _emit(GameAudioCue.playerIntroduction);
         _scheduleIntroduction();
+      case MatchPhase.roundIntro:
       case MatchPhase.challenge:
       case MatchPhase.awaitingJudgement:
         _runChallengeTimer();
@@ -405,10 +476,19 @@ class ActiveMatchController extends ChangeNotifier {
       unawaited(_completeMatch());
       return;
     }
-    _state = _stateForTurn(next, _state.scores);
+    final nextRound = next ~/ _configuration.players.length + 1;
+    final phase = nextRound == _state.round
+        ? MatchPhase.playerIntro
+        : MatchPhase.roundIntro;
+    _state = _stateForTurn(next, _state.scores, phase: phase);
     notifyListeners();
-    _emit(GameAudioCue.playerIntroduction);
-    _scheduleIntroduction();
+    _rememberCurrentChallenge();
+    if (phase == MatchPhase.roundIntro) {
+      _emit(GameAudioCue.roundIntroduction);
+    } else {
+      _emit(GameAudioCue.playerIntroduction);
+      _scheduleIntroduction();
+    }
   }
 
   Future<void> _completeMatch() async {
@@ -497,29 +577,28 @@ class ActiveMatchController extends ChangeNotifier {
     });
   }
 
-  ActiveMatchState _stateForTurn(int turn, Map<String, int> scores) {
-    final modules = _configuration.selectedModuleIds;
+  ActiveMatchState _stateForTurn(
+    int turn,
+    Map<String, int> scores, {
+    MatchPhase phase = MatchPhase.playerIntro,
+  }) {
     final playerCount = _configuration.players.length;
-    final mixed = _configuration.isMixed;
-    final total = mixed
-        ? _configuration.roundCount * modules.length
-        : _configuration.roundCount * playerCount;
-    final round = mixed ? turn ~/ modules.length + 1 : turn ~/ playerCount + 1;
-    final moduleIndex = mixed ? turn % modules.length : 0;
-    final moduleId = modules[moduleIndex];
-    final contentIndex = mixed ? turn ~/ modules.length : turn;
-    final playerIndex = mixed
-        ? (turn + round - 1) % playerCount
-        : turn % playerCount;
+    final total = _configuration.roundCount * playerCount;
+    final round = turn ~/ playerCount + 1;
+    final moduleId = _moduleSchedule[round - 1];
+    final priorRoundsForModule = _moduleSchedule
+        .take(round - 1)
+        .where((id) => id == moduleId)
+        .length;
+    final contentIndex =
+        priorRoundsForModule * playerCount + turn % playerCount;
+    final playerIndex = turn % playerCount;
     final challenge = MatchChallenge(
       moduleId: moduleId,
-      content: challengesForModule(
-        moduleId,
-        configuration: _configuration,
-      )[contentIndex],
+      content: _challengeDecks[moduleId]![contentIndex],
     );
     return ActiveMatchState(
-      phase: MatchPhase.playerIntro,
+      phase: phase,
       challenge: challenge,
       activePlayer: _configuration.players[playerIndex],
       turnIndex: turn,
@@ -532,6 +611,49 @@ class ActiveMatchController extends ChangeNotifier {
       wrongAnswers: Map<String, int>.unmodifiable(_wrong),
       timeouts: Map<String, int>.unmodifiable(_timeouts),
     );
+  }
+
+  void _rememberCurrentChallenge() {
+    final id = _state.challenge.id;
+    if (_reportedChallengeIds.add(id)) onChallengeDrawn?.call(id);
+  }
+
+  static List<String> _buildModuleSchedule(
+    SessionConfiguration configuration,
+    Random random,
+  ) {
+    if (!configuration.isMixed) {
+      return List<String>.filled(
+        configuration.roundCount,
+        configuration.selectedModuleIds.single,
+      );
+    }
+    final result = <String>[];
+    while (result.length < configuration.roundCount) {
+      final cycle = List<String>.from(configuration.selectedModuleIds)
+        ..shuffle(random);
+      if (result.isNotEmpty && cycle.first == result.last) {
+        final differentIndex = cycle.indexWhere((id) => id != result.last);
+        if (differentIndex > 0) {
+          final first = cycle[0];
+          cycle[0] = cycle[differentIndex];
+          cycle[differentIndex] = first;
+        }
+      }
+      result.addAll(cycle);
+    }
+    return result.take(configuration.roundCount).toList(growable: false);
+  }
+
+  static List<OfflineChallenge> _buildChallengeDeck(
+    List<OfflineChallenge> eligible,
+    Set<String> recentIds,
+    Random random,
+  ) {
+    final shuffled = List<OfflineChallenge>.from(eligible)..shuffle(random);
+    final unseen = shuffled.where((item) => !recentIds.contains(item.id));
+    final recent = shuffled.where((item) => recentIds.contains(item.id));
+    return <OfflineChallenge>[...unseen, ...recent];
   }
 
   ActiveMatchState _copy({

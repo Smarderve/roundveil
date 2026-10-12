@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
+import 'package:roundveil/data/repositories/challenge_history_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
@@ -13,12 +16,14 @@ class ActiveMatchPage extends StatefulWidget {
     required this.configuration,
     this.enableTimers = true,
     this.profileRepository,
+    this.challengeHistoryRepository,
     super.key,
   });
 
   final SessionConfiguration configuration;
   final bool enableTimers;
   final PlayerProfileRepository? profileRepository;
+  final ChallengeHistoryRepository? challengeHistoryRepository;
 
   @override
   State<ActiveMatchPage> createState() => _ActiveMatchPageState();
@@ -28,6 +33,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   ActiveMatchController? _match;
   ActiveMatchController get _activeMatch => _match!;
   late final PlayerProfileRepository _profileRepository;
+  late final ChallengeHistoryRepository _challengeHistoryRepository;
   late final Future<void> _startup;
   final TextEditingController _answer = TextEditingController();
 
@@ -36,6 +42,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     super.initState();
     _profileRepository =
         widget.profileRepository ?? InMemoryPlayerProfileRepository();
+    _challengeHistoryRepository =
+        widget.challengeHistoryRepository ?? LocalChallengeHistoryRepository();
     _startup = _startMatch();
   }
 
@@ -43,6 +51,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     final profiles = await _profileRepository.ensureProfiles(
       widget.configuration.players,
     );
+    final recentChallengeIds = await _challengeHistoryRepository
+        .loadRecentIds();
     if (!mounted) return;
     final match = ActiveMatchController(
       configuration: widget.configuration,
@@ -51,10 +61,22 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       profiles: <String, PlayerProfile>{
         for (final profile in profiles) profile.id: profile,
       },
+      recentChallengeIds: recentChallengeIds,
+      onChallengeDrawn: (id) {
+        unawaited(_recordChallenge(id));
+      },
     );
     _match = match;
     match.start();
     setState(() {});
+  }
+
+  Future<void> _recordChallenge(String id) async {
+    try {
+      await _challengeHistoryRepository.recordUsed(id);
+    } on Object catch (error) {
+      debugPrint('Could not persist ROUNDVEIL challenge history: $error');
+    }
   }
 
   @override
@@ -249,6 +271,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     if (state.phase == MatchPhase.completing) {
       return _centerMessage('MATCH COMPLETE', 'Recording final standings…');
     }
+    if (state.phase == MatchPhase.roundIntro) return _roundIntro(tokens);
     if (state.phase == MatchPhase.playerIntro) return _playerIntro(tokens);
     if (state.phase == MatchPhase.paused) {
       return _centerMessage('MATCH PAUSED', 'Resume when your squad is ready.');
@@ -257,6 +280,76 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       return _scoreAward(tokens);
     }
     return _challenge(tokens);
+  }
+
+  Widget _roundIntro(RoundveilBrandTokens tokens) {
+    final state = _activeMatch.state;
+    final compact = MediaQuery.sizeOf(context).height < 500;
+    final title = _moduleTitle(state.challenge.moduleId).toUpperCase();
+    final icon = switch (state.challenge.moduleId) {
+      'quiz' => Icons.quiz_rounded,
+      'word_play' => Icons.abc_rounded,
+      'guess_character' => Icons.person_search_rounded,
+      'guess_country_flags' => Icons.flag_rounded,
+      _ => Icons.sports_esports_rounded,
+    };
+    return SingleChildScrollView(
+      child: Center(
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: .92, end: 1),
+          duration: const Duration(milliseconds: 420),
+          curve: Curves.easeOutCubic,
+          builder: (context, scale, child) =>
+              Transform.scale(scale: scale, child: child),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(
+                'ROUND ${state.round}',
+                style: TextStyle(
+                  color: tokens.orange,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 3,
+                ),
+              ),
+              SizedBox(height: compact ? 5 : 12),
+              Icon(icon, color: tokens.cyan, size: compact ? 38 : 58),
+              SizedBox(height: compact ? 2 : 8),
+              Text(
+                title,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 24 : 42,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.8,
+                ),
+              ),
+              SizedBox(height: compact ? 3 : 8),
+              Text(
+                '${widget.configuration.players.length} PLAYERS · ${widget.configuration.roundCount} GAME-WIDE ROUNDS',
+                style: TextStyle(
+                  color: tokens.muted,
+                  fontSize: compact ? 10 : 14,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1,
+                ),
+              ),
+              SizedBox(height: compact ? 8 : 22),
+              FilledButton.icon(
+                onPressed: _activeMatch.beginRound,
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: const Text('BEGIN ROUND'),
+                style: FilledButton.styleFrom(
+                  minimumSize: Size.fromHeight(compact ? 40 : 48),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _playerIntro(RoundveilBrandTokens tokens) {
@@ -271,7 +364,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Text(
-                'PLAYER ${state.turnIndex + 1} · ROUND ${state.round}',
+                'TURN ${state.turnIndex + 1} OF ${state.totalTurns} · ROUND ${state.round}',
                 style: TextStyle(
                   color: tokens.cyan,
                   letterSpacing: 2,

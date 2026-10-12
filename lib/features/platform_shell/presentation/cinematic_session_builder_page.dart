@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
+import 'package:roundveil/data/repositories/challenge_history_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
@@ -12,6 +13,7 @@ class CinematicSessionBuilderPage extends StatefulWidget {
   const CinematicSessionBuilderPage({
     required this.drafts,
     this.profileRepository,
+    this.challengeHistoryRepository,
     required this.onBack,
     this.initial,
     this.initialName = '',
@@ -22,6 +24,7 @@ class CinematicSessionBuilderPage extends StatefulWidget {
 
   final DraftRepository drafts;
   final PlayerProfileRepository? profileRepository;
+  final ChallengeHistoryRepository? challengeHistoryRepository;
   final VoidCallback onBack;
   final SessionConfiguration? initial;
   final String initialName;
@@ -301,6 +304,7 @@ class _CinematicSessionBuilderPageState
         builder: (_) => ActiveMatchPage(
           configuration: configuration,
           profileRepository: widget.profileRepository,
+          challengeHistoryRepository: widget.challengeHistoryRepository,
         ),
       ),
     );
