@@ -6,6 +6,11 @@ import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 
+bool _isGeneratedPlayerName(PlayerConfiguration player) {
+  final match = RegExp(r'^player-(\d+)$').firstMatch(player.id);
+  return match != null && player.displayName == 'Player ${match.group(1)}';
+}
+
 class PlayerMatchResult {
   const PlayerMatchResult({
     required this.playerId,
@@ -145,10 +150,11 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
       for (final player in players) {
         final profile = existing[player.id];
         if (profile != null) {
-          if (profile.displayName != player.displayName) {
-            existing[player.id] = profile.copyWith(
-              displayName: player.displayName,
-            );
+          final requestedName = _isGeneratedPlayerName(player)
+              ? profile.displayName
+              : player.displayName;
+          if (profile.displayName != requestedName) {
+            existing[player.id] = profile.copyWith(displayName: requestedName);
           }
           continue;
         }
@@ -338,9 +344,13 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
           avatar: PlayerAvatarAppearance.forPlayer(position),
         );
       });
-      if (_profiles[player.id]!.displayName != player.displayName) {
+      final profile = _profiles[player.id]!;
+      final requestedName = _isGeneratedPlayerName(player)
+          ? profile.displayName
+          : player.displayName;
+      if (profile.displayName != requestedName) {
         _profiles[player.id] = _profiles[player.id]!.copyWith(
-          displayName: player.displayName,
+          displayName: requestedName,
         );
       }
     }

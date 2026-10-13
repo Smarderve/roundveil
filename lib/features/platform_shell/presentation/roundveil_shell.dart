@@ -951,6 +951,29 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                   .toList(),
               onChanged: (value) => setState(() => _selectedPlayerId = value),
             ),
+            const SizedBox(height: 6),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: Text(
+                    profile.displayName,
+                    key: const ValueKey<String>('selected-player-callsign'),
+                    style: TextStyle(
+                      color: Color(profile.avatar.accentColor),
+                      fontSize: compact ? 14 : 17,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .5,
+                    ),
+                  ),
+                ),
+                TextButton.icon(
+                  key: const ValueKey<String>('edit-player-callsign'),
+                  onPressed: () => _editCallsign(context, profile),
+                  icon: const Icon(Icons.edit_outlined, size: 16),
+                  label: const Text('EDIT CALLSIGN'),
+                ),
+              ],
+            ),
             const SizedBox(height: 10),
             Expanded(
               child: LayoutBuilder(
@@ -999,6 +1022,40 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
         ),
       ),
     );
+  }
+
+  Future<void> _editCallsign(
+    BuildContext context,
+    PlayerProfile profile,
+  ) async {
+    var draftName = profile.displayName;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('EDIT PLAYER CALLSIGN'),
+        content: TextField(
+          autofocus: true,
+          maxLength: 24,
+          textCapitalization: TextCapitalization.words,
+          decoration: const InputDecoration(labelText: 'PLAYER NAME'),
+          onChanged: (value) => draftName = value,
+          onSubmitted: (_) => Navigator.of(dialogContext).pop(draftName),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(draftName),
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+    final trimmedName = name?.trim();
+    if (trimmedName == null || trimmedName.isEmpty || !mounted) return;
+    widget.onProfileChanged(profile.copyWith(displayName: trimmedName));
   }
 
   Widget _appearanceEditor(PlayerProfile profile) {

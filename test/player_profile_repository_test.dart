@@ -171,4 +171,37 @@ void main() {
       expect(reloaded.avatar.outfitColor, 0xFF7357A5);
     },
   );
+
+  test(
+    'custom callsign survives reload and generated profile bootstrap',
+    () async {
+      final repository = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      final profile = (await repository.ensureProfiles(<PlayerConfiguration>[
+        PlayerConfiguration.placeholder(1),
+      ])).single;
+      await repository.updateProfile(
+        profile.copyWith(displayName: 'Captain Nova'),
+      );
+
+      final reloadedRepository = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      await reloadedRepository.ensureProfiles(<PlayerConfiguration>[
+        PlayerConfiguration.placeholder(1),
+      ]);
+      expect(
+        (await reloadedRepository.loadAll()).single.displayName,
+        'Captain Nova',
+      );
+      await reloadedRepository.ensureProfiles(const <PlayerConfiguration>[
+        PlayerConfiguration(id: 'player-1', displayName: 'Nova Prime'),
+      ]);
+      expect(
+        (await reloadedRepository.loadAll()).single.displayName,
+        'Nova Prime',
+      );
+    },
+  );
 }

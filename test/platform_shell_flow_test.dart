@@ -208,6 +208,14 @@ void main() {
       (await profiles.loadAll()).first.avatar.hairStyle,
       AvatarHairStyle.curls,
     );
+    await tester.tap(
+      find.byKey(const ValueKey<String>('edit-player-callsign')),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, 'Captain Nova');
+    await tester.tap(find.widgetWithText(FilledButton, 'SAVE'));
+    await tester.pumpAndSettle();
+    expect((await profiles.loadAll()).first.displayName, 'Captain Nova');
     expect(tester.takeException(), isNull);
   });
 

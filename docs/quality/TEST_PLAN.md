@@ -43,6 +43,7 @@
 | T-026 | App locale list contains the 12 requested locales, including RTL languages and `zh-Hans` |
 | T-027 | Active catalog, Create Game, Quick Game and mixed templates expose exactly Quiz, Word Play, Guess the Character and Guess the Country |
 | T-028 | Legacy drafts containing retired module IDs remain stored and flagged; editing filters only retired IDs while preserving other draft values |
+| T-029 | Player callsign and appearance edits update the durable local profile and remain available to the pre-match player picker |
 
 ## Tool commands when Flutter scaffold exists
 ```bash
