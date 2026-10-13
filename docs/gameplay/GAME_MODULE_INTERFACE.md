@@ -35,6 +35,8 @@ Types are architectural pseudocode: implement after reviewing exact source tech 
 
 ## GameRuntime owns
 - Player order, turn identity, round progression, shared pause/recovery, event durability, Win Countdown, scoring policy and host command authorization.
+- At match start, the runtime builds/stores the complete round-format schedule. One scheduled game family/category/format is shared by all players in a round; challenge selection remains unique per player. Single-family format rotation is not Mixed Games; Mixed Games is explicitly cross-family.
+- Personal hint balances belong to stable player IDs. A successful hint charges only the active profile; duplicate reward/deduction events must be idempotent.
 - A module reports success; **it must not start the Win Countdown or directly control app navigation**.
 - The module cannot perform networking, write directly to user.db, or display Flutter widgets in pure-domain implementation.
 

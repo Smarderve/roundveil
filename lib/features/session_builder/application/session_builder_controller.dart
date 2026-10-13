@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
+import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/application/active_match_content.dart';
 
 enum SessionFormat { single, mixed }
@@ -70,6 +71,7 @@ class QuickGameTemplate {
       (index) => PlayerConfiguration.placeholder(index + 1),
     ),
     selectedModuleIds: moduleIds,
+    roundFormatIds: defaultRoundFormatIds(moduleIds),
     roundCount: rounds,
     isMixed: moduleIds.length > 1,
     challengeSeconds: 45,
@@ -150,29 +152,50 @@ class SessionBuilderController extends ChangeNotifier {
   bool get busy => _busy;
   SessionFormat get format =>
       _configuration.isMixed ? SessionFormat.mixed : SessionFormat.single;
+  List<RoundGameFormat> get selectedRoundFormats => _configuration
+      .effectiveRoundFormatIds
+      .map(roundGameFormatById)
+      .whereType<RoundGameFormat>()
+      .toList(growable: false);
 
   String? get validationMessage {
     if (_configuration.players.isEmpty) return 'player';
     if (_configuration.selectedModuleIds.isEmpty) return 'game';
-    if (_configuration.isMixed && _configuration.selectedModuleIds.length < 2) {
+    final familyCount = _configuration.selectedGameFamilies.length;
+    if (_configuration.isMixed && familyCount < 2) {
       return 'mixed';
     }
-    if (!_configuration.isMixed &&
-        _configuration.selectedModuleIds.length != 1) {
+    if (!_configuration.isMixed && familyCount != 1) {
       return 'single';
     }
     if (_configuration.roundCount < 1) return 'rounds';
+    if (!_configuration.canStart) return 'format';
     return null;
   }
 
   static SessionConfiguration _supportedConfiguration(
     SessionConfiguration configuration,
-  ) => configuration.copyWith(
-    selectedModuleIds: configuration.selectedModuleIds
+  ) {
+    final modules = configuration.selectedModuleIds
         .where(activeGameModuleIds.contains)
         .toSet()
-        .toList(),
-  );
+        .toList();
+    final formats = configuration.roundFormatIds
+        .where((id) {
+          final format = roundGameFormatById(id);
+          return format == null || modules.contains(format.moduleId);
+        })
+        .toSet()
+        .toList();
+    final validFormats = configuration.roundFormatIds.isEmpty
+        ? defaultRoundFormatIds(modules)
+        : formats;
+    return configuration.copyWith(
+      selectedModuleIds: modules,
+      roundFormatIds: validFormats,
+      isMixed: configuration.isMixed,
+    );
+  }
 
   bool get canCreate => validationMessage == null && !_busy;
 
@@ -180,14 +203,29 @@ class SessionBuilderController extends ChangeNotifier {
 
   String? get startValidationMessage {
     final issue = validationMessage;
-    if (issue != null) return issue;
-    final moduleCount = _configuration.selectedModuleIds.length;
-    final maxRoundsPerModule = _configuration.isMixed
-        ? (_configuration.roundCount + moduleCount - 1) ~/ moduleCount
-        : _configuration.roundCount;
-    final requiredChallenges =
-        maxRoundsPerModule * _configuration.players.length;
+    if (issue != null) {
+      return switch (issue) {
+        'player' => 'Select at least one saved player for this match.',
+        'game' => 'Select a game and its round formats.',
+        'mixed' => 'Mixed Games needs formats from at least two game families.',
+        'single' => 'A single-game session must use one game family.',
+        'rounds' => 'Choose how many rounds to play.',
+        'format' => 'Select an available round format for every selected game. Character Picture Mode needs licensed local images and is unavailable.',
+        _ => issue,
+      };
+    }
+    final formats = _configuration.effectiveRoundFormatIds
+        .map(roundGameFormatById)
+        .whereType<RoundGameFormat>()
+        .toList();
     for (final moduleId in _configuration.selectedModuleIds) {
+      final formatCount = formats
+          .where((format) => format.moduleId == moduleId)
+          .length;
+      final possibleRounds =
+          (_configuration.roundCount * formatCount + formats.length - 1) ~/
+          formats.length;
+      final requiredChallenges = possibleRounds * _configuration.players.length;
       final available = challengesForModule(
         moduleId,
         configuration: _configuration,
@@ -205,12 +243,26 @@ class SessionBuilderController extends ChangeNotifier {
   }
 
   void setFormat(SessionFormat value) {
-    final selected = _configuration.selectedModuleIds;
+    var selected = List<String>.from(_configuration.selectedModuleIds);
+    if (value == SessionFormat.single) {
+      final families = <RoundGameFamily>{};
+      selected = selected.where((module) {
+        final family = familyForModule(module);
+        if (family == null ||
+            families.isNotEmpty && !families.contains(family)) {
+          return false;
+        }
+        families.add(family);
+        return true;
+      }).toList();
+    }
     _configuration = _configuration.copyWith(
       isMixed: value == SessionFormat.mixed,
-      selectedModuleIds: value == SessionFormat.single && selected.length > 1
-          ? selected.take(1).toList()
-          : selected,
+      selectedModuleIds: selected,
+      roundFormatIds: _configuration.effectiveRoundFormatIds.where((id) {
+        final format = roundGameFormatById(id);
+        return format != null && selected.contains(format.moduleId);
+      }).toList(),
     );
     notifyListeners();
   }
@@ -220,14 +272,77 @@ class SessionBuilderController extends ChangeNotifier {
     final selected = List<String>.from(_configuration.selectedModuleIds);
     if (selected.contains(id)) {
       selected.remove(id);
-    } else if (_configuration.isMixed) {
+    } else if (_configuration.isMixed ||
+        familyForModule(id) == RoundGameFamily.guessingGames &&
+            selected.any(
+              (item) => familyForModule(item) == RoundGameFamily.guessingGames,
+            )) {
       selected.add(id);
     } else {
       selected
         ..clear()
         ..add(id);
     }
-    _configuration = _configuration.copyWith(selectedModuleIds: selected);
+    var formats = _configuration.effectiveRoundFormatIds.where((formatId) {
+      final format = roundGameFormatById(formatId);
+      return format != null && selected.contains(format.moduleId);
+    }).toList();
+    for (final module in selected) {
+      if (!formats.any(
+        (formatId) => roundGameFormatById(formatId)?.moduleId == module,
+      )) {
+        formats.add(defaultFormatIdForModule(module));
+      }
+    }
+    _configuration = _configuration.copyWith(
+      selectedModuleIds: selected,
+      roundFormatIds: formats,
+      // Keep the user's selected Mixed mode while the first family is being
+      // assembled; otherwise an empty mixed playlist silently collapses to
+      // Single as soon as its first game is chosen.
+      isMixed:
+          _configuration.isMixed ||
+          selected.map(familyForModule).toSet().length > 1,
+    );
+    notifyListeners();
+  }
+
+  void toggleRoundFormat(String formatId) {
+    final format = roundGameFormatById(formatId);
+    if (format == null ||
+        !_configuration.selectedModuleIds.contains(format.moduleId)) {
+      return;
+    }
+    final selected = List<String>.from(_configuration.effectiveRoundFormatIds);
+    if (selected.contains(formatId)) {
+      selected.remove(formatId);
+      if (!selected.any(
+        (id) => roundGameFormatById(id)?.moduleId == format.moduleId,
+      )) {
+        return;
+      }
+    } else {
+      if (!format.available) return;
+      selected.add(formatId);
+    }
+    _configuration = _configuration.copyWith(
+      roundFormatIds: selected,
+      roundFormatsExplicit: true,
+    );
+    notifyListeners();
+  }
+
+  /// Allows hosts to repair a persisted draft that selected a format which
+  /// is no longer available (or is unknown to this app version).
+  void removeUnsupportedRoundFormat(String formatId) {
+    final format = roundGameFormatById(formatId);
+    if (format != null && format.available) return;
+    final selected = List<String>.from(_configuration.effectiveRoundFormatIds)
+      ..remove(formatId);
+    _configuration = _configuration.copyWith(
+      roundFormatIds: selected,
+      roundFormatsExplicit: true,
+    );
     notifyListeners();
   }
 

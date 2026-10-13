@@ -1,4 +1,5 @@
 import 'session_configuration.dart';
+import 'round_game_format.dart';
 
 class SessionDraft {
   const SessionDraft({
@@ -20,7 +21,11 @@ class SessionDraft {
   bool get needsEditing =>
       configuration.selectedModuleIds.any(
         (id) => !activeGameModuleIds.contains(id),
-      );
+      ) ||
+      configuration.roundFormatIds.any((id) {
+        final format = roundGameFormatById(id);
+        return format == null || !format.available;
+      });
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,

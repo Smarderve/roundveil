@@ -44,6 +44,12 @@
 | T-027 | Active catalog, Create Game, Quick Game and mixed templates expose exactly Quiz, Word Play, Guess the Character and Guess the Country |
 | T-028 | Legacy drafts containing retired module IDs remain stored and flagged; editing filters only retired IDs while preserving other draft values |
 | T-029 | Player callsign and appearance edits update the durable local profile and remain available to the pre-match player picker |
+| T-030 | One game/category/format is shared by all players within a round; challenges are unique; change occurs only at round boundary |
+| T-031 | Quiz-only schedules rotate among MCQ, True/False, Fill Blank and Short Answer without introducing guessing modules |
+| T-032 | Guessing Games can select Character, Country or both while remaining a single-family session; enabled formats are round-scheduled |
+| T-033 | Word Play-only schedules stay within Word formats; only Mixed Games crosses game families |
+| T-034 | Unknown/unavailable draft formats are preserved and flagged; host can remove the unsupported entry and choose a valid format |
+| T-035 | Hint debit uses the active saved player's stable ID and does not affect other players' balances |
 
 ## Tool commands when Flutter scaffold exists
 ```bash

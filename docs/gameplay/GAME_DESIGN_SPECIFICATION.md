@@ -9,7 +9,7 @@
 ROUNDVEIL is a **host-configured multi-game social challenge platform**. The application does not replace real participants with online avatars or prescribe physical actions. It referees the session: player order, selected game modules, prompts, applicable deadlines, host judgement and the shared Win Countdown.
 
 ## Session hierarchy
-`Session -> configured Rounds -> one or more player Turns -> module-owned challenge phases -> TurnOutcome`. A single-game session uses one selected module; mixed-game sessions choose an approved assignment of modules across rounds. Round grouping, players-per-round and playlist editing require final UX approval, not copied prototype mechanics.
+`Session -> configured Rounds -> one or more player Turns -> format-owned challenge phases -> TurnOutcome`. A single-game session stays within one game family. Each round has one scheduled game/category/format shared by every player; each player receives a different eligible challenge. Mixed Games is the only session that crosses game families. The complete format schedule is generated and stored when the match starts.
 
 ## Rules at the session level
 - Host has final authority over options before play and over permitted mid-session commands.
@@ -29,11 +29,14 @@ ROUNDVEIL is a **host-configured multi-game social challenge platform**. The app
 ## Module families
 | Family | Status | Typical resolution |
 |---|---|---|
-| Quiz, True/False, MCQ | reference module to build | automatic or host-confirmed correctness |
-| Word Play / Word Scramble | reference module to build | typed/arranged answers or human judgement |
-| Guess the Character | core reference | verbal final guess; host/clue-giver judgement |
-| Guess the Country (Flags) | spoken answer and host-reveal/judgement flow specified by current rebuild directive | flag-only challenge; host reveals canonical country and judges spoken answer |
+| Quiz | Multiple Choice, True or False, Fill in the Blank, Short Answer; format changes only between rounds | automatic or host-confirmed correctness |
+| Word Play | Word Scramble, Missing Letters, Word Completion, Guess the Word | typed/arranged answers or human judgement |
+| Guessing Games | Guess the Character (Picture/Name) and Guess the Country (Name/Flag) | verbal final guess; host/clue-giver judgement |
 The active game catalog is limited to the four rows above. Riddles and Memory were discontinued by the approved 2026-10-12 product decision; archive images depicting them are obsolete visual references and must not be implemented.
+
+Within a round, all players receive the same family, selected guessing category (where applicable), and format. Only the challenge item changes by player. Enabled formats are shuffled at round boundaries with no unnecessary adjacent repetition; challenge IDs are shuffled and unique within the match. Single Guessing Games may include Character, Country, or both categories without becoming Mixed Games. Quiz formats never enter Guessing Games or Word Play sessions. Personal hint credits are keyed by stable saved-player ID and only the active player's balance is charged for a successfully revealed hint.
+
+Current implementation data is a limited offline starter pack, not production-complete: Quiz 12, Word Play 10, Character Name 10, Country Flags 7, licensed Character Picture images 0. Character Picture Mode is rejected by configuration validation until licensed local assets are available. A legacy draft containing unavailable or unknown formats is preserved, flagged for editing, and must not silently substitute another format.
 
 ## Decisions NOT yet approved
 The 2026-10-11 user rebuild directive now authorizes implementing the listed platform flows and module behaviors. Older Felix/Overwatch HTML navigation, placements and gameplay remain rejected. The 2,000-screen reference archive is unapproved visual concept material except for the explicitly approved V5 home and brand references; it does not set mechanics. See `docs/design/UX_OPEN_QUESTIONS.md` and `docs/architecture/ROUNDVEIL_REBUILD_AUDIT.md`.

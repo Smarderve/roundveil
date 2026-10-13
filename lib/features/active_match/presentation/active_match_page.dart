@@ -7,6 +7,7 @@ import 'package:roundveil/data/repositories/challenge_history_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/application/active_match_controller.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -238,7 +239,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       const SizedBox(width: 8),
       Expanded(
         child: Text(
-          _moduleTitle(_activeMatch.state.challenge.moduleId).toUpperCase(),
+          '${_gameFamilyTitle(_activeMatch.state.challenge.formatId)} · ${roundGameFormatById(_activeMatch.state.challenge.formatId)!.title.toUpperCase()}',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(
@@ -285,7 +286,17 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   Widget _roundIntro(RoundveilBrandTokens tokens) {
     final state = _activeMatch.state;
     final compact = MediaQuery.sizeOf(context).height < 500;
-    final title = _moduleTitle(state.challenge.moduleId).toUpperCase();
+    final format = roundGameFormatById(state.challenge.formatId)!;
+    final gameTitle = switch (format.family) {
+      RoundGameFamily.quiz => 'QUIZ',
+      RoundGameFamily.wordPlay => 'WORD PLAY',
+      RoundGameFamily.guessingGames => 'GUESSING GAMES',
+    };
+    final category = switch (state.challenge.moduleId) {
+      'guess_character' => 'CHARACTER',
+      'guess_country_flags' => 'COUNTRY',
+      _ => null,
+    };
     final icon = switch (state.challenge.moduleId) {
       'quiz' => Icons.quiz_rounded,
       'word_play' => Icons.abc_rounded,
@@ -317,13 +328,46 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
               Icon(icon, color: tokens.cyan, size: compact ? 38 : 58),
               SizedBox(height: compact ? 2 : 8),
               Text(
-                title,
+                gameTitle,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: compact ? 24 : 42,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 1.8,
+                ),
+              ),
+              if (category != null)
+                Text(
+                  category,
+                  style: TextStyle(
+                    color: tokens.cyan,
+                    fontSize: compact ? 10 : 13,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 2,
+                  ),
+                ),
+              SizedBox(height: compact ? 2 : 5),
+              Text(
+                format.title.toUpperCase(),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: tokens.orange,
+                  fontSize: compact ? 14 : 21,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.4,
+                ),
+              ),
+              SizedBox(height: compact ? 3 : 8),
+              Text(
+                switch (state.challenge.formatId) {
+                  'character_name' || 'character_picture' || 'country_name' => 'Each player gets a different challenge. The selected mode stays the same for the whole round.',
+                  _ => 'Every player receives a different challenge in this same game format.',
+                },
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: tokens.muted,
+                  fontSize: compact ? 9 : 12,
                 ),
               ),
               SizedBox(height: compact ? 3 : 8),
@@ -501,7 +545,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                 ],
               ),
               const SizedBox(height: 10),
-              if (challenge.moduleId == 'guess_country_flags') ...<Widget>[
+              if (challenge.formatId == 'country_flag') ...<Widget>[
                 if (challenge.flagAssetPath case final asset?)
                   ConstrainedBox(
                     constraints: BoxConstraints(
@@ -542,24 +586,38 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     onPressed: _activeMatch.revealAnswer,
                     child: const Text('REVEAL ANSWER'),
                   ),
-              ] else if (challenge.moduleId == 'guess_character') ...<Widget>[
+              ] else if (const <String>{
+                'character_name',
+                'character_picture',
+                'country_name',
+              }.contains(challenge.formatId)) ...<Widget>[
                 if (state.phase == MatchPhase.turnAway) ...<Widget>[
                   const Text(
                     'PLAYER — TURN AWAY',
                     style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
-                    'The clue-givers should be ready before revealing the character.',
+                  Text(
+                    challenge.formatId == 'country_name'
+                        ? 'The clue-givers should be ready before revealing the country name.'
+                        : 'The clue-givers should be ready before revealing the character.',
                   ),
                   const SizedBox(height: 18),
                   FilledButton(
                     onPressed: _activeMatch.revealCharacterAfterPlayerTurnsAway,
-                    child: const Text('PLAYER IS TURNED AWAY · REVEAL'),
+                    child: Text(
+                      challenge.formatId == 'country_name'
+                          ? 'PLAYER IS TURNED AWAY · REVEAL COUNTRY'
+                          : 'PLAYER IS TURNED AWAY · REVEAL CHARACTER',
+                    ),
                   ),
                 ] else ...<Widget>[
                   Text(
-                    'NAME MODE · SHOW TO CLUE-GIVERS',
+                    challenge.formatId == 'country_name'
+                        ? 'COUNTRY NAME MODE · SHOW TO CLUE-GIVERS'
+                        : challenge.formatId == 'character_picture'
+                        ? 'PICTURE MODE · SHOW TO CLUE-GIVERS'
+                        : 'NAME MODE · SHOW TO CLUE-GIVERS',
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.w900,
@@ -591,7 +649,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                if (challenge.moduleId == 'quiz')
+                if (challenge.formatId == 'quiz_multiple_choice' ||
+                    challenge.formatId == 'quiz_true_false')
                   Wrap(
                     alignment: WrapAlignment.center,
                     spacing: 10,
@@ -618,8 +677,12 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                       _activeMatch.answer(value);
                       _answer.clear();
                     },
-                    decoration: const InputDecoration(
-                      labelText: 'Your answer',
+                    decoration: InputDecoration(
+                      labelText: challenge.formatId == 'quiz_fill_blank'
+                          ? 'Fill in the blank'
+                          : challenge.moduleId == 'quiz'
+                          ? 'Short answer'
+                          : 'Your word',
                       border: OutlineInputBorder(),
                     ),
                   ),
@@ -629,7 +692,11 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                       _activeMatch.answer(_answer.text);
                       _answer.clear();
                     },
-                    child: const Text('SUBMIT WORD'),
+                    child: Text(
+                      challenge.moduleId == 'quiz'
+                          ? 'SUBMIT ANSWER'
+                          : 'SUBMIT WORD',
+                    ),
                   ),
                 ],
                 if (state.hintVisible)
@@ -823,11 +890,11 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       .firstWhere((player) => player.id == id)
       .displayName;
 
-  String _moduleTitle(String id) => switch (id) {
-    'quiz' => 'Quiz',
-    'word_play' => 'Word Play',
-    'guess_character' => 'Guess the Character',
-    'guess_country_flags' => 'Guess the Country',
-    _ => id,
-  };
+  String _gameFamilyTitle(String formatId) =>
+      switch (roundGameFormatById(formatId)?.family) {
+        RoundGameFamily.quiz => 'QUIZ',
+        RoundGameFamily.wordPlay => 'WORD PLAY',
+        RoundGameFamily.guessingGames => 'GUESSING GAMES',
+        null => 'ROUNDVEIL',
+      };
 }

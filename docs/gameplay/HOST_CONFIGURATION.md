@@ -6,7 +6,7 @@
 > **Rule:** This file must not be used to revive removed features or to treat rejected prototype UX as approved.
 
 ## Host responsibility
-A session **must** derive from a host-reviewed `SessionConfig`. The host chooses/accepts all meaningful settings prior to play: active players, game type(s), topic/category pools, rounds, difficulty options, module-specific rules, timer durations, scoring choice and Win Countdown duration.
+A session **must** derive from a host-reviewed `SessionConfig`. The host chooses/accepts all meaningful settings prior to play: active saved players, game family, enabled round categories/formats, round count, difficulty/content pools, module-specific rules, timer durations, scoring choice and Win Countdown duration. Quiz, Guessing Games, and Word Play are distinct families; only Mixed Games crosses families. Every player in a round shares the same scheduled game/category/format.
 
 ## Conceptual configuration model
 ```yaml
@@ -17,14 +17,14 @@ session:
     - game_module_id: quiz
       category_ids: [animals]
       difficulty: medium
-      module_options: {question_format: multiple_choice}
+      module_options: {round_formats: [multiple_choice, true_false, fill_blank, short_answer]}
     - game_module_id: guess_character
       category_ids: [fictional_characters]
       module_options: {presentation: image, final_guess_only: true}
     - game_module_id: guess_country_flags
       category_ids: [worldwide]
       difficulty: mixed
-      module_options: {answer_mode: multiple_choice, inclusion_policy: un_members_only, hints_enabled: false}
+      module_options: {round_formats: [country_flag], inclusion_policy: un_members_only, hints_enabled: false}
   rules:
     player_order_policy: balanced_random # proposal, configurable
     scoring_enabled: false # illustration only; NOT an approved default

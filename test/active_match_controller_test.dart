@@ -108,6 +108,106 @@ void main() {
     },
   );
 
+  test('Quiz keeps one game while all players share a format per round', () {
+    final configuration = SessionConfiguration(
+      players: List<PlayerConfiguration>.generate(
+        3,
+        (index) => PlayerConfiguration.placeholder(index + 1),
+      ),
+      selectedModuleIds: const <String>['quiz'],
+      roundFormatIds: const <String>[
+        'quiz_multiple_choice',
+        'quiz_true_false',
+        'quiz_fill_blank',
+        'quiz_short_answer',
+      ],
+      roundCount: 4,
+    );
+    expect(configuration.canStart, isTrue);
+    final match = ActiveMatchController(
+      configuration: configuration,
+      enableTimers: false,
+      random: Random(91),
+    );
+    expect(match.state.totalTurns, 12);
+    expect(match.formatSchedule.toSet(), configuration.roundFormatIds.toSet());
+    final formatByRound = <int, String>{};
+    final challengeIds = <String>{};
+    match.start();
+    for (var turn = 0; turn < 12; turn++) {
+      if (match.state.phase == MatchPhase.roundIntro) match.beginRound();
+      match.beginChallenge();
+      final state = match.state;
+      expect(state.challenge.moduleId, 'quiz');
+      formatByRound.putIfAbsent(state.round, () => state.challenge.formatId);
+      expect(state.challenge.formatId, formatByRound[state.round]);
+      expect(challengeIds.add(state.challenge.id), isTrue);
+      if (state.challenge.formatId == 'quiz_true_false') {
+        expect(state.challenge.choices, <String>['True', 'False']);
+      }
+      _answerCorrectly(match);
+      match.beginWinCountdown();
+      match.completeCountdown();
+    }
+    expect(formatByRound.length, 4);
+    expect(match.state.phase, MatchPhase.complete);
+    match.dispose();
+  });
+
+  test('Guessing Games combines categories without becoming Mixed Games', () {
+    final configuration = SessionConfiguration(
+      players: List<PlayerConfiguration>.generate(
+        3,
+        (index) => PlayerConfiguration.placeholder(index + 1),
+      ),
+      selectedModuleIds: const <String>[
+        'guess_character',
+        'guess_country_flags',
+      ],
+      roundFormatIds: const <String>[
+        'character_name',
+        'country_name',
+        'country_flag',
+      ],
+      roundCount: 3,
+      isMixed: false,
+    );
+    expect(configuration.canStart, isTrue);
+    final match = ActiveMatchController(
+      configuration: configuration,
+      enableTimers: false,
+      random: Random(39),
+    );
+    final challengeIds = <String>{};
+    match.start();
+    for (var turn = 0; turn < 9; turn++) {
+      if (match.state.phase == MatchPhase.roundIntro) match.beginRound();
+      match.beginChallenge();
+      expect(match.state.challenge.moduleId, isNot('quiz'));
+      expect(challengeIds.add(match.state.challenge.id), isTrue);
+      _answerCorrectly(match);
+      match.beginWinCountdown();
+      match.completeCountdown();
+    }
+    expect(match.formatSchedule.toSet(), configuration.roundFormatIds.toSet());
+    expect(match.state.phase, MatchPhase.complete);
+    match.dispose();
+  });
+
+  test('Character Picture Mode is blocked without licensed local images', () {
+    final configuration = SessionConfiguration(
+      players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+      selectedModuleIds: const <String>['guess_character'],
+      roundFormatIds: const <String>['character_picture'],
+      roundCount: 1,
+    );
+    expect(configuration.canStart, isFalse);
+    expect(
+      ActiveMatchController.validateConfiguration(configuration),
+      contains('no licensed local images'),
+    );
+  });
+
   test('consecutive matches prefer unseen eligible challenges', () {
     final used = <String>[];
     final configuration = SessionConfiguration(
@@ -154,6 +254,39 @@ void main() {
     match.dispose();
   });
 
+  test('hint credits are charged to the active saved player only', () async {
+    final configuration = SessionConfiguration(
+      players: <PlayerConfiguration>[
+        PlayerConfiguration.placeholder(1),
+        PlayerConfiguration.placeholder(2),
+      ],
+      selectedModuleIds: const <String>['quiz'],
+      roundCount: 1,
+    );
+    final repository = InMemoryPlayerProfileRepository();
+    await repository.ensureProfiles(configuration.players);
+    final saved = await repository.loadAll();
+    await repository.updateProfile(saved[0].copyWith(hintCredits: 2));
+    await repository.updateProfile(saved[1].copyWith(hintCredits: 5));
+    final funded = await repository.loadAll();
+    final match = ActiveMatchController(
+      configuration: configuration,
+      enableTimers: false,
+      profileRepository: repository,
+      profiles: {for (final profile in funded) profile.id: profile},
+      matchId: 'independent-hints',
+      random: Random(28),
+    );
+    match.beginChallenge();
+    expect(await match.revealHint(), isTrue);
+    match.timeoutChallenge();
+    match.beginChallenge();
+    expect(await match.revealHint(), isTrue);
+    final latest = await repository.loadAll();
+    expect(latest.map((profile) => profile.hintCredits), <int>[1, 4]);
+    match.dispose();
+  });
+
   test('content capacity uses actual players and mixed round distribution', () {
     final country = SessionConfiguration(
       players: List<PlayerConfiguration>.generate(
@@ -183,7 +316,7 @@ void main() {
   test(
     'offline starter content has unique nonempty records for four modes',
     () {
-      expect(quizChallenges, hasLength(10));
+      expect(quizChallenges, hasLength(12));
       expect(wordChallenges, hasLength(10));
       expect(characterChallenges, hasLength(10));
       expect(countryChallenges, hasLength(7));
@@ -239,12 +372,12 @@ SessionConfiguration _configuration({
 );
 
 void _answerCorrectly(ActiveMatchController match) {
-  switch (match.state.challenge.moduleId) {
-    case 'guess_character':
+  switch (match.state.challenge.formatId) {
+    case 'character_name' || 'character_picture' || 'country_name':
       expect(match.state.phase, MatchPhase.turnAway);
       match.revealCharacterAfterPlayerTurnsAway();
       match.judge(correct: true);
-    case 'guess_country_flags':
+    case 'country_flag':
       expect(match.state.phase, MatchPhase.awaitingJudgement);
       expect(match.state.challenge.choices, isEmpty);
       match.revealAnswer();

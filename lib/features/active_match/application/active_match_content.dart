@@ -1,3 +1,6 @@
+// The outer quiz collection is const, so format-specific maps are const too.
+// ignore_for_file: unnecessary_const
+
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 
@@ -10,6 +13,8 @@ class OfflineChallenge {
     this.hint = '',
     this.flagAssetPath,
     this.flagAspectRatio,
+    this.formatPrompts = const <String, String>{},
+    this.formatAnswers = const <String, String>{},
   });
 
   final String id;
@@ -19,6 +24,35 @@ class OfflineChallenge {
   final String hint;
   final String? flagAssetPath;
   final double? flagAspectRatio;
+  final Map<String, String> formatPrompts;
+  final Map<String, String> formatAnswers;
+
+  String promptForFormat(String formatId) {
+    final specified = formatPrompts[formatId];
+    if (specified != null) return specified;
+    final letters = answer.runes.map(String.fromCharCode).toList();
+    return switch (formatId) {
+      'word_missing_letters' =>
+        letters
+            .asMap()
+            .entries
+            .map((entry) => entry.key % 3 == 1 ? '_' : entry.value)
+            .join(' '),
+      'word_completion' =>
+        letters
+            .asMap()
+            .entries
+            .map((entry) => entry.key < 2 ? entry.value : '_')
+            .join(' '),
+      'word_guess' => hint,
+      _ => prompt,
+    };
+  }
+
+  String answerForFormat(String formatId) => formatAnswers[formatId] ?? answer;
+
+  List<String> choicesForFormat(String formatId) =>
+      formatId == 'quiz_true_false' ? const <String>['True', 'False'] : choices;
 }
 
 const quizChallenges = <OfflineChallenge>[
@@ -28,6 +62,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Jupiter',
     choices: ['Jupiter', 'Saturn', 'Neptune', 'Earth'],
     hint: 'It is a gas giant.',
+    formatPrompts: const {
+      'quiz_true_false': 'Jupiter is the largest planet in our solar system.',
+      'quiz_fill_blank': 'The largest planet in our solar system is _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
   ),
   OfflineChallenge(
     id: 'quiz-science-002',
@@ -35,6 +74,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'H₂O',
     choices: ['H₂O', 'CO₂', 'O₂', 'NaCl'],
     hint: 'Each molecule contains two hydrogen atoms.',
+    formatPrompts: const {
+      'quiz_true_false': 'A water molecule contains three hydrogen atoms.',
+      'quiz_fill_blank': 'The chemical formula for water is _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'False'},
   ),
   OfflineChallenge(
     id: 'quiz-geography-003',
@@ -42,6 +86,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Africa',
     choices: ['Africa', 'Asia', 'Europe', 'South America'],
     hint: 'It is the continent crossed by the Equator and the Prime Meridian.',
+    formatPrompts: const {
+      'quiz_true_false': 'Kenya is located in Africa.',
+      'quiz_fill_blank': 'Kenya is located on the continent of _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
   ),
   OfflineChallenge(
     id: 'quiz-math-004',
@@ -49,6 +98,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: '56',
     choices: ['56', '54', '64', '48'],
     hint: 'Seven groups of eight.',
+    formatPrompts: const {
+      'quiz_true_false': 'Seven multiplied by eight equals 54.',
+      'quiz_fill_blank': 'Seven multiplied by eight equals _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'False'},
   ),
   OfflineChallenge(
     id: 'quiz-science-005',
@@ -56,6 +110,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Mars',
     choices: ['Mars', 'Venus', 'Mercury', 'Jupiter'],
     hint: 'It is the fourth planet from the Sun.',
+    formatPrompts: const {
+      'quiz_true_false': 'Mars is known as the Red Planet.',
+      'quiz_fill_blank': 'The planet known as the Red Planet is _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
   ),
   OfflineChallenge(
     id: 'quiz-literature-006',
@@ -68,6 +127,11 @@ const quizChallenges = <OfflineChallenge>[
       'Mark Twain',
     ],
     hint: 'The playwright was born in Stratford-upon-Avon.',
+    formatPrompts: const {
+      'quiz_true_false': 'William Shakespeare wrote Romeo and Juliet.',
+      'quiz_fill_blank': 'The play Romeo and Juliet was written by _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
   ),
   OfflineChallenge(
     id: 'quiz-general-007',
@@ -75,6 +139,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Six',
     choices: ['Six', 'Five', 'Seven', 'Eight'],
     hint: 'The prefix “hexa-” means this number.',
+    formatPrompts: const {
+      'quiz_true_false': 'A hexagon has six sides.',
+      'quiz_fill_blank': 'A hexagon has _____ sides.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
   ),
   OfflineChallenge(
     id: 'quiz-geography-008',
@@ -82,6 +151,11 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Tokyo',
     choices: ['Tokyo', 'Kyoto', 'Osaka', 'Hiroshima'],
     hint: 'It hosted the 2020 Summer Olympics.',
+    formatPrompts: const {
+      'quiz_true_false': 'Kyoto is the capital city of Japan.',
+      'quiz_fill_blank': 'The capital city of Japan is _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'False'},
   ),
   OfflineChallenge(
     id: 'quiz-science-009',
@@ -89,6 +163,12 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Carbon dioxide',
     choices: ['Carbon dioxide', 'Oxygen', 'Nitrogen', 'Hydrogen'],
     hint: 'Its chemical formula is CO₂.',
+    formatPrompts: const {
+      'quiz_true_false': 'Plants absorb carbon dioxide during photosynthesis.',
+      'quiz_fill_blank':
+          'During photosynthesis, plants absorb _____ from the air.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
   ),
   OfflineChallenge(
     id: 'quiz-islamic-010',
@@ -96,6 +176,40 @@ const quizChallenges = <OfflineChallenge>[
     answer: 'Al-Fatiha',
     choices: ['Al-Fatiha', 'Al-Baqarah', 'Al-Ikhlas', 'An-Nas'],
     hint: 'Its name means “The Opening”.',
+    formatPrompts: const {
+      'quiz_true_false': 'Al-Fatiha is the first surah in the Qur’an.',
+      'quiz_fill_blank': 'The first surah in the Qur’an is _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
+  ),
+  OfflineChallenge(
+    id: 'quiz-ocean-011',
+    prompt: 'Which ocean is the largest on Earth?',
+    answer: 'Pacific Ocean',
+    choices: [
+      'Pacific Ocean',
+      'Atlantic Ocean',
+      'Indian Ocean',
+      'Arctic Ocean',
+    ],
+    hint: 'It covers about one third of Earth’s surface.',
+    formatPrompts: const {
+      'quiz_true_false': 'The Pacific is the largest ocean basin on Earth.',
+      'quiz_fill_blank': 'The largest ocean basin on Earth is the _____ Ocean.',
+    },
+    formatAnswers: const {'quiz_true_false': 'True'},
+  ),
+  OfflineChallenge(
+    id: 'quiz-chemistry-012',
+    prompt: 'What is the chemical symbol for gold?',
+    answer: 'Au',
+    choices: ['Au', 'Ag', 'Fe', 'Cu'],
+    hint: 'Its symbol comes from the Latin word aurum.',
+    formatPrompts: const {
+      'quiz_true_false': 'The chemical symbol for gold is Ag.',
+      'quiz_fill_blank': 'The chemical symbol for gold is _____.',
+    },
+    formatAnswers: const {'quiz_true_false': 'False'},
   ),
 ];
 

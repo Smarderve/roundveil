@@ -4,6 +4,7 @@ import 'package:roundveil/data/repositories/challenge_history_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
@@ -155,7 +156,12 @@ class _CinematicSessionBuilderPageState
                           child: _ModuleForge(
                             selected: selected,
                             mixed: config.isMixed,
+                            selectedFormatIds: config.effectiveRoundFormatIds
+                                .toSet(),
                             onSelect: _controller.toggleGame,
+                            onFormatSelect: _controller.toggleRoundFormat,
+                            onRemoveUnsupportedFormat:
+                                _controller.removeUnsupportedRoundFormat,
                           ),
                         ),
                         const SizedBox(height: 10),
@@ -204,7 +210,12 @@ class _CinematicSessionBuilderPageState
                       child: _ModuleForge(
                         selected: selected,
                         mixed: config.isMixed,
+                        selectedFormatIds: config.effectiveRoundFormatIds
+                            .toSet(),
                         onSelect: _controller.toggleGame,
+                        onFormatSelect: _controller.toggleRoundFormat,
+                        onRemoveUnsupportedFormat:
+                            _controller.removeUnsupportedRoundFormat,
                       ),
                     ),
                     const SizedBox(width: 12),
@@ -336,54 +347,133 @@ class _ModuleForge extends StatelessWidget {
   const _ModuleForge({
     required this.selected,
     required this.mixed,
+    required this.selectedFormatIds,
     required this.onSelect,
+    required this.onFormatSelect,
+    required this.onRemoveUnsupportedFormat,
   });
   final Set<String> selected;
   final bool mixed;
+  final Set<String> selectedFormatIds;
   final ValueChanged<String> onSelect;
+  final ValueChanged<String> onFormatSelect;
+  final ValueChanged<String> onRemoveUnsupportedFormat;
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    Widget moduleSlot(String id) {
+      final game = gameCatalog.firstWhere((item) => item.id == id);
+      return _ModuleSlot(
+        title: _title(l10n, game.titleKey),
+        status: game.playable ? l10n.playablePrototype : l10n.inFoundation,
+        icon: _gameIcon(game.id),
+        selected: selected.contains(game.id),
+        available: game.playable,
+        color: game.playable ? tokens.orange : tokens.cyan,
+        onTap: () => onSelect(game.id),
+      );
+    }
+
+    Widget familyHeading(String value) => Padding(
+      padding: const EdgeInsets.only(top: 5, bottom: 3),
+      child: Text(
+        value,
+        style: TextStyle(
+          color: tokens.cyan,
+          fontSize: 9,
+          fontWeight: FontWeight.w900,
+          letterSpacing: 1.1,
+        ),
+      ),
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: <Widget>[
         _ForgeHeading(
           icon: Icons.sports_esports_rounded,
-          title: mixed ? 'BUILD YOUR PLAYLIST' : 'CHOOSE THE CHALLENGE',
-          subtitle: mixed ? 'SELECT MULTIPLE MODES' : 'ONE GAME · ALL ROUNDS',
+          title: mixed ? 'BUILD YOUR PLAYLIST' : 'CHOOSE THE GAME',
+          subtitle: mixed
+              ? 'MIXED GAMES IS THE CROSS-GAME MODE'
+              : 'SAME GAME THROUGHOUT',
         ),
-        const SizedBox(height: 8),
-        Expanded(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final columns = constraints.maxWidth < 420 ? 1 : 2;
-              return GridView.builder(
-                padding: EdgeInsets.zero,
-                gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: columns,
-                  mainAxisExtent: 68,
-                  crossAxisSpacing: 8,
-                  mainAxisSpacing: 7,
+        if (selected.isNotEmpty) ...<Widget>[
+          const SizedBox(height: 8),
+          Text(
+            'ROUND FORMATS · ONE SHARED FORMAT PER ROUND',
+            style: TextStyle(
+              color: tokens.cyan,
+              fontSize: 9,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+          const SizedBox(height: 3),
+          SizedBox(
+            height: 58,
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 5,
+                runSpacing: 3,
+                children: <Widget>[
+                  for (final option in roundGameFormats.where(
+                    (format) => selected.contains(format.moduleId),
+                  ))
+                    Tooltip(
+                      message: option.available
+                          ? option.title
+                          : option.unavailableReason ?? 'Not installed',
+                      child: FilterChip(
+                        key: ValueKey<String>('round-format-${option.id}'),
+                        label: Text(option.title.toUpperCase()),
+                        selected: selectedFormatIds.contains(option.id),
+                        onSelected: option.available
+                            ? (_) => onFormatSelect(option.id)
+                            : selectedFormatIds.contains(option.id)
+                            ? (_) => onRemoveUnsupportedFormat(option.id)
+                            : null,
+                        visualDensity: VisualDensity.compact,
+                        labelStyle: const TextStyle(fontSize: 9),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+        if (selectedFormatIds.any((id) => roundGameFormatById(id) == null))
+          Wrap(
+            spacing: 6,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            children: <Widget>[
+              const Text('This draft has unknown round formats.'),
+              for (final id in selectedFormatIds.where(
+                (id) => roundGameFormatById(id) == null,
+              ))
+                TextButton(
+                  onPressed: () => onRemoveUnsupportedFormat(id),
+                  child: Text('REMOVE $id'),
                 ),
-                itemCount: gameCatalog.length,
-                itemBuilder: (context, index) {
-                  final game = gameCatalog[index];
-                  final isSelected = selected.contains(game.id);
-                  return _ModuleSlot(
-                    title: _title(l10n, game.titleKey),
-                    status: game.playable
-                        ? l10n.playablePrototype
-                        : l10n.inFoundation,
-                    icon: _gameIcon(game.id),
-                    selected: isSelected,
-                    available: game.playable,
-                    color: game.playable ? tokens.orange : tokens.cyan,
-                    onTap: () => onSelect(game.id),
-                  );
-                },
-              );
-            },
+            ],
+          ),
+        const SizedBox(height: 6),
+        Expanded(
+          child: ListView(
+            padding: EdgeInsets.zero,
+            children: <Widget>[
+              familyHeading('QUIZ'),
+              moduleSlot('quiz'),
+              familyHeading('WORD PLAY'),
+              moduleSlot('word_play'),
+              familyHeading('GUESSING GAMES'),
+              Row(
+                children: <Widget>[
+                  Expanded(child: moduleSlot('guess_character')),
+                  const SizedBox(width: 7),
+                  Expanded(child: moduleSlot('guess_country_flags')),
+                ],
+              ),
+            ],
           ),
         ),
       ],

@@ -6,6 +6,7 @@ import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/application/active_match_content.dart';
 
 enum MatchPhase {
@@ -38,15 +39,20 @@ enum GameAudioCue {
 }
 
 class MatchChallenge {
-  const MatchChallenge({required this.moduleId, required this.content});
+  const MatchChallenge({
+    required this.moduleId,
+    required this.formatId,
+    required this.content,
+  });
 
   final String moduleId;
+  final String formatId;
   final OfflineChallenge content;
 
   String get id => content.id;
-  String get prompt => content.prompt;
-  String get answer => content.answer;
-  List<String> get choices => content.choices;
+  String get prompt => content.promptForFormat(formatId);
+  String get answer => content.answerForFormat(formatId);
+  List<String> get choices => content.choicesForFormat(formatId);
   String get hint => content.hint;
   String? get flagAssetPath => content.flagAssetPath;
   double? get flagAspectRatio => content.flagAspectRatio;
@@ -126,7 +132,10 @@ class ActiveMatchController extends ChangeNotifier {
     if (initialIssue != null) {
       throw ArgumentError.value(configuration, 'configuration', initialIssue);
     }
-    _moduleSchedule = _buildModuleSchedule(configuration, _random);
+    _roundSchedule = _buildRoundSchedule(configuration, _random);
+    _moduleSchedule = _roundSchedule
+        .map((format) => format.moduleId)
+        .toList(growable: false);
     final requiredByModule = <String, int>{
       for (final moduleId in configuration.selectedModuleIds)
         moduleId:
@@ -158,6 +167,7 @@ class ActiveMatchController extends ChangeNotifier {
   final Set<String> _recentChallengeIds;
   final void Function(String challengeId)? onChallengeDrawn;
   late final List<String> _moduleSchedule;
+  late final List<RoundGameFormat> _roundSchedule;
   late final Map<String, List<OfflineChallenge>> _challengeDecks;
   final Set<String> _reportedChallengeIds = <String>{};
   final bool enableTimers;
@@ -184,6 +194,8 @@ class ActiveMatchController extends ChangeNotifier {
   ActiveMatchState get state => _state;
   Stream<GameAudioCue> get effects => _effects.stream;
   List<String> get moduleSchedule => List<String>.unmodifiable(_moduleSchedule);
+  List<String> get formatSchedule =>
+      List<String>.unmodifiable(_roundSchedule.map((format) => format.id));
 
   void start() {
     if (_started) return;
@@ -204,14 +216,22 @@ class ActiveMatchController extends ChangeNotifier {
   static String? validateConfiguration(SessionConfiguration configuration) {
     final baseIssue = _validateBaseConfiguration(configuration);
     if (baseIssue != null) return baseIssue;
-    final modules = configuration.selectedModuleIds;
     final players = configuration.players.length;
-    final maximumRoundsPerModule = configuration.isMixed
-        ? (configuration.roundCount + modules.length - 1) ~/ modules.length
-        : configuration.roundCount;
+    final formats = configuration.effectiveRoundFormatIds
+        .map(roundGameFormatById)
+        .whereType<RoundGameFormat>()
+        .toList();
     return validateConfigurationWithCounts(configuration, <String, int>{
-      for (final moduleId in modules)
-        moduleId: maximumRoundsPerModule * players,
+      for (final moduleId in configuration.selectedModuleIds)
+        moduleId:
+            ((configuration.roundCount *
+                        formats
+                            .where((format) => format.moduleId == moduleId)
+                            .length +
+                    formats.length -
+                    1) ~/
+                formats.length) *
+            players,
     });
   }
 
@@ -238,7 +258,12 @@ class ActiveMatchController extends ChangeNotifier {
     SessionConfiguration configuration,
   ) {
     if (!configuration.canStart) {
-      return 'Complete the player, game, and round selections first.';
+      if (configuration.effectiveRoundFormatIds.any(
+        (id) => roundGameFormatById(id)?.available == false,
+      )) {
+        return 'Character Picture Mode is unavailable: no licensed local images are installed.';
+      }
+      return 'Choose one game family, its available round formats, players, and a round count.';
     }
     if (configuration.challengeSeconds < 1 ||
         configuration.winCountdownSeconds < 1) {
@@ -254,10 +279,12 @@ class ActiveMatchController extends ChangeNotifier {
   void beginChallenge() {
     if (_state.phase != MatchPhase.playerIntro) return;
     _introTimer?.cancel();
-    final moduleId = _state.challenge.moduleId;
-    final phase = switch (moduleId) {
-      'guess_character' => MatchPhase.turnAway,
-      'guess_country_flags' => MatchPhase.awaitingJudgement,
+    final formatId = _state.challenge.formatId;
+    final phase = switch (formatId) {
+      'character_name' ||
+      'character_picture' ||
+      'country_name' => MatchPhase.turnAway,
+      'country_flag' => MatchPhase.awaitingJudgement,
       _ => MatchPhase.challenge,
     };
     _set(
@@ -281,7 +308,14 @@ class ActiveMatchController extends ChangeNotifier {
   }
 
   void revealCharacterAfterPlayerTurnsAway() {
-    if (_state.phase != MatchPhase.turnAway) return;
+    if (_state.phase != MatchPhase.turnAway ||
+        !const <String>{
+          'character_name',
+          'character_picture',
+          'country_name',
+        }.contains(_state.challenge.formatId)) {
+      return;
+    }
     _set(
       _copy(
         phase: MatchPhase.awaitingJudgement,
@@ -295,7 +329,7 @@ class ActiveMatchController extends ChangeNotifier {
 
   void revealAnswer() {
     if (_state.phase != MatchPhase.awaitingJudgement ||
-        _state.challenge.moduleId != 'guess_country_flags') {
+        _state.challenge.formatId != 'country_flag') {
       return;
     }
     _set(_copy(answerVisible: true));
@@ -585,7 +619,8 @@ class ActiveMatchController extends ChangeNotifier {
     final playerCount = _configuration.players.length;
     final total = _configuration.roundCount * playerCount;
     final round = turn ~/ playerCount + 1;
-    final moduleId = _moduleSchedule[round - 1];
+    final format = _roundSchedule[round - 1];
+    final moduleId = format.moduleId;
     final priorRoundsForModule = _moduleSchedule
         .take(round - 1)
         .where((id) => id == moduleId)
@@ -595,6 +630,7 @@ class ActiveMatchController extends ChangeNotifier {
     final playerIndex = turn % playerCount;
     final challenge = MatchChallenge(
       moduleId: moduleId,
+      formatId: format.id,
       content: _challengeDecks[moduleId]![contentIndex],
     );
     return ActiveMatchState(
@@ -618,23 +654,25 @@ class ActiveMatchController extends ChangeNotifier {
     if (_reportedChallengeIds.add(id)) onChallengeDrawn?.call(id);
   }
 
-  static List<String> _buildModuleSchedule(
+  static List<RoundGameFormat> _buildRoundSchedule(
     SessionConfiguration configuration,
     Random random,
   ) {
-    if (!configuration.isMixed) {
-      return List<String>.filled(
-        configuration.roundCount,
-        configuration.selectedModuleIds.single,
-      );
-    }
-    final result = <String>[];
+    final enabledFormats = configuration.effectiveRoundFormatIds
+        .map(roundGameFormatById)
+        .whereType<RoundGameFormat>()
+        .toList(growable: false);
+    final result = <RoundGameFormat>[];
     while (result.length < configuration.roundCount) {
-      final cycle = List<String>.from(configuration.selectedModuleIds)
-        ..shuffle(random);
-      if (result.isNotEmpty && cycle.first == result.last) {
-        final differentIndex = cycle.indexWhere((id) => id != result.last);
-        if (differentIndex > 0) {
+      final cycle = List<RoundGameFormat>.from(enabledFormats)..shuffle(random);
+      if (result.isNotEmpty && cycle.length > 1) {
+        final violatesBoundary = configuration.isMixed
+            ? cycle.first.family == result.last.family
+            : cycle.first.id == result.last.id;
+        final differentIndex = configuration.isMixed
+            ? cycle.indexWhere((format) => format.family != result.last.family)
+            : cycle.indexWhere((format) => format.id != result.last.id);
+        if (violatesBoundary && differentIndex > 0) {
           final first = cycle[0];
           cycle[0] = cycle[differentIndex];
           cycle[differentIndex] = first;

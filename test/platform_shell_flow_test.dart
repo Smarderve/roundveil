@@ -103,6 +103,110 @@ void main() {
     },
   );
 
+  test('builder configures round formats without crossing game families', () {
+    final controller = SessionBuilderController(
+      drafts: _MemoryDraftRepository(),
+    );
+    controller.addPlayer();
+    controller.toggleGame('quiz');
+    controller.setRoundCount(4);
+    controller.toggleRoundFormat('quiz_true_false');
+    controller.toggleRoundFormat('quiz_fill_blank');
+    controller.toggleRoundFormat('quiz_short_answer');
+    expect(controller.configuration.isMixed, isFalse);
+    expect(controller.configuration.selectedModuleIds, <String>['quiz']);
+    expect(controller.configuration.roundFormatIds, <String>[
+      'quiz_multiple_choice',
+      'quiz_true_false',
+      'quiz_fill_blank',
+      'quiz_short_answer',
+    ]);
+    expect(controller.canStartMatch, isTrue);
+
+    controller.setFormat(SessionFormat.mixed);
+    controller.toggleGame('word_play');
+    expect(controller.configuration.isMixed, isTrue);
+    expect(controller.configuration.selectedModuleIds, <String>[
+      'quiz',
+      'word_play',
+    ]);
+    controller.dispose();
+  });
+
+  test(
+    'empty Mixed Games selection remains mixed while first family is added',
+    () {
+      final controller = SessionBuilderController(
+        drafts: _MemoryDraftRepository(),
+      );
+      controller.addPlayer();
+      controller.setRoundCount(2);
+      controller.setFormat(SessionFormat.mixed);
+      controller.toggleGame('quiz');
+      expect(controller.format, SessionFormat.mixed);
+      expect(controller.configuration.selectedModuleIds, <String>['quiz']);
+      expect(controller.canStartMatch, isFalse);
+
+      controller.toggleGame('word_play');
+      expect(controller.format, SessionFormat.mixed);
+      expect(controller.configuration.selectedModuleIds, <String>[
+        'quiz',
+        'word_play',
+      ]);
+      expect(controller.canStartMatch, isTrue);
+      controller.dispose();
+    },
+  );
+
+  test('unavailable format in a saved draft is flagged and removable', () {
+    final configuration = SessionConfiguration(
+      players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+      selectedModuleIds: const <String>['guess_character'],
+      roundFormatIds: const <String>['character_picture'],
+      roundCount: 1,
+    );
+    final draft = SessionDraft(
+      id: 'legacy-picture',
+      name: 'Old picture match',
+      configuration: configuration,
+      updatedAt: DateTime.utc(2026, 10, 13),
+    );
+    expect(draft.needsEditing, isTrue);
+
+    final controller = SessionBuilderController(
+      drafts: _MemoryDraftRepository(),
+      initial: draft.configuration,
+    );
+    expect(controller.canStartMatch, isFalse);
+    controller.removeUnsupportedRoundFormat('character_picture');
+    expect(controller.configuration.roundFormatIds, isEmpty);
+    expect(controller.canStartMatch, isFalse);
+    controller.toggleRoundFormat('character_name');
+    expect(controller.canStartMatch, isTrue);
+    controller.dispose();
+  });
+
+  test(
+    'Character and Country categories belong to one Guessing Games session',
+    () {
+      final controller = SessionBuilderController(
+        drafts: _MemoryDraftRepository(),
+      );
+      controller.addPlayer();
+      controller.toggleGame('guess_character');
+      controller.toggleGame('guess_country_flags');
+      controller.setRoundCount(2);
+      expect(controller.configuration.isMixed, isFalse);
+      expect(controller.configuration.selectedGameFamilies, hasLength(1));
+      expect(controller.configuration.roundFormatIds, <String>[
+        'character_name',
+        'country_flag',
+      ]);
+      expect(controller.canStartMatch, isTrue);
+      controller.dispose();
+    },
+  );
+
   test('created country session carries its explicit roster and rounds', () {
     final players = <PlayerConfiguration>[
       PlayerConfiguration.placeholder(1),
@@ -137,7 +241,7 @@ void main() {
     expect(find.text('CREATE GAME'), findsOneWidget);
     await tester.tap(find.text('CREATE GAME'));
     await tester.pumpAndSettle();
-    expect(find.text('CHOOSE THE CHALLENGE'), findsOneWidget);
+    expect(find.text('CHOOSE THE GAME'), findsOneWidget);
     expect(find.byTooltip('Add player'), findsOneWidget);
   });
 
@@ -291,8 +395,8 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       await tester.tap(find.text('MIXED'));
-      await tester.tap(find.text('QUIZ'));
-      await tester.tap(find.text('WORD PLAY').first);
+      await tester.tap(find.text('QUIZ').last);
+      await tester.tap(find.text('WORD PLAY').last);
       await tester.tap(find.byTooltip('Add player'));
       await tester.tap(find.byKey(const ValueKey<String>('round-count')));
       await tester.pumpAndSettle();
@@ -540,7 +644,7 @@ void main() {
     await tester.pump(const Duration(milliseconds: 200));
     await _startVisibleTurn(tester);
     expect(find.text('PLAYER — TURN AWAY'), findsOneWidget);
-    await tester.tap(find.text('PLAYER IS TURNED AWAY · REVEAL'));
+    await tester.tap(find.text('PLAYER IS TURNED AWAY · REVEAL CHARACTER'));
     await tester.pump();
     final challenge = characterChallenges.firstWhere(
       (challenge) => find.text(challenge.answer).evaluate().isNotEmpty,
