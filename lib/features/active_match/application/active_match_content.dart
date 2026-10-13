@@ -3,6 +3,7 @@
 
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/domain/session/round_game_format.dart';
 
 class OfflineChallenge {
   const OfflineChallenge({
@@ -13,6 +14,8 @@ class OfflineChallenge {
     this.hint = '',
     this.flagAssetPath,
     this.flagAspectRatio,
+    this.imageFilePath,
+    this.imageSource,
     this.formatPrompts = const <String, String>{},
     this.formatAnswers = const <String, String>{},
   });
@@ -24,6 +27,8 @@ class OfflineChallenge {
   final String hint;
   final String? flagAssetPath;
   final double? flagAspectRatio;
+  final String? imageFilePath;
+  final String? imageSource;
   final Map<String, String> formatPrompts;
   final Map<String, String> formatAnswers;
 
@@ -341,11 +346,11 @@ const characterChallenges = <OfflineChallenge>[
   ),
 ];
 
-final countryChallenges = firstSliceFlags
+final countryChallenges = countryFlags
     .map(
       (flag) => OfflineChallenge(
         id: 'country-${flag.id.toLowerCase()}',
-        prompt: 'Identify this national flag aloud. The host reveals the answer after your guess.',
+        prompt: 'Identify this flag aloud. The host reveals its place or territory after your guess.',
         answer: flag.name,
         hint: flag.hint,
         flagAssetPath: flag.assetPath,
@@ -371,10 +376,16 @@ List<OfflineChallenge> challengesForModule(
   return content
       .where((challenge) {
         final flagId = challenge.id.split('-').last.toUpperCase();
-        final flag = firstSliceFlags.firstWhere((item) => item.id == flagId);
+        final flag = countryFlags.firstWhere((item) => item.id == flagId);
         final inRegion =
             configuration.countryRegion == 'worldwide' ||
-            flag.region.name == configuration.countryRegion;
+            flag.region.name == configuration.countryRegion ||
+            (configuration.countryRegion == 'americas' &&
+                const <CountryRegion>{
+                  CountryRegion.northAmerica,
+                  CountryRegion.southAmerica,
+                  CountryRegion.americas,
+                }.contains(flag.region));
         final inDifficulty =
             configuration.countryDifficulty == 'mixed' ||
             flag.difficulty.name == configuration.countryDifficulty;
@@ -382,3 +393,19 @@ List<OfflineChallenge> challengesForModule(
       })
       .toList(growable: false);
 }
+
+List<OfflineChallenge> challengesForFormat(
+  String formatId, {
+  SessionConfiguration? configuration,
+  List<OfflineChallenge> pictureChallenges = const <OfflineChallenge>[],
+}) => switch (roundGameFormatById(formatId)?.moduleId) {
+  'quiz' => quizChallenges,
+  'word_play' => wordChallenges,
+  'guess_character' when formatId == 'character_picture' => pictureChallenges,
+  'guess_character' => characterChallenges,
+  'guess_country_flags' => challengesForModule(
+    'guess_country_flags',
+    configuration: configuration,
+  ),
+  _ => const <OfflineChallenge>[],
+};

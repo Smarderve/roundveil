@@ -92,6 +92,7 @@ void main() {
             onQuick: onQuick,
             onDrafts: () {},
             onGames: () {},
+            onLaunchGame: (_) {},
             onAvatars: () {},
           ),
         ),
@@ -123,7 +124,7 @@ void main() {
               widget.image is AssetImage &&
               (widget.image as AssetImage).assetName.contains('/game_modes/'),
         ),
-        findsNWidgets(4),
+        findsNWidgets(3),
       );
       expect(
         tester.getTopLeft(quick).dy,

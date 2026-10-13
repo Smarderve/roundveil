@@ -194,18 +194,54 @@ void main() {
     match.dispose();
   });
 
-  test('Character Picture Mode is blocked without licensed local images', () {
+  test('Character Picture Mode requires imported local images', () {
     final configuration = SessionConfiguration(
       players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
       selectedModuleIds: const <String>['guess_character'],
       roundFormatIds: const <String>['character_picture'],
       roundCount: 1,
     );
-    expect(configuration.canStart, isFalse);
+    expect(configuration.canStart, isTrue);
     expect(
       ActiveMatchController.validateConfiguration(configuration),
-      contains('no licensed local images'),
+      contains('distinct local images'),
     );
+  });
+
+  test('Picture Mode draws image challenges and never changes to names', () {
+    final configuration = SessionConfiguration(
+      players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+      selectedModuleIds: const <String>['guess_character'],
+      roundFormatIds: const <String>['character_picture'],
+      roundCount: 1,
+    );
+    final picture = OfflineChallenge(
+      id: 'family-picture-1',
+      prompt: 'Identify the person or character shown.',
+      answer: 'Captain Example',
+      imageFilePath: r'C:\family\captain-example.jpg',
+    );
+    final match = ActiveMatchController(
+      configuration: configuration,
+      enableTimers: false,
+      pictureChallenges: <OfflineChallenge>[picture],
+      random: Random(5),
+    );
+    match.start();
+    expect(match.state.challenge.formatId, 'character_picture');
+    expect(match.state.challenge.imageFilePath, picture.imageFilePath);
+    expect(match.state.challenge.answer, 'Captain Example');
+    match.beginRound();
+    match.beginChallenge();
+    expect(match.state.phase, MatchPhase.turnAway);
+    match.revealCharacterAfterPlayerTurnsAway();
+    expect(match.state.phase, MatchPhase.awaitingJudgement);
+    expect(match.state.challenge.imageFilePath, picture.imageFilePath);
+    match.judge(correct: true);
+    expect(match.state.phase, MatchPhase.scoreAward);
+    match.beginWinCountdown();
+    expect(match.state.phase, MatchPhase.winCountdown);
+    match.dispose();
   });
 
   test('consecutive matches prefer unseen eligible challenges', () {
@@ -287,18 +323,19 @@ void main() {
     match.dispose();
   });
 
-  test('content capacity uses actual players and mixed round distribution', () {
-    final country = SessionConfiguration(
+  test('content capacity uses configured scope and full country pool', () {
+    final easyFlags = SessionConfiguration(
       players: List<PlayerConfiguration>.generate(
         3,
         (index) => PlayerConfiguration.placeholder(index + 1),
       ),
       selectedModuleIds: const <String>['guess_country_flags'],
       roundCount: 3,
+      countryDifficulty: 'easy',
     );
     expect(
-      ActiveMatchController.validateConfiguration(country),
-      contains('7 unique offline challenges; 9 are required'),
+      ActiveMatchController.validateConfiguration(easyFlags),
+      contains('5 unique offline challenges; 9 are required'),
     );
 
     final mixedCountryTail = _configuration(players: 3, rounds: 5);
@@ -306,10 +343,17 @@ void main() {
       ActiveMatchController.validateConfiguration(mixedCountryTail),
       isNull,
     );
-    final unsupported = _configuration(players: 3, rounds: 9);
+    final unsupported = SessionConfiguration(
+      players: List<PlayerConfiguration>.generate(
+        3,
+        (index) => PlayerConfiguration.placeholder(index + 1),
+      ),
+      selectedModuleIds: const <String>['guess_country_flags'],
+      roundCount: 84,
+    );
     expect(
       ActiveMatchController.validateConfiguration(unsupported),
-      contains('7 unique offline challenges; 9 are required'),
+      contains('249 unique offline challenges; 252 are required'),
     );
   });
 
@@ -319,7 +363,7 @@ void main() {
       expect(quizChallenges, hasLength(12));
       expect(wordChallenges, hasLength(10));
       expect(characterChallenges, hasLength(10));
-      expect(countryChallenges, hasLength(7));
+      expect(countryChallenges, hasLength(249));
       for (final items in <List<OfflineChallenge>>[
         quizChallenges,
         wordChallenges,

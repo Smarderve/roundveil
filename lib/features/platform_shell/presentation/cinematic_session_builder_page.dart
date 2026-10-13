@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/data/repositories/challenge_history_repository.dart';
+import 'package:roundveil/data/repositories/character_picture_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
+import 'package:roundveil/features/active_match/application/active_match_controller.dart';
+import 'package:roundveil/features/active_match/application/active_match_content.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -310,6 +313,30 @@ class _CinematicSessionBuilderPageState
   Future<void> _createSession() async {
     final configuration = await _controller.startMatch();
     if (!mounted || configuration == null) return;
+    if (configuration.effectiveRoundFormatIds.contains('character_picture')) {
+      final pictures = await CharacterPictureRepository().loadAll();
+      if (!mounted) return;
+      final issue = ActiveMatchController.validateConfiguration(
+        configuration,
+        pictureChallenges: pictures
+            .map(
+              (picture) => OfflineChallenge(
+                id: picture.id,
+                prompt: 'Identify the person or character shown.',
+                answer: picture.name,
+                hint: picture.hint,
+                imageFilePath: picture.path,
+                imageSource: picture.sourceTitle,
+              ),
+            )
+            .toList(growable: false),
+      );
+      if (issue != null) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(issue)));
+        return;
+      }
+    }
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => ActiveMatchPage(
@@ -782,10 +809,12 @@ class _MatchRulesRail extends StatelessWidget {
                       const <String>[
                             'worldwide',
                             'africa',
-                            'americas',
                             'asia',
                             'europe',
                             'oceania',
+                            'northAmerica',
+                            'southAmerica',
+                            'other',
                           ]
                           .map(
                             (value) => DropdownMenuItem<String>(

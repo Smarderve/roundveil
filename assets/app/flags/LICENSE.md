@@ -1,19 +1,17 @@
-# ROUNDVEIL first-slice flag assets
+# Offline ISO flag assets
 
-The seven SVGs in this directory are a deliberately small, offline-only
-Guess the Country prototype pack. They were copied unchanged from
-[`hampusborgos/country-flags`](https://github.com/hampusborgos/country-flags)
-at the source snapshot inspected on 2026-10-10.
+All 249 installed ISO 3166-1 alpha-2 SVGs in this directory are sourced from
+[`lipis/flag-icons`](https://github.com/lipis/flag-icons), release `v7.5.0`.
+The source `country.json` records the ISO entries; the included files are the
+matching `flags/4x3/*.svg` assets. The complete MIT license is retained in
+[`LICENSE.flag-icons.txt`](LICENSE.flag-icons.txt).
 
-That project states that it renders flags from Wikimedia Commons and country
-legislation, aims to preserve legally described flag geometry, and treats the
-flags as public-domain works (while noting that flag-use restrictions can still
-apply). Each SVG retains its source `viewBox`; ROUNDVEIL renders it with a
-contain fit, never a forced ratio.
+ROUNDVEIL keeps each SVG's original `viewBox` and renders it with `BoxFit.contain`.
+The source set uses a 4:3 viewport; no runtime stretching or emoji rendering is
+used. The source's ISO inclusion flag is a geographic identifier, not a claim
+that every record is a sovereign country or is covered by the same territorial
+policy.
 
-Included IDs: `BR`, `CA`, `FR`, `JP`, `KE`, `US`, `ZA`.
-
-Limitations: this is not the production content pack. It supports only the
-regions and difficulty records declared in `lib/features/guess_country/domain/country_flag.dart`.
-Before release, each flag must receive the full manifest, hash, source-revision,
-policy and authoritative visual review specified in `docs/gameplay/games/GUESS_THE_COUNTRY.md`.
+The country/difficulty metadata and territorial-policy review are still
+incomplete. Only seven entries currently have curated difficulty bands; the
+other 242 are marked `unrated` and appear only in the `Mixed` difficulty pool.

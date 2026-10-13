@@ -7,7 +7,6 @@ import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
-import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
 /// Interactive Version 5 lobby composition. The scene plate is artwork only;
@@ -22,6 +21,7 @@ class V5LobbyPage extends StatefulWidget {
     required this.onQuick,
     required this.onDrafts,
     required this.onGames,
+    required this.onLaunchGame,
     required this.onAvatars,
     super.key,
   });
@@ -33,6 +33,7 @@ class V5LobbyPage extends StatefulWidget {
   final VoidCallback onQuick;
   final VoidCallback onDrafts;
   final VoidCallback onGames;
+  final ValueChanged<String> onLaunchGame;
   final VoidCallback onAvatars;
 
   @override
@@ -218,7 +219,10 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
               right: compact ? 8 : 25,
               bottom: compact ? 5 : 12,
               height: bottom,
-              child: _GameModeRail(compact: compact, onTap: widget.onGames),
+              child: _GameModeRail(
+                compact: compact,
+                onSelectGame: widget.onLaunchGame,
+              ),
             ),
           ],
         );
@@ -784,27 +788,36 @@ class _FeatureButton extends StatelessWidget {
 }
 
 class _GameModeRail extends StatelessWidget {
-  const _GameModeRail({required this.compact, required this.onTap});
+  const _GameModeRail({required this.compact, required this.onSelectGame});
   final bool compact;
-  final VoidCallback onTap;
+  final ValueChanged<String> onSelectGame;
 
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final l10n = AppLocalizations.of(context)!;
+    const games = <(String, String, String)>[
+      ('quiz', 'quiz', 'TEST YOUR KNOWLEDGE'),
+      ('word_play', 'wordPlay', 'BUILD WORDS, SCORE BIG'),
+      ('guessing_games', 'guessingGames', 'CHARACTER + COUNTRY CHALLENGES'),
+    ];
     return Row(
       children: <Widget>[
-        for (var index = 0; index < gameCatalog.length; index++) ...<Widget>[
+        for (var index = 0; index < games.length; index++) ...<Widget>[
           if (index > 0) SizedBox(width: compact ? 4 : 8),
           Expanded(
             child: Material(
               color: const Color(0xBC071426),
               child: InkWell(
-                onTap: onTap,
+                onTap: () => onSelectGame(games[index].$1),
                 child: Stack(
                   fit: StackFit.expand,
                   children: <Widget>[
-                    _GameModeArtwork(gameId: gameCatalog[index].id),
+                    _GameModeArtwork(
+                      gameId: games[index].$1 == 'guessing_games'
+                          ? 'guess_character'
+                          : games[index].$1,
+                    ),
                     const DecoratedBox(
                       decoration: BoxDecoration(
                         gradient: LinearGradient(
@@ -829,10 +842,12 @@ class _GameModeRail extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: <Widget>[
                             Text(
-                              _gameTitle(
-                                l10n,
-                                gameCatalog[index].titleKey,
-                              ).toUpperCase(),
+                              games[index].$1 == 'guessing_games'
+                                  ? 'GUESSING GAMES'
+                                  : _gameTitle(
+                                      l10n,
+                                      games[index].$2,
+                                    ).toUpperCase(),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -848,7 +863,7 @@ class _GameModeRail extends StatelessWidget {
                             ),
                             if (!compact)
                               Text(
-                                _gameSubtitle(gameCatalog[index].id),
+                                games[index].$3,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
@@ -867,11 +882,7 @@ class _GameModeRail extends StatelessWidget {
                       right: 0,
                       bottom: 0,
                       height: 2,
-                      child: ColoredBox(
-                        color: gameCatalog[index].playable
-                            ? tokens.orange
-                            : tokens.cyan,
-                      ),
+                      child: ColoredBox(color: tokens.orange),
                     ),
                   ],
                 ),
@@ -883,14 +894,6 @@ class _GameModeRail extends StatelessWidget {
     );
   }
 }
-
-String _gameSubtitle(String id) => switch (id) {
-  'quiz' => 'TEST YOUR KNOWLEDGE',
-  'word_play' => 'BUILD WORDS, SCORE BIG',
-  'guess_character' => 'SPOT THE RIGHT HERO',
-  'guess_country_flags' => 'EXPLORE THE WORLD',
-  _ => '',
-};
 
 class _GameModeArtwork extends StatelessWidget {
   const _GameModeArtwork({required this.gameId});

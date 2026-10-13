@@ -15,6 +15,7 @@ import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
+import 'package:roundveil/features/active_match/application/active_match_controller.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/active_match/application/active_match_content.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
@@ -158,30 +159,26 @@ void main() {
     },
   );
 
-  test('unavailable format in a saved draft is flagged and removable', () {
+  test('Picture Mode configuration requires imported local images', () {
     final configuration = SessionConfiguration(
       players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
       selectedModuleIds: const <String>['guess_character'],
       roundFormatIds: const <String>['character_picture'],
       roundCount: 1,
     );
-    final draft = SessionDraft(
-      id: 'legacy-picture',
-      name: 'Old picture match',
-      configuration: configuration,
-      updatedAt: DateTime.utc(2026, 10, 13),
+    expect(
+      ActiveMatchController.validateConfiguration(configuration),
+      contains('needs 1 distinct local images'),
     );
-    expect(draft.needsEditing, isTrue);
 
     final controller = SessionBuilderController(
       drafts: _MemoryDraftRepository(),
-      initial: draft.configuration,
+      initial: configuration,
     );
-    expect(controller.canStartMatch, isFalse);
-    controller.removeUnsupportedRoundFormat('character_picture');
-    expect(controller.configuration.roundFormatIds, isEmpty);
-    expect(controller.canStartMatch, isFalse);
+    expect(controller.canStartMatch, isTrue);
     controller.toggleRoundFormat('character_name');
+    controller.toggleRoundFormat('character_picture');
+    expect(controller.configuration.roundFormatIds, <String>['character_name']);
     expect(controller.canStartMatch, isTrue);
     controller.dispose();
   });
@@ -597,7 +594,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
       await _startVisibleTurn(tester);
 
-      expect(find.text('SAY THE COUNTRY ALOUD'), findsOneWidget);
+      expect(find.text('NAME THE PLACE OR TERRITORY'), findsOneWidget);
       expect(find.text('REVEAL ANSWER'), findsOneWidget);
       expect(find.byType(TextField), findsNothing);
       expect(

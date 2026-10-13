@@ -72,8 +72,6 @@ const roundGameFormats = <RoundGameFormat>[
     family: RoundGameFamily.guessingGames,
     moduleId: 'guess_character',
     title: 'Character Picture Mode',
-    available: false,
-    unavailableReason: 'No licensed local Character Picture Mode images.',
   ),
   RoundGameFormat(
     id: 'character_name',

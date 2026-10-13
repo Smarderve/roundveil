@@ -20,9 +20,12 @@ extension on CountryRegion {
   String get label => switch (this) {
     CountryRegion.africa => 'Africa',
     CountryRegion.americas => 'the Americas',
+    CountryRegion.northAmerica => 'North America',
+    CountryRegion.southAmerica => 'South America',
     CountryRegion.asia => 'Asia',
     CountryRegion.europe => 'Europe',
     CountryRegion.oceania => 'Oceania',
+    CountryRegion.other => 'Other',
     CountryRegion.worldwide => 'worldwide',
   };
 }
@@ -34,6 +37,7 @@ extension on CountryDifficulty {
     CountryDifficulty.hard => 'Hard',
     CountryDifficulty.expert => 'Expert',
     CountryDifficulty.mixed => 'Mixed',
+    CountryDifficulty.unrated => 'Unrated',
   };
 }
 
@@ -80,7 +84,7 @@ class GuessCountrySetup {
         ? 'worldwide'
         : region!.label;
     if (eligible.isEmpty) {
-      return 'The seven-flag review pack has no ${difficulty!.label} flags for $scope.';
+      return 'The offline flag library has no ${difficulty!.label} flags for $scope.';
     }
     if (answerMode == CountryAnswerMode.multipleChoice && eligible.length < 2) {
       return 'Only one flag is eligible for $scope. Multiple choice needs an in-scope alternative; choose typed answers or another scope.';
@@ -93,7 +97,14 @@ class GuessCountrySetup {
   }
 
   bool _matches(CountryFlag flag) =>
-      (region == CountryRegion.worldwide || flag.region == region) &&
+      (region == CountryRegion.worldwide ||
+          flag.region == region ||
+          (region == CountryRegion.americas &&
+              const <CountryRegion>{
+                CountryRegion.northAmerica,
+                CountryRegion.southAmerica,
+                CountryRegion.americas,
+              }.contains(flag.region))) &&
       (difficulty == CountryDifficulty.mixed || flag.difficulty == difficulty);
 
   GuessCountrySetup copyWith({
@@ -182,7 +193,7 @@ class GuessCountryState {
 
 class GuessCountryController extends ChangeNotifier {
   GuessCountryController({
-    List<CountryFlag> flags = firstSliceFlags,
+    List<CountryFlag> flags = countryFlags,
     this.onCountdownComplete,
     this.enableTimers = true,
     List<PlayerConfiguration> initialPlayers = const <PlayerConfiguration>[],
@@ -219,6 +230,7 @@ class GuessCountryController extends ChangeNotifier {
   String? get configurationIssue =>
       _state.setup.validate(_flags, _state.players.length);
   List<CountryDifficulty> get availableDifficulties => CountryDifficulty.values
+      .where((difficulty) => difficulty != CountryDifficulty.unrated)
       .where(
         (difficulty) => _flags.any((flag) => flag.difficulty == difficulty),
       )

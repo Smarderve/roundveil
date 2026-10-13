@@ -16,7 +16,7 @@ This note records the playable slice and mixed-round/randomization corrections v
 
 - Quiz: offline question and multiple choice. The selected response is checked against the record answer.
 - Word Play: offline scrambled word, typed answer and answer validation.
-- Guess the Character: Name Mode only in this slice. The active player turns away; the clue-giver sees the character name; the host judges the spoken guess as correct or wrong. No Picture Mode image content exists yet.
+- Guess the Character: Name Mode and local Picture Mode are supported. The active player turns away; the clue-giver sees either the name or the imported subject picture (Picture Mode never substitutes a name); host judgement determines Correct/Wrong. User-imported images and optional source/license notes remain in app-private storage. No curated image library is bundled yet.
 - Guess the Country: a bundled SVG flag is shown without choices or a typed-answer field. The host reveals the country and judges the spoken guess.
 - Correct answers immediately enter the configured Win Countdown. Incorrect answers and challenge timeout advance without it. The controller rotates players, applies round/module order, supports hints and pause/resume, tracks optional scores, and produces a result summary.
 
@@ -29,9 +29,9 @@ Unique record counts currently present in `active_match_content.dart`:
 | Quiz | 10 | Starter records; not an independently source-audited or category-balanced production bank |
 | Word Play | 10 | Starter words, not the requested 10,000-entry dictionary |
 | Guess the Character | 10 | Name Mode text records only; zero licensed pictures; not the requested 760 personalities |
-| Guess the Country | 7 | Existing SVG review slice; not the requested 195 flags; limited territories and regions |
+| Guess the Country | 249 | ISO-marked offline SVG baseline from lipis/flag-icons v7.5.0; 242 difficulty-unrated; territory classification/policy and artwork review remain open |
 
-The flag SVGs retain their source view boxes/proportions and local source license. Territory policy remains UN-member-only in this slice; a configurable policy and broader licensed dataset are still required. Quiz, word and character starter data require editorial/source review before being represented as verified production content.
+The flag SVGs retain the upstream 4:3 viewBoxes, are rendered contain-fit, and include the MIT notice. The ISO list is not a sovereignty classification, and no configurable territory-inclusion policy is implemented yet. Quiz, word and character starter data require editorial/source review before being represented as verified production content.
 
 ## Verification limits
 

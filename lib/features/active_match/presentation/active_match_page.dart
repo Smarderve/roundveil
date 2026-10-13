@@ -1,14 +1,18 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/data/repositories/challenge_history_repository.dart';
+import 'package:roundveil/data/repositories/character_picture_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/application/active_match_controller.dart';
+import 'package:roundveil/features/active_match/application/active_match_content.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
 
@@ -18,6 +22,7 @@ class ActiveMatchPage extends StatefulWidget {
     this.enableTimers = true,
     this.profileRepository,
     this.challengeHistoryRepository,
+    this.characterPictureRepository,
     super.key,
   });
 
@@ -25,6 +30,7 @@ class ActiveMatchPage extends StatefulWidget {
   final bool enableTimers;
   final PlayerProfileRepository? profileRepository;
   final ChallengeHistoryRepository? challengeHistoryRepository;
+  final CharacterPictureRepository? characterPictureRepository;
 
   @override
   State<ActiveMatchPage> createState() => _ActiveMatchPageState();
@@ -35,6 +41,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   ActiveMatchController get _activeMatch => _match!;
   late final PlayerProfileRepository _profileRepository;
   late final ChallengeHistoryRepository _challengeHistoryRepository;
+  late final CharacterPictureRepository _pictureRepository =
+      widget.characterPictureRepository ?? CharacterPictureRepository();
   late final Future<void> _startup;
   final TextEditingController _answer = TextEditingController();
 
@@ -54,6 +62,12 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     );
     final recentChallengeIds = await _challengeHistoryRepository
         .loadRecentIds();
+    final needsPictures = widget.configuration.effectiveRoundFormatIds.contains(
+      'character_picture',
+    );
+    final pictures = needsPictures
+        ? await _pictureRepository.loadAll()
+        : const <CharacterPicture>[];
     if (!mounted) return;
     final match = ActiveMatchController(
       configuration: widget.configuration,
@@ -63,6 +77,18 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
         for (final profile in profiles) profile.id: profile,
       },
       recentChallengeIds: recentChallengeIds,
+      pictureChallenges: pictures
+          .map(
+            (picture) => OfflineChallenge(
+              id: picture.id,
+              prompt: 'Identify the person or character shown.',
+              answer: picture.name,
+              hint: picture.hint,
+              imageFilePath: picture.path,
+              imageSource: picture.sourceTitle,
+            ),
+          )
+          .toList(growable: false),
       onChallengeDrawn: (id) {
         unawaited(_recordChallenge(id));
       },
@@ -501,50 +527,6 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: <Widget>[
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: <Widget>[
-                  Text(
-                    'CHALLENGE TIMER',
-                    style: TextStyle(
-                      color: tokens.muted,
-                      fontSize: 10,
-                      letterSpacing: 1.3,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  SizedBox(
-                    width: 180,
-                    child: ClipRect(
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        widthFactor:
-                            (state.secondsRemaining /
-                                    widget.configuration.challengeSeconds)
-                                .clamp(0.0, 1.0),
-                        child: Container(
-                          height: 4,
-                          color: state.secondsRemaining <= 5
-                              ? tokens.orange
-                              : tokens.cyan,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${state.secondsRemaining}s',
-                    style: TextStyle(
-                      color: state.secondsRemaining <= 5
-                          ? tokens.orange
-                          : Colors.white,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 10),
               if (challenge.formatId == 'country_flag') ...<Widget>[
                 if (challenge.flagAssetPath case final asset?)
                   ConstrainedBox(
@@ -559,7 +541,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   ),
                 const SizedBox(height: 14),
                 Text(
-                  'SAY THE COUNTRY ALOUD',
+                  'NAME THE PLACE OR TERRITORY',
                   style: TextStyle(
                     color: color,
                     fontWeight: FontWeight.w900,
@@ -625,14 +607,36 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  Text(
-                    challenge.answer,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontSize: 42,
-                      fontWeight: FontWeight.w900,
+                  if (challenge.formatId == 'character_picture') ...<Widget>[
+                    if (challenge.imageFilePath case final imagePath?)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 560,
+                          maxHeight: (viewportHeight * .48)
+                              .clamp(120.0, 360.0)
+                              .toDouble(),
+                        ),
+                        child: Image.file(
+                          File(imagePath),
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (context, error, stack) => const Text(
+                            'This local picture is unavailable. Remove it from the picture collection and import it again.',
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      )
+                    else
+                      const Text('The local picture file is missing.'),
+                  ] else
+                    Text(
+                      challenge.answer,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 42,
+                        fontWeight: FontWeight.w900,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 8),
                   const Text(
                     'Give verbal clues. Keep the character visible until the host judges the spoken guess.',
@@ -705,10 +709,56 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     style: TextStyle(color: tokens.muted),
                   ),
               ],
+              if (state.phase != MatchPhase.turnAway) ...<Widget>[
+                const SizedBox(height: 15),
+                _circularChallengeTimer(
+                  secondsRemaining: state.secondsRemaining,
+                  durationSeconds: widget.configuration.challengeSeconds,
+                  primaryColor: tokens.cyan,
+                  warningColor: tokens.orange,
+                ),
+              ],
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _circularChallengeTimer({
+    required int secondsRemaining,
+    required int durationSeconds,
+    required Color primaryColor,
+    required Color warningColor,
+  }) {
+    final target = (secondsRemaining / durationSeconds).clamp(0.0, 1.0);
+    final begin = ((secondsRemaining + 1) / durationSeconds).clamp(0.0, 1.0);
+    return TweenAnimationBuilder<double>(
+      tween: Tween<double>(begin: begin, end: target),
+      duration: const Duration(seconds: 1),
+      curve: Curves.linear,
+      builder: (context, progress, _) {
+        final warning = secondsRemaining <= 5;
+        final color = warning ? warningColor : primaryColor;
+        return SizedBox(
+          width: 76,
+          height: 76,
+          child: CustomPaint(
+            painter: _ChallengeTimerPainter(progress: progress, color: color),
+            child: Center(
+              child: Text(
+                '$secondsRemaining',
+                style: TextStyle(
+                  color: warning ? warningColor : Colors.white,
+                  fontSize: 27,
+                  fontWeight: FontWeight.w900,
+                  height: 1,
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
@@ -897,4 +947,39 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
         RoundGameFamily.guessingGames => 'GUESSING GAMES',
         null => 'ROUNDVEIL',
       };
+}
+
+class _ChallengeTimerPainter extends CustomPainter {
+  const _ChallengeTimerPainter({required this.progress, required this.color});
+
+  final double progress;
+  final Color color;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = math.min(size.width, size.height) / 2 - 4;
+    final bounds = Rect.fromCircle(center: center, radius: radius);
+    final track = Paint()
+      ..color = const Color(0xFF26374A)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4;
+    final ring = Paint()
+      ..color = color
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 4
+      ..strokeCap = StrokeCap.round;
+    canvas.drawCircle(center, radius, track);
+    canvas.drawArc(
+      bounds,
+      -math.pi / 2,
+      -math.pi * 2 * progress.clamp(0.0, 1.0),
+      false,
+      ring,
+    );
+  }
+
+  @override
+  bool shouldRepaint(_ChallengeTimerPainter oldDelegate) =>
+      progress != oldDelegate.progress || color != oldDelegate.color;
 }

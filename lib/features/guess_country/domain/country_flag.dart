@@ -1,48 +1,27 @@
-enum CountryDifficulty { easy, medium, hard, expert, mixed }
+import 'country_flag_iso_data.dart';
+import 'country_flag_models.dart';
 
-enum CountryRegion { africa, americas, asia, europe, oceania, worldwide }
+export 'country_flag_models.dart';
 
-class CountryFlag {
-  const CountryFlag({
-    required this.id,
-    required this.name,
-    required this.aliases,
-    required this.region,
-    required this.difficulty,
-    required this.assetPath,
-    required this.aspectRatio,
-    required this.hint,
-  });
-
-  final String id;
-  final String name;
-  final Set<String> aliases;
-  final CountryRegion region;
-  final CountryDifficulty difficulty;
-  final String assetPath;
-  final double aspectRatio;
-  final String hint;
-}
-
-const firstSliceFlags = <CountryFlag>[
+const countryFlags = <CountryFlag>[
   CountryFlag(
     id: 'BR',
     name: 'Brazil',
     aliases: {'brasil'},
-    region: CountryRegion.americas,
+    region: CountryRegion.southAmerica,
     difficulty: CountryDifficulty.easy,
     assetPath: 'assets/app/flags/br.svg',
-    aspectRatio: 10 / 7,
+    aspectRatio: 4 / 3,
     hint: 'South America',
   ),
   CountryFlag(
     id: 'CA',
     name: 'Canada',
     aliases: <String>{},
-    region: CountryRegion.americas,
+    region: CountryRegion.northAmerica,
     difficulty: CountryDifficulty.easy,
     assetPath: 'assets/app/flags/ca.svg',
-    aspectRatio: 2,
+    aspectRatio: 4 / 3,
     hint: 'North America',
   ),
   CountryFlag(
@@ -52,7 +31,7 @@ const firstSliceFlags = <CountryFlag>[
     region: CountryRegion.europe,
     difficulty: CountryDifficulty.easy,
     assetPath: 'assets/app/flags/fr.svg',
-    aspectRatio: 3 / 2,
+    aspectRatio: 4 / 3,
     hint: 'Europe',
   ),
   CountryFlag(
@@ -62,7 +41,7 @@ const firstSliceFlags = <CountryFlag>[
     region: CountryRegion.asia,
     difficulty: CountryDifficulty.easy,
     assetPath: 'assets/app/flags/jp.svg',
-    aspectRatio: 3 / 2,
+    aspectRatio: 4 / 3,
     hint: 'Asia',
   ),
   CountryFlag(
@@ -72,17 +51,17 @@ const firstSliceFlags = <CountryFlag>[
     region: CountryRegion.africa,
     difficulty: CountryDifficulty.medium,
     assetPath: 'assets/app/flags/ke.svg',
-    aspectRatio: 3 / 2,
+    aspectRatio: 4 / 3,
     hint: 'East Africa',
   ),
   CountryFlag(
     id: 'US',
     name: 'United States',
     aliases: {'united states of america', 'usa', 'us'},
-    region: CountryRegion.americas,
+    region: CountryRegion.northAmerica,
     difficulty: CountryDifficulty.easy,
     assetPath: 'assets/app/flags/us.svg',
-    aspectRatio: 1.9,
+    aspectRatio: 4 / 3,
     hint: 'North America',
   ),
   CountryFlag(
@@ -92,7 +71,8 @@ const firstSliceFlags = <CountryFlag>[
     region: CountryRegion.africa,
     difficulty: CountryDifficulty.hard,
     assetPath: 'assets/app/flags/za.svg',
-    aspectRatio: 3 / 2,
+    aspectRatio: 4 / 3,
     hint: 'Southern Africa',
   ),
+  ...additionalIsoFlags,
 ];

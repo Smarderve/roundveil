@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
+import 'package:roundveil/data/repositories/character_picture_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
+import 'package:roundveil/features/guess_character/presentation/character_picture_library_page.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
@@ -130,6 +132,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
         onQuick: () => _select(_ShellDestination.quick),
         onDrafts: () => _select(_ShellDestination.drafts),
         onGames: () => _select(_ShellDestination.games),
+        onLaunchGame: _openConfiguredGame,
         onAvatars: () => _select(_ShellDestination.avatars),
         players: _lobbyPlayers,
         profiles: _profiles,
@@ -154,11 +157,11 @@ class _RoundveilShellState extends State<RoundveilShell> {
       _ShellDestination.drafts => _DraftsPage(
         drafts: _drafts,
         onEdit: _editDraft,
-        onOpenCountryPrototype: _openCountryPrototype,
+        onOpenCountryPrototype: () => _openConfiguredGame('guessing_games'),
       ),
       _ShellDestination.games => _GameModesPage(
-        onPlayCountry: _openCountryPrototype,
-        onCreate: () => _select(_ShellDestination.create),
+        onPlay: _openConfiguredGame,
+        onPictureLibrary: _openPictureLibrary,
       ),
       _ShellDestination.settings => _SettingsPage(
         isDark: widget.isDark,
@@ -253,14 +256,107 @@ class _RoundveilShellState extends State<RoundveilShell> {
     );
   }
 
-  void _openCountryPrototype() {
+  Future<void> _openPictureLibrary() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const CharacterPictureLibraryPage(),
+      ),
+    );
+  }
+
+  Future<void> _openConfiguredGame(String gameId) async {
+    var players = List<PlayerConfiguration>.of(_lobbyPlayers);
+    if (players.isEmpty) {
+      if (_profiles.isEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('Choose saved players'),
+            content: const Text(
+              'Create at least one player profile before starting a game.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        _select(_ShellDestination.avatars);
+        return;
+      }
+      final chosen = await _pickSavedPlayers();
+      if (chosen == null || chosen.isEmpty || !mounted) return;
+      players = chosen;
+      setState(() => _lobbyPlayers = chosen);
+    }
+
+    final pictureRepository = CharacterPictureRepository();
+    final pictures = gameId == 'guessing_games'
+        ? await pictureRepository.loadAll()
+        : const <Object>[];
+    if (!mounted) return;
+    if (gameId == 'guessing_games' && pictures.length < players.length) {
+      final addPictures = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) => AlertDialog(
+          title: const Text('Picture Mode needs local images'),
+          content: Text(
+            'Import at least ${players.length} distinct subject pictures before starting Guessing Games. Nothing will be substituted for Picture Mode.',
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('NOT NOW'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(dialogContext, true),
+              child: const Text('IMPORT PICTURES'),
+            ),
+          ],
+        ),
+      );
+      if (addPictures == true) await _openPictureLibrary();
+      return;
+    }
+
+    final (modules, formats) = switch (gameId) {
+      'quiz' => (
+        const <String>['quiz'],
+        const <String>[
+          'quiz_multiple_choice',
+          'quiz_true_false',
+          'quiz_fill_blank',
+          'quiz_short_answer',
+        ],
+      ),
+      'word_play' => (
+        const <String>['word_play'],
+        const <String>[
+          'word_scramble',
+          'word_missing_letters',
+          'word_completion',
+          'word_guess',
+        ],
+      ),
+      _ => (
+        const <String>['guess_character', 'guess_country_flags'],
+        const <String>[
+          'character_picture',
+          'character_name',
+          'country_name',
+          'country_flag',
+        ],
+      ),
+    };
     final configuration = SessionConfiguration(
-      players: <PlayerConfiguration>[
-        PlayerConfiguration.placeholder(1),
-        PlayerConfiguration.placeholder(2),
-      ],
-      selectedModuleIds: const <String>['guess_country_flags'],
-      roundCount: 3,
+      players: players,
+      selectedModuleIds: modules,
+      roundFormatIds: formats,
+      roundFormatsExplicit: true,
+      roundCount: 4,
+      isMixed: false,
     );
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -271,6 +367,61 @@ class _RoundveilShellState extends State<RoundveilShell> {
       ),
     );
   }
+
+  Future<List<PlayerConfiguration>?> _pickSavedPlayers() => showDialog(
+    context: context,
+    builder: (dialogContext) {
+      final selected = <String>{};
+      return StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('SELECT PLAYERS'),
+          content: SizedBox(
+            width: 360,
+            child: ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                for (final profile in _profiles)
+                  CheckboxListTile(
+                    value: selected.contains(profile.id),
+                    title: Text(profile.displayName),
+                    onChanged: (value) => setDialogState(() {
+                      if (value == true) {
+                        selected.add(profile.id);
+                      } else {
+                        selected.remove(profile.id);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed: selected.isEmpty
+                  ? null
+                  : () => Navigator.pop(
+                      dialogContext,
+                      _profiles
+                          .where((profile) => selected.contains(profile.id))
+                          .map(
+                            (profile) => PlayerConfiguration(
+                              id: profile.id,
+                              displayName: profile.displayName,
+                            ),
+                          )
+                          .toList(),
+                    ),
+              child: const Text('START MATCH'),
+            ),
+          ],
+        ),
+      );
+    },
+  );
 }
 
 class _StandaloneBuilderRoute extends StatelessWidget {
@@ -1694,128 +1845,83 @@ class _DraftsPageState extends State<_DraftsPage> {
 }
 
 class _GameModesPage extends StatelessWidget {
-  const _GameModesPage({required this.onPlayCountry, required this.onCreate});
-  final VoidCallback onPlayCountry;
-  final VoidCallback onCreate;
+  const _GameModesPage({required this.onPlay, required this.onPictureLibrary});
+
+  final ValueChanged<String> onPlay;
+  final VoidCallback onPictureLibrary;
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(28),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1100),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                l10n.gameModes,
-                style: Theme.of(context).textTheme.headlineMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                l10n.rebuildStatus,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 24),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth > 780
-                      ? 3
-                      : constraints.maxWidth > 500
-                      ? 2
-                      : 1;
-                  return Wrap(
-                    spacing: 14,
-                    runSpacing: 14,
-                    children: gameCatalog
-                        .map(
-                          (game) => SizedBox(
-                            width:
-                                (constraints.maxWidth - (columns - 1) * 14) /
-                                columns,
-                            child: Container(
-                              height: 200,
-                              padding: const EdgeInsets.all(19),
-                              decoration: BoxDecoration(
-                                color: tokens.surface,
-                                border: Border.all(
-                                  color: game.playable
-                                      ? tokens.orange.withValues(alpha: .6)
-                                      : tokens.cyan.withValues(alpha: .18),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Row(
-                                    children: <Widget>[
-                                      Icon(
-                                        _iconFor(game.id),
-                                        color: game.playable
-                                            ? tokens.orange
-                                            : tokens.cyan,
-                                      ),
-                                      const Spacer(),
-                                      Text(
-                                        game.playable
-                                            ? l10n.playablePrototype
-                                            : l10n.inFoundation,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall,
-                                      ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 12),
-                                  Text(
-                                    _gameTitle(l10n, game.titleKey),
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleLarge,
-                                  ),
-                                  const SizedBox(height: 6),
-                                  Expanded(
-                                    child: Text(
-                                      game.playable
-                                          ? l10n.playablePrototype
-                                          : l10n.inFoundation,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall,
-                                    ),
-                                  ),
-                                  if (game.id == 'guess_country_flags')
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton.icon(
-                                        onPressed: onPlayCountry,
-                                        icon: const Icon(
-                                          Icons.play_arrow_rounded,
-                                        ),
-                                        label: Text(l10n.playablePrototype),
-                                      ),
-                                    )
-                                  else
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: TextButton(
-                                        onPressed: onCreate,
-                                        child: Text(l10n.createGame),
-                                      ),
-                                    ),
-                                ],
-                              ),
+    const games = <(String, String, IconData, Color)>[
+      ('quiz', 'QUIZ', Icons.quiz_rounded, Color(0xFFFF9A3D)),
+      ('word_play', 'WORD PLAY', Icons.abc_rounded, Color(0xFF5AD9FF)),
+      (
+        'guessing_games',
+        'GUESSING GAMES',
+        Icons.travel_explore_rounded,
+        Color(0xFFFF9A3D),
+      ),
+    ];
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 920),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 30),
+          children: <Widget>[
+            const Text(
+              'CHOOSE A GAME',
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Your choice starts the match directly with the players in your lobby.',
+              style: TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 22),
+            for (final game in games) ...<Widget>[
+              Material(
+                color: const Color(0xCC0A1A2E),
+                child: InkWell(
+                  onTap: () => onPlay(game.$1),
+                  child: SizedBox(
+                    height: 78,
+                    child: Row(
+                      children: <Widget>[
+                        Container(width: 5, color: game.$4),
+                        const SizedBox(width: 18),
+                        Icon(game.$3, color: game.$4, size: 29),
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: Text(
+                            game.$2,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.2,
                             ),
                           ),
-                        )
-                        .toList(),
-                  );
-                },
+                        ),
+                        const Icon(Icons.play_arrow_rounded),
+                        const SizedBox(width: 14),
+                      ],
+                    ),
+                  ),
+                ),
               ),
+              const SizedBox(height: 10),
             ],
-          ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onPictureLibrary,
+              icon: const Icon(Icons.photo_library_outlined),
+              label: const Text('MANAGE CHARACTER PICTURE COLLECTION'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: tokens.cyan,
+                minimumSize: const Size.fromHeight(48),
+              ),
+            ),
+          ],
         ),
       ),
     );
