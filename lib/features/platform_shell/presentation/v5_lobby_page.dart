@@ -3,7 +3,6 @@ import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
-import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
@@ -65,13 +64,6 @@ class V5LobbyPage extends StatelessWidget {
           fit: StackFit.expand,
           children: <Widget>[
             const V5SceneArt(animate: true),
-            Positioned(
-              left: side + 8,
-              right: right + 8,
-              top: compact ? 10 : 22,
-              bottom: bottom + (compact ? 10 : 20),
-              child: const _HeroMascot(),
-            ),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -84,6 +76,13 @@ class V5LobbyPage extends StatelessWidget {
                   ],
                 ),
               ),
+            ),
+            Positioned(
+              left: side + 12,
+              right: right + 12,
+              top: compact ? 5 : 12,
+              height: compact ? 42 : 58,
+              child: _ProfileSelectionRail(profiles: profiles),
             ),
             Positioned(
               left: compact ? 7 : 22,
@@ -171,277 +170,138 @@ class V5LobbyPage extends StatelessWidget {
   }
 }
 
-class V5SceneArt extends StatefulWidget {
-  const V5SceneArt({this.animate = false, super.key});
-  final bool animate;
+class _ProfileSelectionRail extends StatefulWidget {
+  const _ProfileSelectionRail({required this.profiles});
+
+  final List<PlayerProfile> profiles;
 
   @override
-  State<V5SceneArt> createState() => _V5SceneArtState();
+  State<_ProfileSelectionRail> createState() => _ProfileSelectionRailState();
 }
 
-class _V5SceneArtState extends State<V5SceneArt>
-    with SingleTickerProviderStateMixin {
-  AnimationController? _ambience;
+class _ProfileSelectionRailState extends State<_ProfileSelectionRail> {
+  String? _selectedId;
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.animate) _startAmbience();
+  PlayerProfile? get _selected {
+    if (widget.profiles.isEmpty) return null;
+    return widget.profiles
+            .where((profile) => profile.id == _selectedId)
+            .firstOrNull ??
+        widget.profiles.first;
   }
 
-  @override
-  void didUpdateWidget(V5SceneArt oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.animate == oldWidget.animate) return;
-    if (widget.animate) {
-      _startAmbience();
-    } else {
-      _ambience?.dispose();
-      _ambience = null;
-    }
-  }
-
-  void _startAmbience() {
-    _ambience = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 14),
-    )..repeat();
-  }
-
-  @override
-  void dispose() {
-    _ambience?.dispose();
-    super.dispose();
+  void _step(int amount) {
+    final current = _selected;
+    if (current == null || widget.profiles.length < 2) return;
+    final currentIndex = widget.profiles.indexWhere(
+      (profile) => profile.id == current.id,
+    );
+    final nextIndex =
+        (currentIndex + amount + widget.profiles.length) %
+        widget.profiles.length;
+    setState(() => _selectedId = widget.profiles[nextIndex].id);
   }
 
   @override
   Widget build(BuildContext context) {
-    final ambience = _ambience;
-    if (ambience == null) {
-      return CustomPaint(
-        painter: const _CommandRoomPainter(.35),
-        child: const SizedBox.expand(),
-      );
-    }
-    return AnimatedBuilder(
-      animation: ambience,
-      builder: (context, _) => CustomPaint(
-        painter: _CommandRoomPainter(ambience.value),
-        child: const SizedBox.expand(),
-      ),
-    );
-  }
-}
-
-class _HeroMascot extends StatefulWidget {
-  const _HeroMascot();
-
-  @override
-  State<_HeroMascot> createState() => _HeroMascotState();
-}
-
-class _HeroMascotState extends State<_HeroMascot>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _idle = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 4800),
-  )..repeat(reverse: true);
-
-  @override
-  void dispose() {
-    _idle.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AnimatedBuilder(
-    animation: _idle,
-    builder: (context, _) => Transform.translate(
-      offset: Offset(0, -3.5 * Curves.easeInOut.transform(_idle.value)),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            maxWidth: MediaQuery.sizeOf(context).height * .9,
-            maxHeight: MediaQuery.sizeOf(context).height * .96,
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: <Widget>[
-              Container(
-                width: MediaQuery.sizeOf(context).height * .68,
-                height: MediaQuery.sizeOf(context).height * .68,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: const Color(0xFF4CCBFF)
-                          .withValues(alpha: .1 + .05 * _idle.value),
-                      blurRadius: 100,
-                      spreadRadius: 14,
-                    ),
-                  ],
-                ),
-              ),
-              ColorFiltered(
-                colorFilter: const ColorFilter.matrix(<double>[
-                  1,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                  0,
-                  0,
-                  0,
-                  0,
-                  1,
-                  0,
-                  0,
-                  .5,
-                  .5,
-                  .5,
-                  0,
-                  0,
-                ]),
-                child: Image.asset(
-                  'assets/brand/roundveil_mascot_portrait.webp',
-                  fit: BoxFit.contain,
-                  filterQuality: FilterQuality.high,
-                  semanticLabel: 'ROUNDVEIL hooded mascot',
-                ),
-              ),
-            ],
-          ),
+    final profile = _selected;
+    if (profile == null) return const SizedBox.shrink();
+    final compact = MediaQuery.sizeOf(context).width < 1050;
+    final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    final details = <String>[
+      '${profile.wins} WINS',
+      '${profile.gamesPlayed} MATCHES',
+      '${profile.hintCredits} HINTS',
+      if (profile.gender case final gender?) gender.name.toUpperCase(),
+    ].join('  ·  ');
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: const Color(0xB8051020),
+        border: Border(
+          bottom: BorderSide(color: tokens.cyan.withValues(alpha: .7)),
+          left: BorderSide(color: Color(profile.avatar.accentColor), width: 2),
         ),
       ),
-    ),
-  );
+      child: Row(
+        children: <Widget>[
+          SizedBox(
+            width: compact ? 36 : 46,
+            height: compact ? 36 : 46,
+            child: Image.asset(
+              'assets/brand/roundveil_mascot_portrait.webp',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              semanticLabel: 'Official ROUNDVEIL player portrait',
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 180),
+              child: Column(
+                key: ValueKey<String>(profile.id),
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: <Widget>[
+                  Text(
+                    profile.displayName.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Color(profile.avatar.accentColor),
+                      fontSize: compact ? 9 : 13,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .7,
+                    ),
+                  ),
+                  Text(
+                    details,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: compact ? 6 : 8,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: .3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
+            tooltip: 'Previous player',
+            visualDensity: VisualDensity.compact,
+            onPressed: widget.profiles.length < 2 ? null : () => _step(-1),
+            icon: const Icon(Icons.chevron_left_rounded),
+          ),
+          IconButton(
+            tooltip: 'Next player',
+            visualDensity: VisualDensity.compact,
+            onPressed: widget.profiles.length < 2 ? null : () => _step(1),
+            icon: const Icon(Icons.chevron_right_rounded),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-class _CommandRoomPainter extends CustomPainter {
-  const _CommandRoomPainter(this.phase);
-  final double phase;
+class V5SceneArt extends StatelessWidget {
+  const V5SceneArt({this.animate = false, super.key});
+
+  // Kept as a compatible parameter for existing callers; the approved key art
+  // is intentionally still, avoiding motion on a flattened illustration.
+  final bool animate;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final bounds = Offset.zero & size;
-    final horizon = size.height * .62;
-    canvas.drawRect(
-      bounds,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[
-            Color(0xFF091421),
-            Color(0xFF10253A),
-            Color(0xFF07111D),
-          ],
-          stops: <double>[0, .56, 1],
-        ).createShader(bounds),
-    );
-    canvas.drawRect(
-      bounds,
-      Paint()
-        ..shader = RadialGradient(
-          center: const Alignment(-.04, -.08),
-          radius: 1.04,
-          colors: <Color>[
-            const Color(0xFF276084).withValues(alpha: .24),
-            const Color(0xFF091421).withValues(alpha: .01),
-          ],
-        ).createShader(bounds),
-    );
-
-    final wall = Paint()..color = const Color(0xFF0B1928);
-    final architecture = Paint()
-      ..color = const Color(0xFF183148).withValues(alpha: .58);
-    final edge = Paint()
-      ..color = const Color(0xFF5BCDF1).withValues(alpha: .22)
-      ..strokeWidth = 1.2
-      ..style = PaintingStyle.stroke;
-    final panelPath = Path()
-      ..moveTo(0, 0)
-      ..lineTo(size.width * .24, 0)
-      ..lineTo(size.width * .16, horizon)
-      ..lineTo(0, horizon + 24)
-      ..close();
-    canvas.drawPath(panelPath, wall);
-    final rightPanel = Path()
-      ..moveTo(size.width, 0)
-      ..lineTo(size.width * .78, 0)
-      ..lineTo(size.width * .85, horizon)
-      ..lineTo(size.width, horizon + 18)
-      ..close();
-    canvas.drawPath(rightPanel, wall);
-
-    for (var index = 0; index < 5; index++) {
-      final x = size.width * (.035 + index * .047);
-      canvas.drawLine(
-        Offset(x, 12),
-        Offset(x + size.width * .12, horizon),
-        edge,
-      );
-      final rx = size.width * (.965 - index * .047);
-      canvas.drawLine(
-        Offset(rx, 12),
-        Offset(rx - size.width * .12, horizon),
-        edge,
-      );
-    }
-    canvas.drawRect(
-      Rect.fromLTWH(0, horizon - 1, size.width, 2),
-      Paint()..color = const Color(0xFF55D5FF).withValues(alpha: .28),
-    );
-    canvas.drawRect(
-      Rect.fromLTWH(0, horizon, size.width, size.height - horizon),
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: <Color>[Color(0xFF0C1D2C), Color(0xFF040A12)],
-        ).createShader(Rect.fromLTWH(0, horizon, size.width, size.height)),
-    );
-
-    final floor = Paint()
-      ..color = const Color(0xFF69D9FF).withValues(alpha: .17)
-      ..strokeWidth = 1;
-    final vanishingPoint = Offset(size.width * .51, horizon);
-    for (var index = -5; index <= 5; index++) {
-      canvas.drawLine(
-        vanishingPoint,
-        Offset(size.width * (.5 + index * .12), size.height),
-        floor,
-      );
-    }
-    for (var index = 1; index <= 4; index++) {
-      final t = index / 5;
-      final y = horizon + (size.height - horizon) * t * t;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), floor);
-    }
-
-    final sweepX = (phase * 1.3 % 1) * size.width;
-    canvas.drawRect(
-      Rect.fromLTWH(sweepX, 0, size.width * .12, horizon),
-      Paint()
-        ..shader = LinearGradient(
-          colors: <Color>[
-            Colors.transparent,
-            const Color(0xFF50D8FF).withValues(alpha: .035),
-            Colors.transparent,
-          ],
-        ).createShader(Rect.fromLTWH(sweepX, 0, size.width * .12, horizon)),
-    );
-
-    canvas.drawPath(panelPath, architecture..style = PaintingStyle.stroke);
-    canvas.drawPath(rightPanel, architecture);
-  }
-
-  @override
-  bool shouldRepaint(_CommandRoomPainter oldDelegate) =>
-      oldDelegate.phase != phase;
+  Widget build(BuildContext context) => Image.asset(
+    'assets/brand/v5/v5_arena_scene_reconstruction.jpg',
+    fit: BoxFit.cover,
+    alignment: Alignment.center,
+    filterQuality: FilterQuality.high,
+    semanticLabel: 'ROUNDVEIL arena with the approved hooded hero artwork',
+  );
 }
 
 class _CommandCard extends StatefulWidget {
@@ -769,10 +629,25 @@ class _PlayerSlot extends StatelessWidget {
                   SizedBox(
                     width: portraitSize,
                     height: portraitSize,
-                    child: PlayerAvatarFigure(
-                      appearance: appearance!,
-                      width: portraitSize,
-                      height: portraitSize,
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: <Widget>[
+                        Image.asset(
+                          'assets/brand/roundveil_mascot_portrait.webp',
+                          fit: BoxFit.cover,
+                          filterQuality: FilterQuality.high,
+                          semanticLabel:
+                              'Official ROUNDVEIL character portrait',
+                        ),
+                        DecoratedBox(
+                          decoration: BoxDecoration(
+                            border: Border.all(
+                              color: Color(appearance!.accentColor),
+                              width: 1.5,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   )
                 else

@@ -46,6 +46,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
     PlayerConfiguration.placeholder(2),
   ];
   List<PlayerProfile> _profiles = const <PlayerProfile>[];
+  bool _profilesLoaded = false;
 
   @override
   void initState() {
@@ -56,9 +57,15 @@ class _RoundveilShellState extends State<RoundveilShell> {
   Future<void> _refreshProfiles() async {
     try {
       final profiles = await _playerProfiles.ensureProfiles(_lobbyPlayers);
-      if (mounted) setState(() => _profiles = profiles);
+      if (mounted) {
+        setState(() {
+          _profiles = profiles;
+          _profilesLoaded = true;
+        });
+      }
     } on Object {
       // Keep the playable lobby available if local profile storage fails.
+      if (mounted) setState(() => _profilesLoaded = true);
     }
   }
 
@@ -69,6 +76,45 @@ class _RoundveilShellState extends State<RoundveilShell> {
       _profiles = <PlayerProfile>[
         for (final existing in _profiles)
           if (existing.id == profile.id) profile else existing,
+      ];
+    });
+  }
+
+  Future<PlayerProfile> _createProfile(
+    String displayName,
+    PlayerGender? gender,
+  ) async {
+    final created = await _playerProfiles.createProfile(
+      displayName: displayName,
+      gender: gender,
+    );
+    if (mounted) {
+      setState(() {
+        _profiles = <PlayerProfile>[..._profiles, created]
+          ..sort((a, b) => a.id.compareTo(b.id));
+      });
+    }
+    return created;
+  }
+
+  Future<void> _deleteProfile(String playerId) async {
+    await _playerProfiles.deleteProfile(playerId);
+    if (!mounted) return;
+    setState(() {
+      _profiles = _profiles.where((profile) => profile.id != playerId).toList();
+      _lobbyPlayers = _lobbyPlayers
+          .where((player) => player.id != playerId)
+          .toList();
+    });
+  }
+
+  void _useProfileInSquad(PlayerProfile profile) {
+    if (_lobbyPlayers.any((player) => player.id == profile.id)) return;
+    if (_lobbyPlayers.length >= 12) return;
+    setState(() {
+      _lobbyPlayers = <PlayerConfiguration>[
+        ..._lobbyPlayers,
+        PlayerConfiguration(id: profile.id, displayName: profile.displayName),
       ];
     });
   }
@@ -122,7 +168,11 @@ class _RoundveilShellState extends State<RoundveilShell> {
       ),
       _ShellDestination.avatars => _AvatarWorkshopPage(
         profiles: _profiles,
+        profilesLoaded: _profilesLoaded,
         onProfileChanged: _saveProfile,
+        onCreateProfile: _createProfile,
+        onDeleteProfile: _deleteProfile,
+        onUsePlayer: _useProfileInSquad,
       ),
     };
     final motion = MediaQuery.disableAnimationsOf(context)
@@ -264,6 +314,7 @@ class _GameNavigationBar extends StatelessWidget {
       (_ShellDestination.drafts, 'DRAFTS', Icons.description_rounded),
       (_ShellDestination.settings, 'SETTINGS', Icons.settings_rounded),
     ];
+    final railWidth = compact ? 190.0 : 330.0;
     return Container(
       height: compact ? 48 : 76,
       padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 24),
@@ -283,75 +334,65 @@ class _GameNavigationBar extends StatelessWidget {
       child: Row(
         children: <Widget>[
           SizedBox(
-            width: compact ? 190 : 330,
-            child: ColorFiltered(
-              colorFilter: const ColorFilter.matrix(<double>[
-                1,
-                0,
-                0,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                0,
-                0,
-                0,
-                1,
-                0,
-                0,
-                .5,
-                .5,
-                .5,
-                0,
-                0,
-              ]),
-              child: Image.asset(
-                'assets/brand/roundveil_logo_lockup.webp',
-                fit: BoxFit.contain,
-                alignment: Alignment.centerLeft,
-              ),
+            width: railWidth,
+            child: Image.asset(
+              'assets/brand/roundveil_logo_lockup.webp',
+              fit: BoxFit.contain,
+              alignment: Alignment.centerLeft,
+              semanticLabel: 'ROUNDVEIL',
             ),
           ),
           Expanded(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: items
-                    .map(
-                      (item) => _TopNavItem(
-                        label: item.$2,
-                        icon: item.$3,
-                        selected: item.$1 == destination,
-                        compact: compact,
-                        onTap: () => onSelect(item.$1),
-                      ),
-                    )
-                    .toList(),
+            child: Center(
+              child: SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: items
+                      .map(
+                        (item) => _TopNavItem(
+                          label: item.$2,
+                          icon: item.$3,
+                          selected: item.$1 == destination,
+                          compact: compact,
+                          onTap: () => onSelect(item.$1),
+                        ),
+                      )
+                      .toList(),
+                ),
               ),
             ),
           ),
-          if (!compact) ...<Widget>[
-            Icon(Icons.wifi_off_rounded, color: tokens.cyan, size: 17),
-            const SizedBox(width: 6),
-            Text(
-              'LOCAL PLAY',
-              style: TextStyle(
-                color: tokens.muted,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 1.1,
-              ),
+          SizedBox(
+            width: railWidth,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                if (!compact) ...<Widget>[
+                  Icon(Icons.wifi_off_rounded, color: tokens.cyan, size: 17),
+                  const SizedBox(width: 6),
+                  Text(
+                    'LOCAL PLAY',
+                    style: TextStyle(
+                      color: tokens.muted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                ],
+                IconButton(
+                  onPressed: onThemeToggle,
+                  tooltip: isDark
+                      ? 'Switch to light theme'
+                      : 'Switch to dark theme',
+                  icon: Icon(
+                    isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  ),
+                  color: tokens.ink,
+                ),
+              ],
             ),
-          ],
-          IconButton(
-            onPressed: onThemeToggle,
-            tooltip: isDark ? 'Switch to light theme' : 'Switch to dark theme',
-            icon: Icon(
-              isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
-            ),
-            color: tokens.ink,
           ),
         ],
       ),
@@ -869,10 +910,18 @@ class _QuickGamePageState extends State<_QuickGamePage> {
 class _AvatarWorkshopPage extends StatefulWidget {
   const _AvatarWorkshopPage({
     required this.profiles,
+    required this.profilesLoaded,
     required this.onProfileChanged,
+    required this.onCreateProfile,
+    required this.onDeleteProfile,
+    required this.onUsePlayer,
   });
   final List<PlayerProfile> profiles;
+  final bool profilesLoaded;
   final ValueChanged<PlayerProfile> onProfileChanged;
+  final Future<PlayerProfile> Function(String, PlayerGender?) onCreateProfile;
+  final Future<void> Function(String) onDeleteProfile;
+  final ValueChanged<PlayerProfile> onUsePlayer;
 
   @override
   State<_AvatarWorkshopPage> createState() => _AvatarWorkshopPageState();
@@ -886,8 +935,26 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final size = MediaQuery.sizeOf(context);
     final compact = size.width < 850;
-    if (widget.profiles.isEmpty) {
+    if (widget.profiles.isEmpty && !widget.profilesLoaded) {
       return const Center(child: CircularProgressIndicator());
+    }
+    if (widget.profiles.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            const Icon(Icons.person_add_alt_1, size: 42),
+            const SizedBox(height: 12),
+            const Text('YOUR SQUAD IS EMPTY'),
+            const SizedBox(height: 10),
+            FilledButton.icon(
+              onPressed: () => _createPlayer(context),
+              icon: const Icon(Icons.add),
+              label: const Text('CREATE PLAYER'),
+            ),
+          ],
+        ),
+      );
     }
     final selectedId =
         widget.profiles.any((profile) => profile.id == _selectedPlayerId)
@@ -923,15 +990,26 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                     ),
                   ),
                 ),
-                Text(
-                  '2D LOOK · SAVED LOCALLY',
-                  style: TextStyle(
-                    color: tokens.cyan,
-                    fontSize: compact ? 8 : 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: .8,
-                  ),
+                IconButton(
+                  tooltip: 'Create player',
+                  onPressed: () => _createPlayer(context),
+                  icon: const Icon(Icons.person_add_alt_1),
                 ),
+                if (compact)
+                  const Tooltip(
+                    message: 'Official art; personalized 3D viewer pending',
+                    child: Icon(Icons.view_in_ar_outlined, size: 16),
+                  )
+                else
+                  Text(
+                    'OFFICIAL ART · PERSONALIZED 3D PENDING',
+                    style: TextStyle(
+                      color: tokens.cyan,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: .8,
+                    ),
+                  ),
               ],
             ),
             const SizedBox(height: 10),
@@ -972,7 +1050,68 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                   icon: const Icon(Icons.edit_outlined, size: 16),
                   label: const Text('EDIT CALLSIGN'),
                 ),
+                IconButton(
+                  tooltip: 'Delete ${profile.displayName}',
+                  onPressed: () => _confirmDelete(context, profile),
+                  color: tokens.orange,
+                  icon: const Icon(Icons.delete_outline),
+                ),
               ],
+            ),
+            Row(
+              children: <Widget>[
+                Expanded(
+                  child: DropdownButtonFormField<PlayerGender?>(
+                    key: ValueKey<String>('player-gender-${profile.id}'),
+                    initialValue: profile.gender,
+                    decoration: const InputDecoration(
+                      labelText: 'OPTIONAL GENDER',
+                      isDense: true,
+                    ),
+                    items: const <DropdownMenuItem<PlayerGender?>>[
+                      DropdownMenuItem<PlayerGender?>(
+                        value: null,
+                        child: Text('NOT SPECIFIED'),
+                      ),
+                      DropdownMenuItem<PlayerGender?>(
+                        value: PlayerGender.woman,
+                        child: Text('WOMAN'),
+                      ),
+                      DropdownMenuItem<PlayerGender?>(
+                        value: PlayerGender.man,
+                        child: Text('MAN'),
+                      ),
+                      DropdownMenuItem<PlayerGender?>(
+                        value: PlayerGender.nonBinary,
+                        child: Text('NON-BINARY'),
+                      ),
+                    ],
+                    onChanged: (gender) => widget.onProfileChanged(
+                      profile.copyWith(gender: gender),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                TextButton.icon(
+                  key: const ValueKey<String>('use-player-in-squad'),
+                  onPressed: () => widget.onUsePlayer(profile),
+                  icon: const Icon(Icons.group_add_outlined),
+                  label: const Text('USE IN SQUAD'),
+                ),
+              ],
+            ),
+            Padding(
+              padding: const EdgeInsets.only(top: 5),
+              child: Text(
+                '${profile.wins} WINS  ·  ${profile.gamesPlayed} MATCHES  ·  ${profile.hintCredits} HINTS',
+                key: const ValueKey<String>('player-profile-stats'),
+                style: TextStyle(
+                  color: tokens.muted,
+                  fontSize: compact ? 9 : 11,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: .5,
+                ),
+              ),
             ),
             const SizedBox(height: 10),
             Expanded(
@@ -1024,6 +1163,113 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
     );
   }
 
+  Future<void> _createPlayer(BuildContext context) async {
+    var draftName = '';
+    PlayerGender? gender;
+    final result = await showDialog<(String, PlayerGender?)>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('ADD SQUAD PLAYER'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              TextFormField(
+                initialValue: draftName,
+                autofocus: true,
+                maxLength: 24,
+                textCapitalization: TextCapitalization.words,
+                decoration: const InputDecoration(labelText: 'PLAYER NAME'),
+                onChanged: (value) => draftName = value,
+              ),
+              DropdownButtonFormField<PlayerGender?>(
+                initialValue: gender,
+                decoration: const InputDecoration(labelText: 'OPTIONAL GENDER'),
+                items: const <DropdownMenuItem<PlayerGender?>>[
+                  DropdownMenuItem<PlayerGender?>(
+                    value: null,
+                    child: Text('NOT SPECIFIED'),
+                  ),
+                  DropdownMenuItem<PlayerGender?>(
+                    value: PlayerGender.woman,
+                    child: Text('WOMAN'),
+                  ),
+                  DropdownMenuItem<PlayerGender?>(
+                    value: PlayerGender.man,
+                    child: Text('MAN'),
+                  ),
+                  DropdownMenuItem<PlayerGender?>(
+                    value: PlayerGender.nonBinary,
+                    child: Text('NON-BINARY'),
+                  ),
+                ],
+                onChanged: (value) => setDialogState(() => gender = value),
+              ),
+            ],
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed: () =>
+                  Navigator.of(dialogContext).pop((draftName, gender)),
+              child: const Text('SAVE PLAYER'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    final name = result.$1.trim();
+    if (name.isEmpty) return;
+    try {
+      final created = await widget.onCreateProfile(name, result.$2);
+      if (mounted) setState(() => _selectedPlayerId = created.id);
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Could not save player: $error')));
+    }
+  }
+
+  Future<void> _confirmDelete(
+    BuildContext context,
+    PlayerProfile profile,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('DELETE PLAYER?'),
+        content: Text(
+          'Delete ${profile.displayName}, its appearance and saved statistics from this device?',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await widget.onDeleteProfile(profile.id);
+      if (mounted) setState(() => _selectedPlayerId = null);
+    } on Object catch (error) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not delete player: $error')),
+      );
+    }
+  }
+
   Future<void> _editCallsign(
     BuildContext context,
     PlayerProfile profile,
@@ -1033,13 +1279,14 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('EDIT PLAYER CALLSIGN'),
-        content: TextField(
+        content: TextFormField(
           autofocus: true,
+          initialValue: profile.displayName,
           maxLength: 24,
           textCapitalization: TextCapitalization.words,
           decoration: const InputDecoration(labelText: 'PLAYER NAME'),
           onChanged: (value) => draftName = value,
-          onSubmitted: (_) => Navigator.of(dialogContext).pop(draftName),
+          onFieldSubmitted: (_) => Navigator.of(dialogContext).pop(draftName),
         ),
         actions: <Widget>[
           TextButton(

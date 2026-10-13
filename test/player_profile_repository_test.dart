@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 
 void main() {
@@ -116,6 +117,7 @@ void main() {
       final profiles = await repository.loadAll();
       expect(profiles.map((profile) => profile.hintCredits), [5, 3, 1, 0]);
       expect(profiles.every((profile) => profile.gamesPlayed == 1), isTrue);
+      expect(profiles.map((profile) => profile.wins), [1, 0, 0, 0]);
     },
   );
 
@@ -202,6 +204,35 @@ void main() {
         (await reloadedRepository.loadAll()).single.displayName,
         'Nova Prime',
       );
+    },
+  );
+
+  test(
+    'profiles can be created and deleted without draft resurrection',
+    () async {
+      final repository = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      final created = await repository.createProfile(
+        displayName: '  Nova  ',
+        gender: PlayerGender.nonBinary,
+      );
+      expect(created.id, 'player-1');
+      expect(created.displayName, 'Nova');
+      expect(created.gender, PlayerGender.nonBinary);
+
+      final reloaded = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      expect((await reloaded.loadAll()).single.gender, PlayerGender.nonBinary);
+      await reloaded.deleteProfile(created.id);
+      await reloaded.ensureProfiles(<PlayerConfiguration>[
+        PlayerConfiguration(id: created.id, displayName: created.displayName),
+      ]);
+      expect(await reloaded.loadAll(), isEmpty);
+
+      final replacement = await reloaded.createProfile(displayName: 'Orion');
+      expect(replacement.id, 'player-2');
     },
   );
 }

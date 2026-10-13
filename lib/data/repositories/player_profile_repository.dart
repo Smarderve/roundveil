@@ -11,6 +11,15 @@ bool _isGeneratedPlayerName(PlayerConfiguration player) {
   return match != null && player.displayName == 'Player ${match.group(1)}';
 }
 
+String _nextProfileId(Iterable<String> existingIds) {
+  final existing = existingIds.toSet();
+  var number = 1;
+  while (existing.contains('player-$number')) {
+    number++;
+  }
+  return 'player-$number';
+}
+
 class PlayerMatchResult {
   const PlayerMatchResult({
     required this.playerId,
@@ -56,6 +65,11 @@ class MatchCompletionReceipt {
 
 abstract interface class PlayerProfileRepository {
   Future<List<PlayerProfile>> loadAll();
+  Future<PlayerProfile> createProfile({
+    required String displayName,
+    PlayerGender? gender,
+  });
+  Future<void> deleteProfile(String playerId);
   Future<List<PlayerProfile>> ensureProfiles(
     Iterable<PlayerConfiguration> players,
   );
@@ -116,6 +130,7 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
       return <String, Object?>{
         'schemaVersion': 1,
         'profiles': <Object?>[],
+        'deletedProfileIds': <Object?>[],
         'spentHintKeys': <Object?>[],
         'completedMatchIds': <Object?>[],
       };
@@ -139,15 +154,71 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
   Future<List<PlayerProfile>> loadAll() async => _profiles(await _read());
 
   @override
+  Future<PlayerProfile> createProfile({
+    required String displayName,
+    PlayerGender? gender,
+  }) async {
+    final name = displayName.trim();
+    if (name.isEmpty) throw ArgumentError.value(displayName, 'displayName');
+    late PlayerProfile created;
+    await _serialize(() async {
+      final data = await _read();
+      final profiles = _profiles(data);
+      final deletedIds =
+          (data['deletedProfileIds'] as List<Object?>? ?? const <Object?>[])
+              .cast<String>();
+      final id = _nextProfileId(<String>[
+        ...profiles.map((profile) => profile.id),
+        ...deletedIds,
+      ]);
+      final position = int.parse(id.substring('player-'.length));
+      created = PlayerProfile(
+        id: id,
+        displayName: name,
+        gender: gender,
+        avatar: PlayerAvatarAppearance.forPlayer(position),
+      );
+      profiles.add(created);
+      data['profiles'] = profiles.map((profile) => profile.toJson()).toList();
+      await _write(data);
+    });
+    return created;
+  }
+
+  @override
+  Future<void> deleteProfile(String playerId) => _serialize(() async {
+    final data = await _read();
+    final profiles = _profiles(data);
+    if (!profiles.any((profile) => profile.id == playerId)) {
+      throw StateError('Unknown local player $playerId.');
+    }
+    final deletedIds =
+        (data['deletedProfileIds'] as List<Object?>? ?? <Object?>[])
+            .cast<String>();
+    if (!deletedIds.contains(playerId)) deletedIds.add(playerId);
+    data['profiles'] = profiles
+        .where((profile) => profile.id != playerId)
+        .map((profile) => profile.toJson())
+        .toList();
+    data['deletedProfileIds'] = deletedIds;
+    await _write(data);
+  });
+
+  @override
   Future<List<PlayerProfile>> ensureProfiles(
     Iterable<PlayerConfiguration> players,
   ) async {
     await _serialize(() async {
       final data = await _read();
+      final deletedIds =
+          (data['deletedProfileIds'] as List<Object?>? ?? const <Object?>[])
+              .cast<String>()
+              .toSet();
       final existing = <String, PlayerProfile>{
         for (final profile in _profiles(data)) profile.id: profile,
       };
       for (final player in players) {
+        if (deletedIds.contains(player.id)) continue;
         final profile = existing[player.id];
         if (profile != null) {
           final requestedName = _isGeneratedPlayerName(player)
@@ -246,6 +317,7 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
         if (profile == null) continue;
         profiles[row.playerId] = profile.copyWith(
           hintCredits: profile.hintCredits + row.hintCreditsAwarded,
+          wins: profile.wins + (row.rank == 1 ? 1 : 0),
           gamesPlayed: profile.gamesPlayed + 1,
           correctAnswers: profile.correctAnswers + row.correctAnswers,
           wrongAnswers: profile.wrongAnswers + row.wrongAnswers,
@@ -321,6 +393,7 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
 
 class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
   final Map<String, PlayerProfile> _profiles = <String, PlayerProfile>{};
+  final Set<String> _deletedProfileIds = <String>{};
   final Set<String> _spentHints = <String>{};
   final Set<String> _completedMatches = <String>{};
 
@@ -328,10 +401,42 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
   Future<List<PlayerProfile>> loadAll() async => _sortedProfiles;
 
   @override
+  Future<PlayerProfile> createProfile({
+    required String displayName,
+    PlayerGender? gender,
+  }) async {
+    final name = displayName.trim();
+    if (name.isEmpty) throw ArgumentError.value(displayName, 'displayName');
+    final id = _nextProfileId(<String>[
+      ..._profiles.keys,
+      ..._deletedProfileIds,
+    ]);
+    final created = PlayerProfile(
+      id: id,
+      displayName: name,
+      gender: gender,
+      avatar: PlayerAvatarAppearance.forPlayer(
+        int.parse(id.substring('player-'.length)),
+      ),
+    );
+    _profiles[id] = created;
+    return created;
+  }
+
+  @override
+  Future<void> deleteProfile(String playerId) async {
+    if (_profiles.remove(playerId) == null) {
+      throw StateError('Unknown local player $playerId.');
+    }
+    _deletedProfileIds.add(playerId);
+  }
+
+  @override
   Future<List<PlayerProfile>> ensureProfiles(
     Iterable<PlayerConfiguration> players,
   ) async {
     for (final player in players) {
+      if (_deletedProfileIds.contains(player.id)) continue;
       _profiles.putIfAbsent(player.id, () {
         final position =
             int.tryParse(
@@ -402,6 +507,7 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
       if (profile == null) continue;
       _profiles[row.playerId] = profile.copyWith(
         hintCredits: profile.hintCredits + row.hintCreditsAwarded,
+        wins: profile.wins + (row.rank == 1 ? 1 : 0),
         gamesPlayed: profile.gamesPlayed + 1,
         correctAnswers: profile.correctAnswers + row.correctAnswers,
         wrongAnswers: profile.wrongAnswers + row.wrongAnswers,

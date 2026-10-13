@@ -11,6 +11,7 @@ import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
@@ -218,6 +219,59 @@ void main() {
     expect((await profiles.loadAll()).first.displayName, 'Captain Nova');
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets(
+    'Armory creates, selects, and confirms deletion of saved players',
+    (tester) async {
+      final profiles = InMemoryPlayerProfileRepository();
+      await tester.binding.setSurfaceSize(const Size(1280, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.pumpWidget(RoundveilApp(profileRepository: profiles));
+      await tester.pump(const Duration(milliseconds: 1200));
+      await tester.pump(const Duration(milliseconds: 280));
+      await tester.tap(find.text('AVATARS').first);
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.tap(find.byTooltip('Create player'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField).last, 'Nova Prime');
+      await tester.tap(
+        find.byType(DropdownButtonFormField<PlayerGender?>).last,
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NON-BINARY').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('SAVE PLAYER'));
+      await tester.pumpAndSettle();
+
+      var saved = await profiles.loadAll();
+      final nova = saved.singleWhere(
+        (profile) => profile.displayName == 'Nova Prime',
+      );
+      expect(nova.gender, PlayerGender.nonBinary);
+      await tester.tap(
+        find.byKey(const ValueKey<String>('use-player-in-squad')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('HOME').first);
+      await tester.pumpAndSettle();
+      expect(find.text('NOVA PRIME'), findsOneWidget);
+
+      await tester.tap(find.text('AVATARS').first);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byType(DropdownButtonFormField<String>).last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('NOVA PRIME').last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.byTooltip('Delete Nova Prime'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'DELETE'));
+      await tester.pumpAndSettle();
+      saved = await profiles.loadAll();
+      expect(saved.any((profile) => profile.id == nova.id), isFalse);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets(
     'host can create a multi-game session through the actual builder UI',
