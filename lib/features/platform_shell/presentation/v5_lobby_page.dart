@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
+
+import 'dart:math' as math;
+
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
-class V5LobbyPage extends StatelessWidget {
+/// Interactive Version 5 lobby composition. The scene plate is artwork only;
+/// navigation, squad editing, profile selection and launch actions stay real
+/// Flutter controls above it.
+class V5LobbyPage extends StatefulWidget {
   const V5LobbyPage({
     required this.players,
     required this.profiles,
@@ -28,9 +35,31 @@ class V5LobbyPage extends StatelessWidget {
   final VoidCallback onGames;
   final VoidCallback onAvatars;
 
+  @override
+  State<V5LobbyPage> createState() => _V5LobbyPageState();
+}
+
+class _V5LobbyPageState extends State<V5LobbyPage> {
+  String? _selectedProfileId;
+
+  PlayerProfile? get _selectedProfile =>
+      widget.profiles
+          .where((profile) => profile.id == _selectedProfileId)
+          .firstOrNull ??
+      widget.profiles.firstOrNull;
+
+  void _stepProfile(int direction) {
+    final profile = _selectedProfile;
+    if (profile == null || widget.profiles.length < 2) return;
+    final current = widget.profiles.indexWhere((item) => item.id == profile.id);
+    final next =
+        (current + direction + widget.profiles.length) % widget.profiles.length;
+    setState(() => _selectedProfileId = widget.profiles[next].id);
+  }
+
   void _addPlayer() {
-    if (players.length >= 12) return;
-    final usedNumbers = players
+    if (widget.players.length >= 12) return;
+    final usedNumbers = widget.players
         .map((player) => int.tryParse(player.id.replaceFirst('player-', '')))
         .whereType<int>()
         .toSet();
@@ -38,14 +67,14 @@ class V5LobbyPage extends StatelessWidget {
     while (usedNumbers.contains(nextNumber)) {
       nextNumber++;
     }
-    onPlayersChanged(<PlayerConfiguration>[
-      ...players,
+    widget.onPlayersChanged(<PlayerConfiguration>[
+      ...widget.players,
       PlayerConfiguration.placeholder(nextNumber),
     ]);
   }
 
-  void _removePlayer(String playerId) => onPlayersChanged(
-    players.where((player) => player.id != playerId).toList(),
+  void _removePlayer(String playerId) => widget.onPlayersChanged(
+    widget.players.where((player) => player.id != playerId).toList(),
   );
 
   @override
@@ -53,6 +82,7 @@ class V5LobbyPage extends StatelessWidget {
     final size = MediaQuery.sizeOf(context);
     final compact = size.width < 1050 || size.height < 570;
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    final activeProfile = _selectedProfile;
     return LayoutBuilder(
       builder: (context, constraints) {
         final side = compact ? 150.0 : 218.0;
@@ -60,69 +90,100 @@ class V5LobbyPage extends StatelessWidget {
             ? (constraints.maxWidth * .34).clamp(260.0, 360.0)
             : (constraints.maxWidth * .27).clamp(350.0, 450.0);
         final bottom = compact ? 62.0 : 96.0;
+        final contentTop = compact ? 47.0 : 63.0;
+        final centerWidth = constraints.maxWidth - side - right - 18;
+        final availableHeroHeight =
+            constraints.maxHeight - contentTop - bottom - 12;
+        final heroWidth = math.min(
+          centerWidth * .68,
+          availableHeroHeight * .66,
+        );
+        final heroHeight = math.min(availableHeroHeight, heroWidth * 220 / 150);
+        final heroLeft = side + (centerWidth - heroWidth) * .29;
         return Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            const V5SceneArt(animate: true),
+            const V5SceneArt(),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: <Color>[
-                    Color(0x18020A16),
-                    Color(0x12020A16),
-                    Color(0xBF020A16),
+                    Color(0x10020A16),
+                    Color(0x06020A16),
+                    Color(0xB8020A16),
                   ],
                 ),
               ),
             ),
-            Positioned(
-              left: side + 12,
-              right: right + 12,
-              top: compact ? 5 : 12,
-              height: compact ? 42 : 58,
-              child: _ProfileSelectionRail(profiles: profiles),
-            ),
+            if (activeProfile != null)
+              Positioned(
+                left: heroLeft,
+                top: contentTop + 5,
+                width: heroWidth,
+                height: heroHeight,
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: PlayerAvatarFigure(
+                    key: ValueKey<String>('lobby-hero-${activeProfile.id}'),
+                    appearance: activeProfile.avatar,
+                    width: heroWidth,
+                    height: heroHeight,
+                  ),
+                ),
+              ),
             Positioned(
               left: compact ? 7 : 22,
-              top: compact ? 8 : 18,
+              top: contentTop,
               bottom: bottom + (compact ? 9 : 16),
               width: side,
               child: _SquadDock(
-                players: players,
-                profiles: profiles,
+                players: widget.players,
+                profiles: widget.profiles,
                 compact: compact,
                 onAdd: _addPlayer,
                 onRemove: _removePlayer,
-                onPortraits: onAvatars,
+                onPortraits: widget.onAvatars,
               ),
             ),
             Positioned(
               right: compact ? 8 : 25,
-              top: compact ? 8 : 19,
+              top: contentTop,
               bottom: bottom + (compact ? 9 : 16),
               width: right,
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
-                  Expanded(
+                  SizedBox(
+                    height: compact ? 43 : 58,
+                    child: _ProfileSelectionRail(
+                      profile: activeProfile,
+                      profileCount: widget.profiles.length,
+                      onStep: _stepProfile,
+                    ),
+                  ),
+                  SizedBox(height: compact ? 5 : 10),
+                  SizedBox(
+                    height: compact ? 58 : 102,
                     child: _CommandCard(
-                      title: AppLocalizations.of(context)!.createGame,
-                      subtitle: 'BUILD YOUR MATCH',
-                      icon: Icons.sports_esports_rounded,
+                      title: AppLocalizations.of(context)!.quickGame,
+                      subtitle: 'FIND A MATCH AND PLAY INSTANTLY',
+                      icon: Icons.bolt_rounded,
                       color: tokens.orange,
-                      onTap: () => onCreate(players),
+                      onTap: widget.onQuick,
                       compact: compact,
                     ),
                   ),
-                  SizedBox(height: compact ? 6 : 11),
-                  Expanded(
+                  SizedBox(height: compact ? 5 : 9),
+                  SizedBox(
+                    height: compact ? 52 : 88,
                     child: _CommandCard(
-                      title: AppLocalizations.of(context)!.quickGame,
-                      subtitle: 'JUMP STRAIGHT IN',
-                      icon: Icons.bolt_rounded,
+                      title: AppLocalizations.of(context)!.createGame,
+                      subtitle: 'SET RULES AND INVITE PLAYERS',
+                      icon: Icons.groups_rounded,
                       color: tokens.cyan,
-                      onTap: onQuick,
+                      onTap: () => widget.onCreate(widget.players),
                       compact: compact,
                     ),
                   ),
@@ -135,7 +196,7 @@ class V5LobbyPage extends StatelessWidget {
                           child: _FeatureButton(
                             icon: Icons.description_outlined,
                             label: AppLocalizations.of(context)!.savedDrafts,
-                            onTap: onDrafts,
+                            onTap: widget.onDrafts,
                           ),
                         ),
                         SizedBox(width: compact ? 5 : 8),
@@ -143,7 +204,7 @@ class V5LobbyPage extends StatelessWidget {
                           child: _FeatureButton(
                             icon: Icons.face_rounded,
                             label: 'AVATARS',
-                            onTap: onAvatars,
+                            onTap: widget.onAvatars,
                           ),
                         ),
                       ],
@@ -157,11 +218,7 @@ class V5LobbyPage extends StatelessWidget {
               right: compact ? 8 : 25,
               bottom: compact ? 5 : 12,
               height: bottom,
-              child: _GameModeRail(
-                compact: compact,
-                onTap: onGames,
-                onCreate: () => onCreate(players),
-              ),
+              child: _GameModeRail(compact: compact, onTap: widget.onGames),
             ),
           ],
         );
@@ -170,68 +227,41 @@ class V5LobbyPage extends StatelessWidget {
   }
 }
 
-class _ProfileSelectionRail extends StatefulWidget {
-  const _ProfileSelectionRail({required this.profiles});
-
-  final List<PlayerProfile> profiles;
-
-  @override
-  State<_ProfileSelectionRail> createState() => _ProfileSelectionRailState();
-}
-
-class _ProfileSelectionRailState extends State<_ProfileSelectionRail> {
-  String? _selectedId;
-
-  PlayerProfile? get _selected {
-    if (widget.profiles.isEmpty) return null;
-    return widget.profiles
-            .where((profile) => profile.id == _selectedId)
-            .firstOrNull ??
-        widget.profiles.first;
-  }
-
-  void _step(int amount) {
-    final current = _selected;
-    if (current == null || widget.profiles.length < 2) return;
-    final currentIndex = widget.profiles.indexWhere(
-      (profile) => profile.id == current.id,
-    );
-    final nextIndex =
-        (currentIndex + amount + widget.profiles.length) %
-        widget.profiles.length;
-    setState(() => _selectedId = widget.profiles[nextIndex].id);
-  }
+class _ProfileSelectionRail extends StatelessWidget {
+  const _ProfileSelectionRail({
+    required this.profile,
+    required this.profileCount,
+    required this.onStep,
+  });
+  final PlayerProfile? profile;
+  final int profileCount;
+  final ValueChanged<int> onStep;
 
   @override
   Widget build(BuildContext context) {
-    final profile = _selected;
+    final profile = this.profile;
     if (profile == null) return const SizedBox.shrink();
     final compact = MediaQuery.sizeOf(context).width < 1050;
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
-    final details = <String>[
-      '${profile.wins} WINS',
-      '${profile.gamesPlayed} MATCHES',
-      '${profile.hintCredits} HINTS',
-      if (profile.gender case final gender?) gender.name.toUpperCase(),
-    ].join('  ·  ');
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xB8051020),
+        color: const Color(0xC6071423),
         border: Border(
-          bottom: BorderSide(color: tokens.cyan.withValues(alpha: .7)),
+          bottom: BorderSide(color: tokens.cyan.withValues(alpha: .62)),
           left: BorderSide(color: Color(profile.avatar.accentColor), width: 2),
         ),
       ),
       child: Row(
         children: <Widget>[
           SizedBox(
-            width: compact ? 36 : 46,
-            height: compact ? 36 : 46,
-            child: Image.asset(
-              'assets/brand/roundveil_mascot_portrait.webp',
-              fit: BoxFit.contain,
-              filterQuality: FilterQuality.high,
-              semanticLabel: 'Official ROUNDVEIL player portrait',
+            width: compact ? 38 : 48,
+            height: compact ? 38 : 48,
+            child: PlayerAvatarFigure(
+              key: ValueKey<String>('home-player-portrait-${profile.id}'),
+              appearance: profile.avatar,
+              width: compact ? 38 : 48,
+              height: compact ? 38 : 48,
+              portrait: true,
             ),
           ),
           const SizedBox(width: 7),
@@ -249,20 +279,20 @@ class _ProfileSelectionRailState extends State<_ProfileSelectionRail> {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Color(profile.avatar.accentColor),
-                      fontSize: compact ? 9 : 13,
+                      fontSize: compact ? 8 : 12,
                       fontWeight: FontWeight.w900,
-                      letterSpacing: .7,
+                      letterSpacing: .55,
                     ),
                   ),
                   Text(
-                    details,
+                    '${profile.wins} WINS  ·  ${profile.gamesPlayed} MATCHES  ·  ${profile.hintCredits} HINTS',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: compact ? 6 : 8,
+                      fontSize: compact ? 5.6 : 7.5,
                       fontWeight: FontWeight.w700,
-                      letterSpacing: .3,
+                      letterSpacing: .2,
                     ),
                   ),
                 ],
@@ -272,14 +302,18 @@ class _ProfileSelectionRailState extends State<_ProfileSelectionRail> {
           IconButton(
             tooltip: 'Previous player',
             visualDensity: VisualDensity.compact,
-            onPressed: widget.profiles.length < 2 ? null : () => _step(-1),
-            icon: const Icon(Icons.chevron_left_rounded),
+            constraints: const BoxConstraints.tightFor(width: 22, height: 30),
+            padding: EdgeInsets.zero,
+            onPressed: profileCount < 2 ? null : () => onStep(-1),
+            icon: const Icon(Icons.chevron_left_rounded, size: 19),
           ),
           IconButton(
             tooltip: 'Next player',
             visualDensity: VisualDensity.compact,
-            onPressed: widget.profiles.length < 2 ? null : () => _step(1),
-            icon: const Icon(Icons.chevron_right_rounded),
+            constraints: const BoxConstraints.tightFor(width: 22, height: 30),
+            padding: EdgeInsets.zero,
+            onPressed: profileCount < 2 ? null : () => onStep(1),
+            icon: const Icon(Icons.chevron_right_rounded, size: 19),
           ),
         ],
       ),
@@ -288,19 +322,15 @@ class _ProfileSelectionRailState extends State<_ProfileSelectionRail> {
 }
 
 class V5SceneArt extends StatelessWidget {
-  const V5SceneArt({this.animate = false, super.key});
-
-  // Kept as a compatible parameter for existing callers; the approved key art
-  // is intentionally still, avoiding motion on a flattened illustration.
-  final bool animate;
+  const V5SceneArt({super.key});
 
   @override
   Widget build(BuildContext context) => Image.asset(
-    'assets/brand/v5/v5_arena_scene_reconstruction.jpg',
+    'assets/brand/v5/v5_tech_arena_environment.png',
     fit: BoxFit.cover,
     alignment: Alignment.center,
     filterQuality: FilterQuality.high,
-    semanticLabel: 'ROUNDVEIL arena with the approved hooded hero artwork',
+    semanticLabel: 'Cinematic Version 5 ROUNDVEIL arena environment',
   );
 }
 
@@ -376,8 +406,8 @@ class _CommandCardState extends State<_CommandCard> {
                     child: Center(
                       child: Icon(
                         widget.icon,
-                        size: widget.compact ? 54 : 105,
-                        color: widget.color.withValues(alpha: .19),
+                        size: widget.compact ? 44 : 76,
+                        color: widget.color.withValues(alpha: .22),
                       ),
                     ),
                   ),
@@ -390,8 +420,8 @@ class _CommandCardState extends State<_CommandCard> {
                   ),
                   Padding(
                     padding: EdgeInsets.symmetric(
-                      horizontal: widget.compact ? 12 : 23,
-                      vertical: widget.compact ? 8 : 18,
+                      horizontal: widget.compact ? 12 : 20,
+                      vertical: widget.compact ? 6 : 12,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -403,21 +433,21 @@ class _CommandCardState extends State<_CommandCard> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: widget.color,
-                            fontSize: widget.compact ? 7 : 10,
-                            letterSpacing: 1.25,
+                            fontSize: widget.compact ? 6.2 : 9,
+                            letterSpacing: 1,
                             fontWeight: FontWeight.w900,
                           ),
                         ),
-                        SizedBox(height: widget.compact ? 5 : 9),
+                        SizedBox(height: widget.compact ? 4 : 8),
                         Text(
                           widget.title.toUpperCase(),
-                          maxLines: 2,
+                          maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: widget.compact ? 15 : 26,
+                            fontSize: widget.compact ? 13 : 22,
                             height: .95,
-                            letterSpacing: .5,
+                            letterSpacing: .4,
                             fontWeight: FontWeight.w900,
                             shadows: const <Shadow>[
                               Shadow(color: Colors.black87, blurRadius: 12),
@@ -428,11 +458,11 @@ class _CommandCardState extends State<_CommandCard> {
                     ),
                   ),
                   Positioned(
-                    right: widget.compact ? 8 : 15,
-                    bottom: widget.compact ? 7 : 12,
+                    right: widget.compact ? 7 : 12,
+                    bottom: widget.compact ? 6 : 10,
                     child: Icon(
                       Icons.arrow_forward_rounded,
-                      size: widget.compact ? 17 : 25,
+                      size: widget.compact ? 15 : 21,
                       color: widget.color,
                     ),
                   ),
@@ -614,40 +644,27 @@ class _PlayerSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
-    final portraitSize = compact ? 39.0 : 62.0;
+    final portraitSize = compact ? 39.0 : 54.0;
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? 5 : 8),
       child: Material(
-        color: const Color(0x7A07152A),
+        color: const Color(0x78071325),
         child: InkWell(
           onTap: filled ? null : onTap,
           child: SizedBox(
-            height: compact ? 45 : 70,
+            height: compact ? 45 : 62,
             child: Row(
               children: <Widget>[
                 if (filled && appearance != null)
                   SizedBox(
                     width: portraitSize,
                     height: portraitSize,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        Image.asset(
-                          'assets/brand/roundveil_mascot_portrait.webp',
-                          fit: BoxFit.cover,
-                          filterQuality: FilterQuality.high,
-                          semanticLabel:
-                              'Official ROUNDVEIL character portrait',
-                        ),
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            border: Border.all(
-                              color: Color(appearance!.accentColor),
-                              width: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
+                    child: PlayerAvatarFigure(
+                      key: ValueKey<String>('squad-portrait-$playerId'),
+                      appearance: appearance!,
+                      width: portraitSize,
+                      height: portraitSize,
+                      portrait: true,
                     ),
                   )
                 else
@@ -668,7 +685,7 @@ class _PlayerSlot extends StatelessWidget {
                       ),
                     ),
                   ),
-                SizedBox(width: compact ? 5 : 9),
+                SizedBox(width: compact ? 5 : 8),
                 Expanded(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -682,8 +699,8 @@ class _PlayerSlot extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: compact ? 7 : 10,
-                          letterSpacing: .4,
+                          fontSize: compact ? 7 : 9,
+                          letterSpacing: .35,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
@@ -692,7 +709,7 @@ class _PlayerSlot extends StatelessWidget {
                           'READY',
                           style: TextStyle(
                             color: tokens.cyan,
-                            fontSize: compact ? 6 : 8,
+                            fontSize: compact ? 6 : 7,
                             letterSpacing: 1,
                             fontWeight: FontWeight.w800,
                           ),
@@ -705,10 +722,15 @@ class _PlayerSlot extends StatelessWidget {
                     tooltip: 'Remove $name',
                     onPressed: onTap,
                     visualDensity: VisualDensity.compact,
+                    constraints: const BoxConstraints.tightFor(
+                      width: 28,
+                      height: 34,
+                    ),
+                    padding: EdgeInsets.zero,
                     icon: Icon(
                       Icons.close_rounded,
                       color: Colors.white54,
-                      size: compact ? 14 : 18,
+                      size: compact ? 14 : 16,
                     ),
                   ),
               ],
@@ -762,14 +784,9 @@ class _FeatureButton extends StatelessWidget {
 }
 
 class _GameModeRail extends StatelessWidget {
-  const _GameModeRail({
-    required this.compact,
-    required this.onTap,
-    required this.onCreate,
-  });
+  const _GameModeRail({required this.compact, required this.onTap});
   final bool compact;
   final VoidCallback onTap;
-  final VoidCallback onCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -777,243 +794,115 @@ class _GameModeRail extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return Row(
       children: <Widget>[
-        SizedBox(
-          width: compact ? 190 : 205,
-          child: _PlayTogetherAction(compact: compact, onTap: onCreate),
-        ),
-        SizedBox(width: compact ? 6 : 15),
-        if (!compact)
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: SizedBox(
-              width: 190,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: <Widget>[
-                  Text(
-                    'CHOOSE YOUR GAME',
-                    style: TextStyle(
-                      color: tokens.cyan,
-                      fontSize: 10,
-                      letterSpacing: 1.4,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'BUILD A ROUND OR MIX MODES',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 8,
-                      letterSpacing: .7,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        Expanded(
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: EdgeInsets.zero,
-            itemCount: gameCatalog.length,
-            separatorBuilder: (_, _) => SizedBox(width: compact ? 5 : 9),
-            itemBuilder: (context, index) {
-              final game = gameCatalog[index];
-              return SizedBox(
-                width: compact ? 83 : 132,
-                child: Material(
-                  color: const Color(0xB309172B),
-                  child: InkWell(
-                    onTap: onTap,
-                    child: Stack(
-                      fit: StackFit.expand,
-                      children: <Widget>[
-                        _GameModeArtwork(
-                          gameId: game.id,
-                          color: game.playable ? tokens.orange : tokens.cyan,
+        for (var index = 0; index < gameCatalog.length; index++) ...<Widget>[
+          if (index > 0) SizedBox(width: compact ? 4 : 8),
+          Expanded(
+            child: Material(
+              color: const Color(0xBC071426),
+              child: InkWell(
+                onTap: onTap,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    _GameModeArtwork(gameId: gameCatalog[index].id),
+                    const DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: <Color>[Color(0x12030B18), Color(0xF0030B18)],
+                          stops: <double>[.1, 1],
                         ),
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: <Color>[
-                                Color(0x08030B18),
-                                Color(0xF0030B18),
-                              ],
-                              stops: <double>[.1, 1],
-                            ),
-                          ),
+                      ),
+                    ),
+                    Align(
+                      alignment: Alignment.bottomLeft,
+                      child: Padding(
+                        padding: EdgeInsets.fromLTRB(
+                          compact ? 5 : 8,
+                          2,
+                          3,
+                          compact ? 4 : 7,
                         ),
-                        Align(
-                          alignment: Alignment.bottomLeft,
-                          child: Padding(
-                            padding: EdgeInsets.fromLTRB(
-                              compact ? 5 : 9,
-                              2,
-                              3,
-                              compact ? 5 : 8,
-                            ),
-                            child: Text(
-                              _gameTitle(l10n, game.titleKey).toUpperCase(),
-                              maxLines: 2,
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: <Widget>[
+                            Text(
+                              _gameTitle(
+                                l10n,
+                                gameCatalog[index].titleKey,
+                              ).toUpperCase(),
+                              maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: compact ? 7 : 10,
-                                height: 1.0,
-                                letterSpacing: .2,
+                                fontSize: compact ? 6.4 : 9,
+                                height: 1,
+                                letterSpacing: .15,
                                 fontWeight: FontWeight.w900,
                                 shadows: const <Shadow>[
                                   Shadow(color: Colors.black, blurRadius: 7),
                                 ],
                               ),
                             ),
-                          ),
+                            if (!compact)
+                              Text(
+                                _gameSubtitle(gameCatalog[index].id),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 6.2,
+                                  letterSpacing: .25,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                          ],
                         ),
-                        Positioned(
-                          left: 0,
-                          right: 0,
-                          bottom: 0,
-                          height: 2,
-                          child: ColoredBox(
-                            color: game.playable ? tokens.orange : tokens.cyan,
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
-                  ),
+                    Positioned(
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      height: 2,
+                      child: ColoredBox(
+                        color: gameCatalog[index].playable
+                            ? tokens.orange
+                            : tokens.cyan,
+                      ),
+                    ),
+                  ],
                 ),
-              );
-            },
+              ),
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
 }
 
-class _PlayTogetherAction extends StatelessWidget {
-  const _PlayTogetherAction({required this.compact, required this.onTap});
-  final bool compact;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) => Material(
-    color: const Color(0xC50A1729),
-    child: InkWell(
-      onTap: onTap,
-      child: Row(
-        children: <Widget>[
-          SizedBox(
-            width: compact ? 36 : 62,
-            height: double.infinity,
-            child: Icon(
-              Icons.groups_rounded,
-              color: const Color(0xFFFFAB3D),
-              size: compact ? 29 : 48,
-            ),
-          ),
-          SizedBox(width: compact ? 5 : 9),
-          Expanded(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Text(
-                  compact ? 'PLAY' : 'PLAY TOGETHER',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: compact ? 7 : 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: .5,
-                  ),
-                ),
-                Text(
-                  compact ? 'SQUAD' : 'CHALLENGE TOGETHER',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: const Color(0xFF61D9FF),
-                    fontSize: compact ? 6 : 8,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: .45,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
-}
+String _gameSubtitle(String id) => switch (id) {
+  'quiz' => 'TEST YOUR KNOWLEDGE',
+  'word_play' => 'BUILD WORDS, SCORE BIG',
+  'guess_character' => 'SPOT THE RIGHT HERO',
+  'guess_country_flags' => 'EXPLORE THE WORLD',
+  _ => '',
+};
 
 class _GameModeArtwork extends StatelessWidget {
-  const _GameModeArtwork({required this.gameId, required this.color});
+  const _GameModeArtwork({required this.gameId});
   final String gameId;
-  final Color color;
 
   @override
-  Widget build(BuildContext context) {
-    final icon = switch (gameId) {
-      'quiz' => Icons.psychology_alt_rounded,
-      'word_play' => Icons.abc_rounded,
-      'guess_character' => Icons.person_search_rounded,
-      'guess_country_flags' => Icons.flag_rounded,
-      _ => Icons.sports_esports_rounded,
-    };
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: <Color>[const Color(0xFF16334A), const Color(0xFF06101C)],
-        ),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          CustomPaint(painter: _ModeGlyphPainter(color)),
-          Align(
-            alignment: const Alignment(.15, -.12),
-            child: Icon(icon, size: 45, color: color.withValues(alpha: .9)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ModeGlyphPainter extends CustomPainter {
-  const _ModeGlyphPainter(this.color);
-  final Color color;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = Paint()
-      ..color = color.withValues(alpha: .24)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1;
-    final path = Path()
-      ..moveTo(0, size.height * .8)
-      ..lineTo(size.width * .44, size.height * .15)
-      ..lineTo(size.width, size.height * .52);
-    canvas.drawPath(path, stroke);
-    canvas.drawCircle(
-      Offset(size.width * .78, size.height * .22),
-      size.shortestSide * .28,
-      stroke,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_ModeGlyphPainter oldDelegate) =>
-      oldDelegate.color != color;
+  Widget build(BuildContext context) => Image.asset(
+    'assets/brand/game_modes/$gameId.jpg',
+    fit: BoxFit.cover,
+    filterQuality: FilterQuality.high,
+    semanticLabel: '$gameId original ROUNDVEIL game-mode artwork',
+  );
 }
 
 String _gameTitle(AppLocalizations l10n, String key) => switch (key) {

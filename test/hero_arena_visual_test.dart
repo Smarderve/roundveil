@@ -67,6 +67,17 @@ void main() {
 
   testWidgets('desktop preparation visual', (tester) async {
     await pumpCandidate(tester, configuredController(), desktop);
+    final context = tester.element(find.byType(HeroArenaPage));
+    await tester.runAsync(() async {
+      for (final path in <String>[
+        'assets/brand/avatars/operator_scout.png',
+        'assets/brand/avatars/operator_striker.png',
+        'assets/brand/avatars/operator_vanguard.png',
+      ]) {
+        await precacheImage(AssetImage(path), context);
+      }
+    });
+    await tester.pumpAndSettle();
     expect(find.text('GUESS THE COUNTRY'), findsOneWidget);
     expect(find.text('SQUAD ASSEMBLY'), findsOneWidget);
     expect(find.byType(PlayerAvatarFigure), findsNWidgets(2));

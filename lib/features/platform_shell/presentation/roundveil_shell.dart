@@ -179,40 +179,58 @@ class _RoundveilShellState extends State<RoundveilShell> {
         ? Duration.zero
         : const Duration(milliseconds: 230);
 
+    final switchedPage = AnimatedSwitcher(
+      duration: motion,
+      switchInCurve: Curves.easeOutCubic,
+      switchOutCurve: Curves.easeInCubic,
+      transitionBuilder: (child, animation) => FadeTransition(
+        opacity: animation,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(.025, 0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: child,
+        ),
+      ),
+      child: KeyedSubtree(
+        key: ValueKey<_ShellDestination>(_destination),
+        child: page,
+      ),
+    );
+
     return Scaffold(
       backgroundColor: const Color(0xFF050D1C),
       body: SafeArea(
-        child: Column(
-          children: <Widget>[
-            _GameNavigationBar(
-              destination: _destination,
-              isDark: widget.isDark,
-              onSelect: _select,
-              onThemeToggle: () => widget.onThemeChanged(!widget.isDark),
-            ),
-            Expanded(
-              child: AnimatedSwitcher(
-                duration: motion,
-                switchInCurve: Curves.easeOutCubic,
-                switchOutCurve: Curves.easeInCubic,
-                transitionBuilder: (child, animation) => FadeTransition(
-                  opacity: animation,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(.025, 0),
-                      end: Offset.zero,
-                    ).animate(animation),
-                    child: child,
+        child: _destination == _ShellDestination.home
+            ? Stack(
+                fit: StackFit.expand,
+                children: <Widget>[
+                  switchedPage,
+                  Align(
+                    alignment: Alignment.topCenter,
+                    child: _GameNavigationBar(
+                      destination: _destination,
+                      isDark: widget.isDark,
+                      overlay: true,
+                      onSelect: _select,
+                      onThemeToggle: () =>
+                          widget.onThemeChanged(!widget.isDark),
+                    ),
                   ),
-                ),
-                child: KeyedSubtree(
-                  key: ValueKey<_ShellDestination>(_destination),
-                  child: page,
-                ),
+                ],
+              )
+            : Column(
+                children: <Widget>[
+                  _GameNavigationBar(
+                    destination: _destination,
+                    isDark: widget.isDark,
+                    onSelect: _select,
+                    onThemeToggle: () => widget.onThemeChanged(!widget.isDark),
+                  ),
+                  Expanded(child: switchedPage),
+                ],
               ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -292,12 +310,14 @@ class _GameNavigationBar extends StatelessWidget {
   const _GameNavigationBar({
     required this.destination,
     required this.isDark,
+    this.overlay = false,
     required this.onSelect,
     required this.onThemeToggle,
   });
 
   final _ShellDestination destination;
   final bool isDark;
+  final bool overlay;
   final ValueChanged<_ShellDestination> onSelect;
   final VoidCallback onThemeToggle;
 
@@ -314,22 +334,34 @@ class _GameNavigationBar extends StatelessWidget {
       (_ShellDestination.drafts, 'DRAFTS', Icons.description_rounded),
       (_ShellDestination.settings, 'SETTINGS', Icons.settings_rounded),
     ];
-    final railWidth = compact ? 190.0 : 330.0;
+    final railWidth = overlay
+        ? (compact ? 116.0 : 164.0)
+        : (compact ? 190.0 : 330.0);
     return Container(
-      height: compact ? 48 : 76,
-      padding: EdgeInsets.symmetric(horizontal: compact ? 8 : 24),
+      height: overlay ? (compact ? 42 : 56) : (compact ? 48 : 76),
+      padding: EdgeInsets.symmetric(
+        horizontal: overlay
+            ? 4
+            : compact
+            ? 8
+            : 24,
+      ),
       decoration: BoxDecoration(
-        color: const Color(0xED06152B),
-        border: Border(
-          bottom: BorderSide(color: tokens.cyan.withValues(alpha: .36)),
-        ),
-        boxShadow: const <BoxShadow>[
-          BoxShadow(
-            color: Color(0x88020A16),
-            blurRadius: 18,
-            offset: Offset(0, 5),
-          ),
-        ],
+        color: overlay ? Colors.transparent : const Color(0xED06152B),
+        border: overlay
+            ? null
+            : Border(
+                bottom: BorderSide(color: tokens.cyan.withValues(alpha: .36)),
+              ),
+        boxShadow: overlay
+            ? null
+            : const <BoxShadow>[
+                BoxShadow(
+                  color: Color(0x88020A16),
+                  blurRadius: 18,
+                  offset: Offset(0, 5),
+                ),
+              ],
       ),
       child: Row(
         children: <Widget>[
@@ -368,7 +400,7 @@ class _GameNavigationBar extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
-                if (!compact) ...<Widget>[
+                if (!compact && !overlay) ...<Widget>[
                   Icon(Icons.wifi_off_rounded, color: tokens.cyan, size: 17),
                   const SizedBox(width: 6),
                   Text(
@@ -390,6 +422,12 @@ class _GameNavigationBar extends StatelessWidget {
                     isDark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                   ),
                   color: tokens.ink,
+                  visualDensity: overlay
+                      ? VisualDensity.compact
+                      : VisualDensity.standard,
+                  constraints: overlay
+                      ? const BoxConstraints.tightFor(width: 30, height: 30)
+                      : null,
                 ),
               ],
             ),

@@ -63,6 +63,8 @@ flutter:
     - assets/app/flags/
     - assets/brand/
     - assets/brand/v5/
+    - assets/brand/avatars/
+    - assets/brand/game_modes/
 
   # Production assets are curated under assets/app/.
   # Design-reference screenshots are intentionally not bundled with the app.
