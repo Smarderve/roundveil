@@ -4,7 +4,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/features/guess_country/application/guess_country_controller.dart';
 import 'package:roundveil/features/guess_country/domain/country_flag.dart';
-import 'package:roundveil/features/guess_country/domain/player_avatar_appearance.dart';
 import 'package:roundveil/features/guess_country/presentation/hero_arena_page.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 
@@ -130,34 +129,17 @@ void main() {
     expect(find.text('ADD PLAYER'), findsOneWidget);
   });
 
-  testWidgets('host can customize an avatar and the look is retained', (
+  testWidgets('pre-match lineup does not expose failed appearance controls', (
     tester,
   ) async {
     final controller = GuessCountryController(enableTimers: false)
       ..addPlayer()
       ..openPreparation();
     await pumpCandidate(tester, controller, mobile);
-    await tester.tap(find.text('EDIT LOOK'));
-    await tester.pumpAndSettle();
-    expect(find.text('SQUAD ARMORY'), findsOneWidget);
-    expect(find.text('SKIN TONE'), findsOneWidget);
-    expect(find.text('HAIR STYLE'), findsOneWidget);
-    expect(find.text('OUTFIT'), findsOneWidget);
-    expect(find.text('ACCESSORY'), findsOneWidget);
-    await tester.ensureVisible(find.text('Curls'));
-    await tester.tap(find.text('Curls'));
-    await tester.pumpAndSettle();
-    expect(
-      controller.state.avatarAppearances['player-1']!.hairStyle,
-      AvatarHairStyle.curls,
-    );
-    await tester.tap(find.text('DONE'));
-    await tester.pumpAndSettle();
     expect(find.text('SQUAD ASSEMBLY'), findsOneWidget);
-    expect(
-      controller.state.avatarAppearances['player-1']!.hairStyle,
-      AvatarHairStyle.curls,
-    );
+    expect(find.text('EDIT LOOK'), findsNothing);
+    expect(find.text('CUSTOMIZE'), findsNothing);
+    expect(find.text('SKIN TONE'), findsNothing);
   });
 
   testWidgets('removing a chosen squad member removes only that avatar', (

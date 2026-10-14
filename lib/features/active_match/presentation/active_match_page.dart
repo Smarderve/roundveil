@@ -255,6 +255,10 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       ),
       const SizedBox(width: 8),
       PlayerAvatarFigure(
+        avatarId: _activeMatch
+            .state
+            .profiles[_activeMatch.state.activePlayer.id]!
+            .avatarId,
         appearance: _activeMatch
             .state
             .profiles[_activeMatch.state.activePlayer.id]!
@@ -443,6 +447,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
               ),
               SizedBox(height: compact ? 4 : 12),
               PlayerAvatarFigure(
+                avatarId: profile.avatarId,
                 appearance: profile.avatar,
                 width: compact ? 70 : 118,
                 height: compact ? 104 : 174,
@@ -852,6 +857,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                         ),
                       ),
                       PlayerAvatarFigure(
+                        avatarId:
+                            _activeMatch.state.profiles[row.playerId]!.avatarId,
                         appearance:
                             _activeMatch.state.profiles[row.playerId]!.avatar,
                         width: 28,

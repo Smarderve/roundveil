@@ -354,14 +354,6 @@ class _PlayerLineup extends StatelessWidget {
               appearance:
                   state.avatarAppearances[state.players[index].id] ??
                   PlayerAvatarAppearance.forPlayer(index + 1),
-              onEdit: () => _editAvatar(
-                context,
-                controller,
-                state.players[index].id,
-                state.players[index].displayName,
-                state.avatarAppearances[state.players[index].id] ??
-                    PlayerAvatarAppearance.forPlayer(index + 1),
-              ),
               onRemove: () => controller.removePlayer(state.players[index].id),
             ),
           _AddAvatarSlot(compact: compact, onPressed: controller.addPlayer),
@@ -369,24 +361,6 @@ class _PlayerLineup extends StatelessWidget {
       ),
     ],
   );
-
-  void _editAvatar(
-    BuildContext context,
-    GuessCountryController controller,
-    String playerId,
-    String playerName,
-    PlayerAvatarAppearance appearance,
-  ) {
-    showDialog<void>(
-      context: context,
-      builder: (context) => _AvatarEditorDialog(
-        controller: controller,
-        playerId: playerId,
-        playerName: playerName,
-        initial: appearance,
-      ),
-    );
-  }
 }
 
 class _AvatarSquadMember extends StatelessWidget {
@@ -396,7 +370,6 @@ class _AvatarSquadMember extends StatelessWidget {
     required this.name,
     required this.compact,
     required this.appearance,
-    required this.onEdit,
     required this.onRemove,
   });
   final int index;
@@ -404,7 +377,6 @@ class _AvatarSquadMember extends StatelessWidget {
   final String name;
   final bool compact;
   final PlayerAvatarAppearance appearance;
-  final VoidCallback onEdit;
   final VoidCallback onRemove;
 
   @override
@@ -491,37 +463,6 @@ class _AvatarSquadMember extends StatelessWidget {
               ),
             ],
           ),
-          if (compact)
-            TextButton(
-              key: ValueKey('edit-avatar-$playerId'),
-              onPressed: onEdit,
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF263449),
-                minimumSize: const Size(48, 42),
-                textStyle: const TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: .35,
-                ),
-              ),
-              child: const Text('EDIT LOOK'),
-            )
-          else
-            TextButton.icon(
-              key: ValueKey('edit-avatar-$playerId'),
-              onPressed: onEdit,
-              icon: const Icon(Icons.face_retouching_natural_rounded, size: 17),
-              label: const Text('CUSTOMIZE'),
-              style: TextButton.styleFrom(
-                foregroundColor: const Color(0xFF263449),
-                minimumSize: const Size(48, 42),
-                textStyle: const TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: .8,
-                ),
-              ),
-            ),
         ],
       ),
     );

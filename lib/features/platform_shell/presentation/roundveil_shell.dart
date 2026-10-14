@@ -3,7 +3,7 @@ import 'package:roundveil/data/repositories/draft_repository.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/data/repositories/character_picture_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
-import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
@@ -1123,7 +1123,7 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final size = MediaQuery.sizeOf(context);
-    final compact = size.width < 850;
+    final compact = size.width < 850 || size.height < 900;
     if (widget.profiles.isEmpty && !widget.profilesLoaded) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -1150,7 +1150,6 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
         ? _selectedPlayerId!
         : widget.profiles.first.id;
     final profile = widget.profiles.firstWhere((item) => item.id == selectedId);
-    final editor = _appearanceEditor(profile);
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
@@ -1322,6 +1321,7 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                       ),
                     ),
                     child: PlayerAvatarFigure(
+                      avatarId: profile.avatarId,
                       appearance: profile.avatar,
                       width: compact ? 105 : 220,
                       height: compact ? 145 : 300,
@@ -1332,7 +1332,7 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                       children: <Widget>[
                         SizedBox(height: 120, child: stage),
                         const SizedBox(height: 8),
-                        Expanded(child: editor),
+                        Expanded(child: _avatarGallery(profile)),
                       ],
                     );
                   }
@@ -1340,7 +1340,7 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                     children: <Widget>[
                       SizedBox(width: constraints.maxWidth * .34, child: stage),
                       const SizedBox(width: 20),
-                      Expanded(child: editor),
+                      Expanded(child: _avatarGallery(profile)),
                     ],
                   );
                 },
@@ -1494,167 +1494,105 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
     widget.onProfileChanged(profile.copyWith(displayName: trimmedName));
   }
 
-  Widget _appearanceEditor(PlayerProfile profile) {
-    final appearance = profile.avatar;
-    const skinTones = <int>[
-      0xFFF4D1B5,
-      0xFFE7B99A,
-      0xFFC98B69,
-      0xFF9E654F,
-      0xFF684637,
-    ];
-    const hairColors = <int>[
-      0xFF263449,
-      0xFF6B4634,
-      0xFFB97A38,
-      0xFFCFD5DE,
-      0xFF40254E,
-    ];
-    const outfitColors = <int>[
-      0xFF2879BA,
-      0xFF7357A5,
-      0xFFB84D48,
-      0xFF26796F,
-      0xFF263449,
-    ];
-    const accents = <int>[0xFFF4A62C, 0xFF55C4B2, 0xFFFF865D, 0xFFB6D9F5];
-    return SingleChildScrollView(
-      child: Wrap(
-        spacing: 18,
-        runSpacing: 10,
-        children: <Widget>[
-          _choiceGroup<AvatarFaceStyle>(
-            'FACE',
-            AvatarFaceStyle.values,
-            appearance.faceStyle,
-            (value) => value.name.toUpperCase(),
-            (value) => _update(profile, appearance.copyWith(faceStyle: value)),
+  Widget _avatarGallery(PlayerProfile profile) {
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < 850 || size.height < 900;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        const Text(
+          'CHOOSE YOUR OPERATOR',
+          style: TextStyle(
+            color: Color(0xFF70D9FF),
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
           ),
-          _colorGroup(
-            'SKIN TONE',
-            skinTones,
-            appearance.skinTone,
-            (value) => _update(profile, appearance.copyWith(skinTone: value)),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            padding: EdgeInsets.zero,
+            separatorBuilder: (_, _) => const SizedBox(width: 8),
+            itemCount: PlayerAvatarCatalog.all.length,
+            itemBuilder: (context, index) {
+              final avatar = PlayerAvatarCatalog.all[index];
+              final selected = profile.avatarId == avatar.id;
+              return Semantics(
+                button: true,
+                selected: selected,
+                label: '${avatar.name} avatar',
+                child: InkWell(
+                  key: ValueKey<String>('select-avatar-${avatar.id}'),
+                  onTap: () => widget.onProfileChanged(
+                    profile.copyWith(avatarId: avatar.id),
+                  ),
+                  child: SizedBox(
+                    width: compact ? 92 : 116,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF071321),
+                        border: Border.all(
+                          color: selected
+                              ? const Color(0xFFF4A62C)
+                              : const Color(0x4460D9FF),
+                          width: selected ? 2 : 1,
+                        ),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: <Widget>[
+                          Image.asset(avatar.assetPath, fit: BoxFit.cover),
+                          Align(
+                            alignment: Alignment.bottomCenter,
+                            child: Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 4),
+                              color: const Color(0xD9081424),
+                              child: Text(
+                                avatar.name,
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: .35,
+                                ),
+                              ),
+                            ),
+                          ),
+                          if (selected)
+                            const Align(
+                              alignment: Alignment.topRight,
+                              child: Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.check_circle,
+                                  color: Color(0xFFF4A62C),
+                                  size: 17,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-          _choiceGroup<AvatarHairStyle>(
-            'HAIR STYLE',
-            AvatarHairStyle.values,
-            appearance.hairStyle,
-            (value) => value.name.toUpperCase(),
-            (value) => _update(profile, appearance.copyWith(hairStyle: value)),
-          ),
-          _colorGroup(
-            'HAIR COLOR',
-            hairColors,
-            appearance.hairColor,
-            (value) => _update(profile, appearance.copyWith(hairColor: value)),
-          ),
-          _choiceGroup<AvatarOutfitStyle>(
-            'OUTFIT',
-            AvatarOutfitStyle.values,
-            appearance.outfitStyle,
-            (value) => value.name.toUpperCase(),
-            (value) =>
-                _update(profile, appearance.copyWith(outfitStyle: value)),
-          ),
-          _colorGroup(
-            'OUTFIT COLOR',
-            outfitColors,
-            appearance.outfitColor,
-            (value) =>
-                _update(profile, appearance.copyWith(outfitColor: value)),
-          ),
-          _colorGroup(
-            'ACCENT',
-            accents,
-            appearance.accentColor,
-            (value) =>
-                _update(profile, appearance.copyWith(accentColor: value)),
-          ),
-          _choiceGroup<AvatarAccessory>(
-            'ACCESSORY',
-            AvatarAccessory.values,
-            appearance.accessory,
-            (value) => value.name.toUpperCase(),
-            (value) => _update(profile, appearance.copyWith(accessory: value)),
-          ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 6),
+        const Text(
+          '8 ready characters · 5 new originals · roster target: 30',
+          style: TextStyle(color: Color(0xFF8B9BB1), fontSize: 10),
+        ),
+      ],
     );
-  }
-
-  Widget _choiceGroup<T>(
-    String title,
-    List<T> values,
-    T selected,
-    String Function(T) label,
-    ValueChanged<T> onSelected,
-  ) => SizedBox(
-    width: 250,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFF70D9FF),
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
-        ),
-        Wrap(
-          spacing: 4,
-          children: <Widget>[
-            for (final value in values)
-              ChoiceChip(
-                label: Text(label(value)),
-                selected: value == selected,
-                onSelected: (_) => onSelected(value),
-              ),
-          ],
-        ),
-      ],
-    ),
-  );
-
-  Widget _colorGroup(
-    String title,
-    List<int> colors,
-    int selected,
-    ValueChanged<int> onSelected,
-  ) => SizedBox(
-    width: 190,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: <Widget>[
-        Text(
-          title,
-          style: const TextStyle(
-            color: Color(0xFF70D9FF),
-            fontSize: 9,
-            fontWeight: FontWeight.w900,
-            letterSpacing: 1.2,
-          ),
-        ),
-        Wrap(
-          spacing: 8,
-          children: <Widget>[
-            for (final color in colors)
-              ChoiceChip(
-                label: const SizedBox(width: 16, height: 16),
-                selected: selected == color,
-                avatar: CircleAvatar(backgroundColor: Color(color)),
-                onSelected: (_) => onSelected(color),
-              ),
-          ],
-        ),
-      ],
-    ),
-  );
-
-  void _update(PlayerProfile profile, PlayerAvatarAppearance appearance) {
-    widget.onProfileChanged(profile.copyWith(avatar: appearance));
   }
 }
 

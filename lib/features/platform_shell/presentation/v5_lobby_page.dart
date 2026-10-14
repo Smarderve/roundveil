@@ -4,6 +4,7 @@ import 'dart:math' as math;
 
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
@@ -128,6 +129,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                   alignment: Alignment.bottomCenter,
                   child: PlayerAvatarFigure(
                     key: ValueKey<String>('lobby-hero-${activeProfile.id}'),
+                    avatarId: activeProfile.avatarId,
                     appearance: activeProfile.avatar,
                     width: heroWidth,
                     height: heroHeight,
@@ -262,6 +264,7 @@ class _ProfileSelectionRail extends StatelessWidget {
             height: compact ? 38 : 48,
             child: PlayerAvatarFigure(
               key: ValueKey<String>('home-player-portrait-${profile.id}'),
+              avatarId: profile.avatarId,
               appearance: profile.avatar,
               width: compact ? 38 : 48,
               height: compact ? 38 : 48,
@@ -570,6 +573,12 @@ class _SquadDock extends StatelessWidget {
                   playerId: players[index].id,
                   filled: true,
                   compact: compact,
+                  avatarId:
+                      profiles
+                          .where((profile) => profile.id == players[index].id)
+                          .firstOrNull
+                          ?.avatarId ??
+                      PlayerAvatarCatalog.idForPlayer(index + 1),
                   appearance:
                       profiles
                           .where((profile) => profile.id == players[index].id)
@@ -585,6 +594,7 @@ class _SquadDock extends StatelessWidget {
                   playerId: null,
                   filled: false,
                   compact: compact,
+                  avatarId: null,
                   appearance: null,
                   onTap: onAdd,
                 ),
@@ -610,8 +620,8 @@ class _SquadDock extends StatelessWidget {
           ),
         TextButton.icon(
           onPressed: onPortraits,
-          icon: Icon(Icons.palette_outlined, size: compact ? 14 : 17),
-          label: const Text('EDIT LOOK'),
+          icon: Icon(Icons.face_retouching_natural, size: compact ? 14 : 17),
+          label: const Text('CHOOSE AVATAR'),
           style: TextButton.styleFrom(
             foregroundColor: tokens.cyan,
             padding: EdgeInsets.zero,
@@ -634,6 +644,7 @@ class _PlayerSlot extends StatelessWidget {
     required this.playerId,
     required this.filled,
     required this.compact,
+    required this.avatarId,
     required this.appearance,
     required this.onTap,
   });
@@ -642,6 +653,7 @@ class _PlayerSlot extends StatelessWidget {
   final String? playerId;
   final bool filled;
   final bool compact;
+  final String? avatarId;
   final PlayerAvatarAppearance? appearance;
   final VoidCallback onTap;
 
@@ -665,6 +677,7 @@ class _PlayerSlot extends StatelessWidget {
                     height: portraitSize,
                     child: PlayerAvatarFigure(
                       key: ValueKey<String>('squad-portrait-$playerId'),
+                      avatarId: avatarId,
                       appearance: appearance!,
                       width: portraitSize,
                       height: portraitSize,

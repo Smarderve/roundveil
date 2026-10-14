@@ -10,7 +10,7 @@ import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
-import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
@@ -291,7 +291,7 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('avatar workshop edits and persists the selected squad look', (
+  testWidgets('avatar workshop selects and persists a ready-made character', (
     tester,
   ) async {
     final profiles = InMemoryPlayerProfileRepository();
@@ -304,12 +304,12 @@ void main() {
     await tester.pump(const Duration(milliseconds: 300));
 
     expect(find.text('SQUAD ARMORY'), findsOneWidget);
-    await tester.tap(find.text('CURLS'));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(
-      (await profiles.loadAll()).first.avatar.hairStyle,
-      AvatarHairStyle.curls,
-    );
+    expect(find.text('SKIN TONE'), findsNothing);
+    expect(find.text('CHOOSE YOUR OPERATOR'), findsOneWidget);
+    await tester.tap(find.text('STRIKER'));
+    await tester.pumpAndSettle();
+    expect((await profiles.loadAll()).first.avatarId, 'operator_striker');
+    expect(PlayerAvatarCatalog.all, hasLength(8));
     await tester.tap(
       find.byKey(const ValueKey<String>('edit-player-callsign')),
     );

@@ -157,6 +157,7 @@ void main() {
       final player = PlayerConfiguration.placeholder(1);
       final profile = (await repository.ensureProfiles([player])).single;
       final updated = profile.copyWith(
+        avatarId: 'operator_pathfinder',
         avatar: profile.avatar.copyWith(
           hairStyle: AvatarHairStyle.curls,
           accessory: AvatarAccessory.visor,
@@ -171,6 +172,7 @@ void main() {
       expect(reloaded.avatar.hairStyle, AvatarHairStyle.curls);
       expect(reloaded.avatar.accessory, AvatarAccessory.visor);
       expect(reloaded.avatar.outfitColor, 0xFF7357A5);
+      expect(reloaded.avatarId, 'operator_pathfinder');
     },
   );
 

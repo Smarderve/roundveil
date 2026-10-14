@@ -17,6 +17,7 @@ void main() {
     PlayerProfile(
       id: 'player-1',
       displayName: 'Player 1',
+      avatarId: 'operator_scout',
       avatar: const PlayerAvatarAppearance(
         hairStyle: AvatarHairStyle.cropped,
         hairColor: 0xFF202B38,
@@ -32,6 +33,7 @@ void main() {
     PlayerProfile(
       id: 'player-2',
       displayName: 'Player 2',
+      avatarId: 'operator_striker',
       avatar: const PlayerAvatarAppearance(
         faceStyle: AvatarFaceStyle.bold,
         skinTone: 0xFF9F624A,
@@ -49,6 +51,7 @@ void main() {
     PlayerProfile(
       id: 'player-3',
       displayName: 'Player 3',
+      avatarId: 'operator_vanguard',
       avatar: const PlayerAvatarAppearance(
         faceStyle: AvatarFaceStyle.soft,
         skinTone: 0xFFF0C7A0,

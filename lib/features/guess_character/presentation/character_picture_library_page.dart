@@ -1,6 +1,8 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:roundveil/data/repositories/character_picture_repository.dart';
 
 /// Local-only content management for the user-owned Picture Mode collection.
@@ -75,7 +77,75 @@ class _CharacterPictureLibraryPageState
 
   Future<void> _remove(CharacterPicture item) async {
     await _repository.remove(item.id);
-    if (mounted) setState(() => _items = _repository.loadAll());
+    if (mounted) {
+      setState(() {
+        _items = _repository.loadAll();
+      });
+    }
+  }
+
+  Future<void> _importPackage() async {
+    setState(() => _busy = true);
+    try {
+      final selection = await FilePicker.pickFiles(
+        dialogTitle: 'Import ROUNDVEIL character collection',
+        type: FileType.custom,
+        allowedExtensions: const <String>['zip'],
+      );
+      if (selection.isEmpty) return;
+      final bytes = await selection.single.readAsBytes();
+      final report = await _repository.importPackageBytes(bytes);
+      if (!mounted) return;
+      setState(() {
+        _items = _repository.loadAll();
+      });
+      final detail = report.errors.isEmpty
+          ? ''
+          : ' ${report.errors.length} invalid record(s) skipped.';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Imported ${report.imported}; duplicate images skipped: ${report.duplicates}.$detail',
+          ),
+          duration: const Duration(seconds: 6),
+        ),
+      );
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Collection import failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _exportPackage() async {
+    setState(() => _busy = true);
+    try {
+      final bytes = await _repository.exportPackageBytes();
+      final destination = await FilePicker.saveFile(
+        fileName: 'roundveil-character-collection.zip',
+        bytes: Uint8List.fromList(bytes),
+        dialogTitle: 'Export private character collection',
+        type: FileType.custom,
+        allowedExtensions: const <String>['zip'],
+      );
+      if (destination != null && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Private collection package exported.')),
+        );
+      }
+    } on Object catch (error) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Collection export failed: $error')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
   }
 
   @override
@@ -149,6 +219,16 @@ class _CharacterPictureLibraryPageState
                         onPressed: _busy ? null : _import,
                         icon: const Icon(Icons.add_photo_alternate_outlined),
                         label: Text(_busy ? 'IMPORTING…' : 'IMPORT PICTURE'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _importPackage,
+                        icon: const Icon(Icons.archive_outlined),
+                        label: const Text('IMPORT COLLECTION ZIP'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _exportPackage,
+                        icon: const Icon(Icons.ios_share_rounded),
+                        label: const Text('EXPORT COLLECTION ZIP'),
                       ),
                     ],
                   ),

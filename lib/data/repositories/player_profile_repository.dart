@@ -5,6 +5,7 @@ import 'dart:io';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 
 bool _isGeneratedPlayerName(PlayerConfiguration player) {
   final match = RegExp(r'^player-(\d+)$').firstMatch(player.id);
@@ -176,6 +177,7 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
         id: id,
         displayName: name,
         gender: gender,
+        avatarId: PlayerAvatarCatalog.idForPlayer(position),
         avatar: PlayerAvatarAppearance.forPlayer(position),
       );
       profiles.add(created);
@@ -237,6 +239,7 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
         existing[player.id] = PlayerProfile(
           id: player.id,
           displayName: player.displayName,
+          avatarId: PlayerAvatarCatalog.idForPlayer(position),
           avatar: PlayerAvatarAppearance.forPlayer(position),
         );
       }
@@ -415,6 +418,9 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
       id: id,
       displayName: name,
       gender: gender,
+      avatarId: PlayerAvatarCatalog.idForPlayer(
+        int.parse(id.substring('player-'.length)),
+      ),
       avatar: PlayerAvatarAppearance.forPlayer(
         int.parse(id.substring('player-'.length)),
       ),
@@ -446,6 +452,7 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
         return PlayerProfile(
           id: player.id,
           displayName: player.displayName,
+          avatarId: PlayerAvatarCatalog.idForPlayer(position),
           avatar: PlayerAvatarAppearance.forPlayer(position),
         );
       });

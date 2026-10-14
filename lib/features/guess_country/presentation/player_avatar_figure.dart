@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 
 /// Shared original 2D player-character artwork for lobby, squad, customization,
 /// player introduction and results. This is static 2D art, not a 3D model.
@@ -9,6 +10,7 @@ class PlayerAvatarFigure extends StatelessWidget {
     this.width = 150,
     this.height = 220,
     this.portrait,
+    this.avatarId,
     super.key,
   });
 
@@ -16,8 +18,10 @@ class PlayerAvatarFigure extends StatelessWidget {
   final double width;
   final double height;
   final bool? portrait;
+  final String? avatarId;
 
   String get _artPath {
+    if (avatarId != null) return PlayerAvatarCatalog.byId(avatarId).assetPath;
     // A saved combination selects one of the distinct bundled character
     // silhouettes. This intentionally avoids reusing the ROUNDVEIL mascot as
     // every player's default identity.

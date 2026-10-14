@@ -1,4 +1,5 @@
 import 'package:roundveil/domain/player/player_avatar_appearance.dart';
+import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 
 enum PlayerGender { woman, man, nonBinary }
 
@@ -7,6 +8,7 @@ class PlayerProfile {
     required this.id,
     required this.displayName,
     required this.avatar,
+    this.avatarId = 'operator_vanguard',
     this.gender,
     this.avatarImagePath,
     this.hintCredits = 0,
@@ -21,6 +23,7 @@ class PlayerProfile {
   final String id;
   final String displayName;
   final PlayerAvatarAppearance avatar;
+  final String avatarId;
   final PlayerGender? gender;
   final String? avatarImagePath;
   final int hintCredits;
@@ -34,6 +37,7 @@ class PlayerProfile {
   PlayerProfile copyWith({
     String? displayName,
     PlayerAvatarAppearance? avatar,
+    String? avatarId,
     Object? gender = _unchanged,
     String? avatarImagePath,
     int? hintCredits,
@@ -47,6 +51,7 @@ class PlayerProfile {
     id: id,
     displayName: displayName ?? this.displayName,
     avatar: avatar ?? this.avatar,
+    avatarId: avatarId ?? this.avatarId,
     gender: identical(gender, _unchanged)
         ? this.gender
         : gender as PlayerGender?,
@@ -64,6 +69,7 @@ class PlayerProfile {
     'id': id,
     'displayName': displayName,
     'avatarImagePath': avatarImagePath,
+    'avatarId': avatarId,
     'gender': gender?.name,
     'avatar': <String, Object?>{
       'faceStyle': avatar.faceStyle.name,
@@ -90,6 +96,7 @@ class PlayerProfile {
       id: json['id']! as String,
       displayName: json['displayName']! as String,
       avatarImagePath: json['avatarImagePath'] as String?,
+      avatarId: json['avatarId'] as String? ?? _legacyAvatarId(avatarJson),
       gender: _parseGender(json['gender']),
       avatar: PlayerAvatarAppearance(
         faceStyle: AvatarFaceStyle.values.byName(
@@ -126,6 +133,26 @@ class PlayerProfile {
     }
     return null;
   }
+}
+
+String _legacyAvatarId(Map<String, Object?> avatar) {
+  final face = avatar['faceStyle'] as String? ?? 'focused';
+  final hair = avatar['hairStyle'] as String? ?? 'cropped';
+  final outfit = avatar['outfitStyle'] as String? ?? 'striker';
+  final faceStyle = AvatarFaceStyle.values.indexWhere(
+    (value) => value.name == face,
+  );
+  final hairStyle = AvatarHairStyle.values.indexWhere(
+    (value) => value.name == hair,
+  );
+  final outfitStyle = AvatarOutfitStyle.values.indexWhere(
+    (value) => value.name == outfit,
+  );
+  return PlayerAvatarCatalog.legacyIdForAppearance(
+    faceStyle: faceStyle < 0 ? 1 : faceStyle,
+    hairStyle: hairStyle < 0 ? 0 : hairStyle,
+    outfitStyle: outfitStyle < 0 ? 0 : outfitStyle,
+  );
 }
 
 const Object _unchanged = Object();

@@ -16,7 +16,7 @@ This is a physical-room social game: **active player turns away from screen BEFO
 5. `Judgement`: host or authorized clue-giver marks Correct or Wrong; Correct immediately enters Win Countdown, Wrong/Timeout finishes turn. Only after judgement can active player turn back.
 
 ## Presentation
-**Name Mode:** identity name is shown only after the active player turns away; clue-givers keep it visible until host judgement. **Picture Mode:** licensed image only, no identity caption; the active player turns away before identity is exposed. Picture Mode is currently unavailable because the offline licensed image count is zero. Do not substitute generated or low-quality images. A Guessing Games session can schedule Character and Country formats together, but a round keeps one category and format for every player.
+**Name Mode:** identity name is shown only after the active player turns away; clue-givers keep it visible until host judgement. **Picture Mode:** authentic imported image only, no identity caption; the active player turns away before identity is exposed. Picture Mode requires enough real imported local images for the configured turns; tests' synthetic files do not count as product content. Collection packages and current inventory are documented in [`../PICTURE_MODE_COLLECTIONS.md`](../PICTURE_MODE_COLLECTIONS.md). Do not substitute generated or low-quality subject images. A Guessing Games session can schedule Character and Country formats together, but a round keeps one category and format for every player.
 
 ## Content
 `displayName`, aliases/accepted variants, group/category, difficulty, optional licensed image, source, suitable-audience tagging and user-owned local family photo flag. No remote search during live reveal.
