@@ -1,5 +1,12 @@
 # ROUNDVEIL — Verified project status
 
+## UI/UX rebuild — match-entry batch (2026-10-14, partial)
+- Replaced the always-open multi-panel Create Game form with four visible decisions (game family, saved players, round count, Start Game) and one collapsed Advanced Settings area. Game format, timer, countdown, hints, scoring and country rules remain available there. Saved profile selection renders player portraits and preserves stable profile IDs. Quick Game can reuse the Home squad instead of requesting the same players again.
+- Session-building changes are limited to the presentation/controller entry layer; the active match engine and stored profile/draft repositories were not rewritten. Built-in Quick Game templates remain editable.
+- Verification: Flutter analysis clean; full suite **83 tests passed**. Windows debug build succeeded and was launched in the actual desktop window. A two-player, one-round Quiz match was played through results: distinct questions, shared Multiple Choice format, correct-answer feedback/countdown progression, tie ranking, and individual +5/+3 hint rewards were visible. Android debug APK built with the previously approved process-only `JAVA_TOOL_OPTIONS` workaround; installed and launched on `emulator-5554` (x86_64, landscape), and the live Quiz challenge was reached without an immediate crash. Android Home, Create Game, and gameplay captures are in `docs/evidence/ux_rebuild_batch_2026-10-14/`.
+- Visual review is not approval: the Windows Create Game capture shows cramped, undersized section detail text at the tested window size; the Android setup screen still has excessive negative space. The home, avatar selector, Quick Game, drafts, settings, results and other destinations have not all been reconstructed or visually compared in this batch. Therefore the requested complete UI/UX rebuild and full eight-workflow acceptance suite remain **incomplete**; do not mark the rebuild approved or complete.
+- Git/remote delivery is recorded in the completion report for the focused files in this batch. Unrelated pre-existing untracked evidence and workspace files were left untouched.
+
 > **Status:** ACTIVE<br>
 > **Authority:** ROUNDVEIL project decisions<br>
 > **Product:** ROUNDVEIL — Windows + Android via Flutter/Dart<br>

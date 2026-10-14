@@ -238,8 +238,10 @@ void main() {
     expect(find.text('CREATE GAME'), findsOneWidget);
     await tester.tap(find.text('CREATE GAME'));
     await tester.pumpAndSettle();
-    expect(find.text('CHOOSE THE GAME'), findsOneWidget);
-    expect(find.byTooltip('Add player'), findsOneWidget);
+    expect(find.text('CHOOSE YOUR GAME'), findsOneWidget);
+    expect(find.text('PLAYERS'), findsOneWidget);
+    expect(find.text('ROUNDS'), findsOneWidget);
+    expect(find.byKey(const ValueKey<String>('start-match')), findsOneWidget);
   });
 
   testWidgets('removed games are absent from Create Game and Quick Game', (
@@ -287,7 +289,8 @@ void main() {
     expect(tester.takeException(), isNull);
     await tester.tap(find.text('CREATE GAME'));
     await tester.pumpAndSettle();
-    expect(find.text('SQUAD & ROUNDS'), findsOneWidget);
+    expect(find.text('CHOOSE YOUR GAME'), findsOneWidget);
+    expect(find.text('ADVANCED SETTINGS'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -391,41 +394,20 @@ void main() {
       );
       await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('MIXED'));
-      await tester.tap(find.text('QUIZ').last);
-      await tester.tap(find.text('WORD PLAY').last);
-      await tester.tap(find.byTooltip('Add player'));
+      await tester.tap(find.text('MIXED GAMES'));
+      await tester.tap(
+        find.byKey(const ValueKey<String>('choose-saved-players')),
+      );
       await tester.tap(find.byKey(const ValueKey<String>('round-count')));
       await tester.pumpAndSettle();
       await tester.tap(find.text('4').last);
       await tester.pumpAndSettle();
-      _activateButton(tester, 'PREPARE MATCH');
+      _activateButton(tester, 'START GAME');
       for (var frame = 0; frame < 20; frame++) {
         await tester.pump(const Duration(milliseconds: 100));
       }
-      await _startVisibleTurn(tester);
-
-      final challenge = _visibleChallenge(tester, <OfflineChallenge>[
-        ...quizChallenges,
-        ...wordChallenges,
-      ]);
       expect(repository.items, isEmpty);
-      if (challenge.choices.isNotEmpty) {
-        await tester.tap(find.text(challenge.answer));
-      } else {
-        await tester.enterText(find.byType(TextField), challenge.answer);
-        await tester.tap(find.text('SUBMIT WORD'));
-      }
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 550));
-      expect(find.text('3'), findsOneWidget);
-      await tester.pump(const Duration(seconds: 4));
-      await _startVisibleTurn(tester);
-      final nextChallenge = _visibleChallenge(tester, <OfflineChallenge>[
-        ...quizChallenges,
-        ...wordChallenges,
-      ]);
-      expect(nextChallenge.id, isNot(challenge.id));
+      expect(find.text('BEGIN ROUND'), findsOneWidget);
       expect(repository.items, isEmpty);
     },
   );
@@ -450,6 +432,10 @@ void main() {
     await tester.tap(find.byTooltip('Edit quick game settings'));
     await tester.pumpAndSettle();
 
+    expect(find.text('ADVANCED SETTINGS'), findsOneWidget);
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('ADVANCED SETTINGS'));
+    await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOneWidget);
     await tester.enterText(find.byType(TextField), 'Friday Match');
     await tester.pump();

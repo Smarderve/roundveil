@@ -6,12 +6,14 @@ import 'package:roundveil/data/repositories/player_profile_repository.dart';
 import 'package:roundveil/design_system/roundveil_theme.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/session/round_game_format.dart';
+import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
 import 'package:roundveil/features/active_match/application/active_match_controller.dart';
 import 'package:roundveil/features/active_match/application/active_match_content.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
+import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 
 class CinematicSessionBuilderPage extends StatefulWidget {
   const CinematicSessionBuilderPage({
@@ -52,6 +54,24 @@ class _CinematicSessionBuilderPageState
   late final TextEditingController _name = TextEditingController(
     text: widget.initialName,
   );
+  List<PlayerProfile> _savedProfiles = const <PlayerProfile>[];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfiles();
+  }
+
+  Future<void> _loadProfiles() async {
+    final repository = widget.profileRepository;
+    if (repository == null) return;
+    try {
+      final profiles = await repository.loadAll();
+      if (mounted) setState(() => _savedProfiles = profiles);
+    } on Object {
+      // Keep setup usable if local profile storage is temporarily unavailable.
+    }
+  }
 
   @override
   void dispose() {
@@ -95,211 +115,431 @@ class _CinematicSessionBuilderPageState
     final compact = size.height < 580 || size.width < 820;
     final canBuild = _controller.canCreate;
     final canStart = _controller.canStartMatch;
-    final selected = config.selectedModuleIds.toSet();
+    final gameChoice = _choiceFor(config);
+    final selectedNames = config.selectedModuleIds.map((id) {
+      final game = gameCatalog.firstWhere((item) => item.id == id);
+      return _title(l10n, game.titleKey);
+    }).toList();
+    final contentWidth = size.width < 1000 ? size.width * .84 : 1040.0;
+    final choiceHeight = compact ? 48.0 : 64.0;
+    final playersHeight = compact ? 78.0 : 116.0;
 
-    return Padding(
-      padding: EdgeInsets.fromLTRB(
-        compact ? 12 : 30,
-        8,
-        compact ? 12 : 30,
-        compact ? 4 : 10,
-      ),
-      child: Column(
-        children: <Widget>[
-          Row(
+    return Align(
+      alignment: Alignment.topCenter,
+      child: SizedBox(
+        width: contentWidth,
+        child: Padding(
+          padding: EdgeInsets.fromLTRB(
+            compact ? 12 : 32,
+            4,
+            compact ? 12 : 32,
+            8,
+          ),
+          child: Column(
             children: <Widget>[
-              IconButton(
-                onPressed: widget.onBack,
-                tooltip: l10n.back,
-                icon: const Icon(Icons.arrow_back_rounded),
-              ),
-              const SizedBox(width: 6),
-              Expanded(
-                child: Text(
-                  widget.templateId == null
-                      ? l10n.createGame.toUpperCase()
-                      : l10n.quickGame.toUpperCase(),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
               SizedBox(
-                width: compact ? 170 : 250,
-                child: TextField(
-                  controller: _name,
-                  onChanged: _controller.setName,
-                  textAlign: TextAlign.end,
-                  decoration: InputDecoration(
-                    isDense: true,
-                    hintText: l10n.sessionName,
-                    border: const UnderlineInputBorder(),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              _FormatToggle(
-                mixed: config.isMixed,
-                onSingle: () => _controller.setFormat(SessionFormat.single),
-                onMixed: () => _controller.setFormat(SessionFormat.mixed),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Expanded(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                if (constraints.maxWidth < 720) {
-                  return SingleChildScrollView(
-                    child: Column(
-                      children: <Widget>[
-                        SizedBox(
-                          height: 330,
-                          child: _ModuleForge(
-                            selected: selected,
-                            mixed: config.isMixed,
-                            selectedFormatIds: config.effectiveRoundFormatIds
-                                .toSet(),
-                            onSelect: _controller.toggleGame,
-                            onFormatSelect: _controller.toggleRoundFormat,
-                            onRemoveUnsupportedFormat:
-                                _controller.removeUnsupportedRoundFormat,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 220,
-                          child: _SquadForge(
-                            players: config.players,
-                            rounds: config.roundCount,
-                            onAdd: _controller.addPlayer,
-                            onRemove: _controller.removePlayer,
-                            onRounds: _controller.setRoundCount,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        SizedBox(
-                          height: 260,
-                          child: _MatchRulesRail(
-                            config: config,
-                            selectedNames: config.selectedModuleIds.map((id) {
-                              final game = gameCatalog.firstWhere(
-                                (item) => item.id == id,
-                              );
-                              return _title(l10n, game.titleKey);
-                            }).toList(),
-                            onChallengeSeconds: _controller.setChallengeSeconds,
-                            onCountdownSeconds:
-                                _controller.setWinCountdownSeconds,
-                            onHints: _controller.setHintsEnabled,
-                            onScoring: _controller.setScoringEnabled,
-                            onPointsPerCorrect:
-                                _controller.setPointsPerCorrectAnswer,
-                            onCountryRegion: _controller.setCountryRegion,
-                            onCountryDifficulty:
-                                _controller.setCountryDifficulty,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return Row(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                height: compact ? 35 : 48,
+                child: Row(
                   children: <Widget>[
+                    IconButton(
+                      onPressed: widget.onBack,
+                      tooltip: l10n.back,
+                      visualDensity: VisualDensity.compact,
+                      icon: const Icon(Icons.arrow_back_rounded),
+                    ),
+                    const SizedBox(width: 5),
                     Expanded(
-                      flex: 11,
-                      child: _ModuleForge(
-                        selected: selected,
+                      child: Text(
+                        widget.templateId == null
+                            ? l10n.createGame.toUpperCase()
+                            : l10n.quickGame.toUpperCase(),
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontSize: compact ? 17 : 23,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                    ),
+                    if (widget.templateId != null)
+                      _FormatToggle(
                         mixed: config.isMixed,
-                        selectedFormatIds: config.effectiveRoundFormatIds
-                            .toSet(),
-                        onSelect: _controller.toggleGame,
-                        onFormatSelect: _controller.toggleRoundFormat,
-                        onRemoveUnsupportedFormat:
-                            _controller.removeUnsupportedRoundFormat,
+                        onSingle: () =>
+                            _controller.setFormat(SessionFormat.single),
+                        onMixed: () =>
+                            _controller.setFormat(SessionFormat.mixed),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 9,
-                      child: _SquadForge(
-                        players: config.players,
-                        rounds: config.roundCount,
-                        onAdd: _controller.addPlayer,
-                        onRemove: _controller.removePlayer,
-                        onRounds: _controller.setRoundCount,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      flex: 7,
-                      child: _MatchRulesRail(
-                        config: config,
-                        selectedNames: config.selectedModuleIds.map((id) {
-                          final game = gameCatalog.firstWhere(
-                            (item) => item.id == id,
-                          );
-                          return _title(l10n, game.titleKey);
-                        }).toList(),
-                        onChallengeSeconds: _controller.setChallengeSeconds,
-                        onCountdownSeconds: _controller.setWinCountdownSeconds,
-                        onHints: _controller.setHintsEnabled,
-                        onScoring: _controller.setScoringEnabled,
-                        onPointsPerCorrect:
-                            _controller.setPointsPerCorrectAnswer,
-                        onCountryRegion: _controller.setCountryRegion,
-                        onCountryDifficulty: _controller.setCountryDifficulty,
-                      ),
-                    ),
                   ],
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            children: <Widget>[
-              if (_controller.startValidationMessage != null)
-                Expanded(
-                  child: Text(
-                    _controller.startValidationMessage!,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: tokens.muted, fontSize: 10),
-                  ),
-                )
-              else
-                const Spacer(),
-              TextButton.icon(
-                onPressed: canBuild ? _saveDraft : null,
-                icon: const Icon(Icons.bookmark_add_outlined),
-                label: Text(
-                  widget.templateId == null
-                      ? l10n.saveDraft.toUpperCase()
-                      : 'SAVE AS NEW DRAFT',
                 ),
               ),
-              const SizedBox(width: 8),
-              FilledButton.icon(
-                onPressed: canStart ? _createSession : null,
-                icon: const Icon(Icons.play_arrow_rounded),
-                label: Text(
-                  widget.templateId == null ? 'PREPARE MATCH' : 'START MATCH',
+              Expanded(
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: contentWidth,
+                      maxHeight: size.height * (compact ? .76 : .72),
+                    ),
+                    child: SingleChildScrollView(
+                      padding: EdgeInsets.only(bottom: compact ? 3 : 8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          _LobbySectionLabel(
+                            title: 'CHOOSE YOUR GAME',
+                            detail:
+                                'ONE CLEAR CHOICE. START WHEN YOU ARE READY.',
+                            compact: compact,
+                          ),
+                          SizedBox(height: compact ? 4 : 8),
+                          SizedBox(
+                            height: choiceHeight,
+                            child: Row(
+                              children: <Widget>[
+                                for (final choice
+                                    in _MatchChoice.values) ...<Widget>[
+                                  if (choice != _MatchChoice.values.first)
+                                    SizedBox(width: compact ? 4 : 8),
+                                  Expanded(
+                                    child: _MatchChoiceButton(
+                                      choice: choice,
+                                      selected: gameChoice == choice,
+                                      compact: compact,
+                                      onTap: () => _selectChoice(choice),
+                                    ),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: compact ? 7 : 14),
+                          _LobbySectionLabel(
+                            title: 'PLAYERS',
+                            detail: '${config.players.length} SELECTED',
+                            compact: compact,
+                          ),
+                          SizedBox(height: compact ? 3 : 7),
+                          SizedBox(
+                            height: playersHeight,
+                            child: Row(
+                              children: <Widget>[
+                                Expanded(
+                                  child: ListView.separated(
+                                    key: const ValueKey<String>(
+                                      'selected-players',
+                                    ),
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: config.players.length,
+                                    separatorBuilder: (context, index) =>
+                                        SizedBox(width: compact ? 5 : 9),
+                                    itemBuilder: (context, index) {
+                                      final player = config.players[index];
+                                      final profile = _savedProfiles
+                                          .where((item) => item.id == player.id)
+                                          .firstOrNull;
+                                      return _SelectedPlayer(
+                                        player: player,
+                                        profile: profile,
+                                        compact: compact,
+                                        onRemove: () => _controller.setPlayers(
+                                          config.players
+                                              .where(
+                                                (item) => item.id != player.id,
+                                              )
+                                              .toList(),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                                SizedBox(width: compact ? 5 : 12),
+                                OutlinedButton.icon(
+                                  key: const ValueKey<String>(
+                                    'choose-saved-players',
+                                  ),
+                                  onPressed: _choosePlayers,
+                                  icon: const Icon(
+                                    Icons.person_add_alt_1_rounded,
+                                  ),
+                                  label: Text(
+                                    compact ? 'SELECT' : 'SELECT PLAYERS',
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: compact ? 7 : 14),
+                          Row(
+                            children: <Widget>[
+                              Expanded(
+                                child: _LobbySectionLabel(
+                                  title: 'ROUNDS',
+                                  detail: 'ONE FORMAT FOR EVERY PLAYER',
+                                  compact: compact,
+                                ),
+                              ),
+                              DropdownButton<int>(
+                                key: const ValueKey<String>('round-count'),
+                                value: config.roundCount == 0
+                                    ? null
+                                    : config.roundCount,
+                                hint: const Text('CHOOSE'),
+                                items: List<DropdownMenuItem<int>>.generate(
+                                  10,
+                                  (index) => DropdownMenuItem<int>(
+                                    value: index + 1,
+                                    child: Text('${index + 1}'),
+                                  ),
+                                ),
+                                onChanged: (value) {
+                                  if (value != null) {
+                                    _controller.setRoundCount(value);
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                          Theme(
+                            data: Theme.of(context).copyWith(
+                              dividerColor: Colors.transparent,
+                              splashColor: tokens.cyan.withValues(alpha: .08),
+                            ),
+                            child: ExpansionTile(
+                              tilePadding: EdgeInsets.zero,
+                              childrenPadding: EdgeInsets.zero,
+                              dense: true,
+                              title: Text(
+                                'ADVANCED SETTINGS',
+                                style: TextStyle(
+                                  color: tokens.cyan,
+                                  fontSize: compact ? 10 : 12,
+                                  fontWeight: FontWeight.w900,
+                                  letterSpacing: 1,
+                                ),
+                              ),
+                              subtitle: Text(
+                                'Formats, timers, hints, scoring and more',
+                                style: TextStyle(
+                                  color: tokens.muted,
+                                  fontSize: compact ? 9 : 10,
+                                ),
+                              ),
+                              children: <Widget>[
+                                TextField(
+                                  controller: _name,
+                                  onChanged: _controller.setName,
+                                  decoration: InputDecoration(
+                                    isDense: true,
+                                    hintText: l10n.sessionName,
+                                    labelText: 'MATCH NAME',
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                _RoundFormatPicker(
+                                  selectedModules: config.selectedModuleIds
+                                      .toSet(),
+                                  selectedFormatIds: config
+                                      .effectiveRoundFormatIds
+                                      .toSet(),
+                                  onToggle: _controller.toggleRoundFormat,
+                                ),
+                                const SizedBox(height: 10),
+                                _MatchRulesRail(
+                                  config: config,
+                                  selectedNames: selectedNames,
+                                  onChallengeSeconds:
+                                      _controller.setChallengeSeconds,
+                                  onCountdownSeconds:
+                                      _controller.setWinCountdownSeconds,
+                                  onHints: _controller.setHintsEnabled,
+                                  onScoring: _controller.setScoringEnabled,
+                                  onPointsPerCorrect:
+                                      _controller.setPointsPerCorrectAnswer,
+                                  onCountryRegion: _controller.setCountryRegion,
+                                  onCountryDifficulty:
+                                      _controller.setCountryDifficulty,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: tokens.orange,
-                  foregroundColor: const Color(0xFF16100A),
-                  minimumSize: const Size(160, 48),
-                  shape: const _AngledButtonShape(),
-                ),
+              ),
+              SizedBox(height: compact ? 3 : 8),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      canStart
+                          ? 'MATCH READY'
+                          : (_controller.startValidationMessage ??
+                                'CHOOSE A GAME, PLAYERS AND ROUNDS'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: canStart ? tokens.cyan : tokens.muted,
+                        fontSize: compact ? 9 : 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: canBuild ? _saveDraft : null,
+                    icon: const Icon(Icons.bookmark_add_outlined, size: 18),
+                    label: Text(
+                      widget.templateId == null
+                          ? l10n.saveDraft.toUpperCase()
+                          : 'SAVE DRAFT',
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  FilledButton.icon(
+                    key: const ValueKey<String>('start-match'),
+                    onPressed: canStart ? _createSession : null,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('START GAME'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: tokens.orange,
+                      foregroundColor: const Color(0xFF16100A),
+                      minimumSize: Size(compact ? 130 : 180, compact ? 40 : 50),
+                      shape: const _AngledButtonShape(),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
+        ),
       ),
     );
+  }
+
+  _MatchChoice? _choiceFor(SessionConfiguration config) {
+    if (config.isMixed) return _MatchChoice.mixed;
+    if (config.selectedModuleIds.length == 1) {
+      return switch (config.selectedModuleIds.single) {
+        'quiz' => _MatchChoice.quiz,
+        'word_play' => _MatchChoice.wordPlay,
+        _ => _MatchChoice.guessing,
+      };
+    }
+    if (config.selectedModuleIds.isNotEmpty &&
+        config.selectedModuleIds.every(
+          (id) => id == 'guess_character' || id == 'guess_country_flags',
+        )) {
+      return _MatchChoice.guessing;
+    }
+    return null;
+  }
+
+  void _selectChoice(_MatchChoice choice) {
+    final modules = switch (choice) {
+      _MatchChoice.quiz => const <String>['quiz'],
+      _MatchChoice.wordPlay => const <String>['word_play'],
+      _MatchChoice.guessing => const <String>[
+        'guess_character',
+        'guess_country_flags',
+      ],
+      _MatchChoice.mixed => const <String>[
+        'quiz',
+        'word_play',
+        'guess_character',
+        'guess_country_flags',
+      ],
+    };
+    _controller.setGameSelection(
+      moduleIds: modules,
+      mixed: choice == _MatchChoice.mixed,
+    );
+  }
+
+  Future<void> _choosePlayers() async {
+    if (widget.profileRepository == null) {
+      _controller.addPlayer();
+      return;
+    }
+    final profiles = _savedProfiles.isNotEmpty
+        ? _savedProfiles
+        : await widget.profileRepository!.loadAll();
+    if (!mounted) return;
+    if (profiles.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Create a saved player in Avatars before starting a match.',
+          ),
+        ),
+      );
+      return;
+    }
+    final selectedIds = _controller.configuration.players
+        .map((player) => player.id)
+        .toSet();
+    final result = await showDialog<List<PlayerConfiguration>>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('CHOOSE YOUR PLAYERS'),
+          content: SizedBox(
+            width: 420,
+            child: ListView(
+              shrinkWrap: true,
+              children: <Widget>[
+                for (final profile in profiles)
+                  CheckboxListTile(
+                    value: selectedIds.contains(profile.id),
+                    secondary: SizedBox(
+                      width: 42,
+                      height: 42,
+                      child: PlayerAvatarFigure(
+                        avatarId: profile.avatarId,
+                        appearance: profile.avatar,
+                        width: 42,
+                        height: 42,
+                        portrait: true,
+                      ),
+                    ),
+                    title: Text(profile.displayName),
+                    subtitle: Text('${profile.gamesPlayed} matches'),
+                    onChanged: (checked) => setDialogState(() {
+                      if (checked == true) {
+                        selectedIds.add(profile.id);
+                      } else {
+                        selectedIds.remove(profile.id);
+                      }
+                    }),
+                  ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed: selectedIds.isEmpty
+                  ? null
+                  : () => Navigator.pop(
+                      dialogContext,
+                      profiles
+                          .where((profile) => selectedIds.contains(profile.id))
+                          .map(
+                            (profile) => PlayerConfiguration(
+                              id: profile.id,
+                              displayName: profile.displayName,
+                            ),
+                          )
+                          .toList(growable: false),
+                    ),
+              child: const Text('SELECT PLAYERS'),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (result != null) _controller.setPlayers(result);
   }
 
   Future<void> _saveDraft() async {
@@ -349,6 +589,268 @@ class _CinematicSessionBuilderPageState
   }
 }
 
+enum _MatchChoice { quiz, wordPlay, guessing, mixed }
+
+class _LobbySectionLabel extends StatelessWidget {
+  const _LobbySectionLabel({
+    required this.title,
+    required this.detail,
+    required this.compact,
+  });
+
+  final String title;
+  final String detail;
+  final bool compact;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    return Row(
+      children: <Widget>[
+        Text(
+          title,
+          style: TextStyle(
+            color: tokens.orange,
+            fontSize: compact ? 10 : 12,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.2,
+          ),
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Text(
+            detail,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: tokens.muted,
+              fontSize: compact ? 8 : 9,
+              fontWeight: FontWeight.w700,
+              letterSpacing: .6,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MatchChoiceButton extends StatelessWidget {
+  const _MatchChoiceButton({
+    required this.choice,
+    required this.selected,
+    required this.compact,
+    required this.onTap,
+  });
+
+  final _MatchChoice choice;
+  final bool selected;
+  final bool compact;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    final (label, icon) = switch (choice) {
+      _MatchChoice.quiz => ('QUIZ', Icons.quiz_rounded),
+      _MatchChoice.wordPlay => ('WORD PLAY', Icons.abc_rounded),
+      _MatchChoice.guessing => ('GUESSING GAMES', Icons.visibility_rounded),
+      _MatchChoice.mixed => ('MIXED GAMES', Icons.shuffle_rounded),
+    };
+    return Material(
+      color: selected ? const Color(0xB835281A) : const Color(0x77202A39),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 160),
+          padding: EdgeInsets.symmetric(horizontal: compact ? 3 : 9),
+          decoration: BoxDecoration(
+            border: Border(
+              bottom: BorderSide(
+                color: selected ? tokens.orange : Colors.white24,
+                width: selected ? 3 : 1,
+              ),
+            ),
+            gradient: selected
+                ? LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: <Color>[
+                      tokens.orange.withValues(alpha: .22),
+                      Colors.transparent,
+                    ],
+                  )
+                : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              Icon(
+                icon,
+                size: compact ? 15 : 19,
+                color: selected ? tokens.orange : tokens.ink,
+              ),
+              SizedBox(width: compact ? 3 : 7),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: compact ? 7.5 : 10,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: compact ? .1 : .6,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SelectedPlayer extends StatelessWidget {
+  const _SelectedPlayer({
+    required this.player,
+    required this.profile,
+    required this.compact,
+    required this.onRemove,
+  });
+
+  final PlayerConfiguration player;
+  final PlayerProfile? profile;
+  final bool compact;
+  final VoidCallback onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final size = compact ? 48.0 : 72.0;
+    final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    return Tooltip(
+      message: 'Remove ${player.displayName}',
+      child: InkWell(
+        onTap: onRemove,
+        child: SizedBox(
+          width: compact ? 58 : 90,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              SizedBox(
+                width: size,
+                height: size,
+                child: Stack(
+                  children: <Widget>[
+                    Positioned.fill(
+                      child: profile == null
+                          ? DecoratedBox(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: const Color(0xAA11243A),
+                                border: Border.all(
+                                  color: tokens.cyan.withValues(alpha: .7),
+                                ),
+                              ),
+                              child: Icon(
+                                Icons.person_rounded,
+                                color: tokens.cyan,
+                                size: size * .55,
+                              ),
+                            )
+                          : PlayerAvatarFigure(
+                              avatarId: profile!.avatarId,
+                              appearance: profile!.avatar,
+                              width: size,
+                              height: size,
+                              portrait: true,
+                            ),
+                    ),
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Icon(
+                        Icons.remove_circle,
+                        size: compact ? 13 : 16,
+                        color: tokens.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                player.displayName.toUpperCase(),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: compact ? 7 : 9,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RoundFormatPicker extends StatelessWidget {
+  const _RoundFormatPicker({
+    required this.selectedModules,
+    required this.selectedFormatIds,
+    required this.onToggle,
+  });
+
+  final Set<String> selectedModules;
+  final Set<String> selectedFormatIds;
+  final ValueChanged<String> onToggle;
+
+  @override
+  Widget build(BuildContext context) {
+    final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(
+          'ROUND FORMATS · ONE SHARED FORMAT FOR THE WHOLE ROUND',
+          style: TextStyle(
+            color: tokens.cyan,
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: .7,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Wrap(
+          spacing: 5,
+          runSpacing: 3,
+          children: <Widget>[
+            for (final format in roundGameFormats.where(
+              (item) => selectedModules.contains(item.moduleId),
+            ))
+              FilterChip(
+                key: ValueKey<String>('round-format-${format.id}'),
+                label: Text(format.title.toUpperCase()),
+                selected: selectedFormatIds.contains(format.id),
+                onSelected: format.available
+                    ? (_) => onToggle(format.id)
+                    : null,
+                visualDensity: VisualDensity.compact,
+                labelStyle: const TextStyle(fontSize: 9),
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _FormatToggle extends StatelessWidget {
   const _FormatToggle({
     required this.mixed,
@@ -370,6 +872,7 @@ class _FormatToggle extends StatelessWidget {
   );
 }
 
+// ignore: unused_element
 class _ModuleForge extends StatelessWidget {
   const _ModuleForge({
     required this.selected,
@@ -508,6 +1011,7 @@ class _ModuleForge extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _SquadForge extends StatelessWidget {
   const _SquadForge({
     required this.players,

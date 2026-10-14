@@ -153,6 +153,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
       _ShellDestination.quick => V5QuickGamesPage(
         drafts: _drafts,
         profileRepository: _playerProfiles,
+        initialPlayers: _lobbyPlayers,
         onBack: () => _select(_ShellDestination.home),
       ),
       _ShellDestination.drafts => _DraftsPage(

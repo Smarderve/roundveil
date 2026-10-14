@@ -267,6 +267,39 @@ class SessionBuilderController extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Replaces the selected game family set from the simplified match-entry UI.
+  /// Formats are initialized to one playable format per selected module; hosts
+  /// can change them under Advanced Settings.
+  void setGameSelection({
+    required List<String> moduleIds,
+    required bool mixed,
+  }) {
+    final modules = moduleIds
+        .where(activeGameModuleIds.contains)
+        .toSet()
+        .toList(growable: false);
+    final formats = defaultRoundFormatIds(modules)
+        .where((id) => roundGameFormatById(id)?.available ?? false)
+        .toList(growable: false);
+    _configuration = _configuration.copyWith(
+      selectedModuleIds: modules,
+      roundFormatIds: formats,
+      roundFormatsExplicit: true,
+      isMixed: mixed,
+    );
+    notifyListeners();
+  }
+
+  void setPlayers(List<PlayerConfiguration> players) {
+    final unique = <String>{};
+    _configuration = _configuration.copyWith(
+      players: players
+          .where((player) => unique.add(player.id))
+          .toList(growable: false),
+    );
+    notifyListeners();
+  }
+
   void toggleGame(String id) {
     if (!gameCatalog.any((game) => game.id == id)) return;
     final selected = List<String>.from(_configuration.selectedModuleIds);

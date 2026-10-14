@@ -15,11 +15,13 @@ class V5QuickGamesPage extends StatefulWidget {
   const V5QuickGamesPage({
     required this.drafts,
     required this.onBack,
+    this.initialPlayers = const <PlayerConfiguration>[],
     this.profileRepository,
     this.challengeHistoryRepository,
     super.key,
   });
   final DraftRepository drafts;
+  final List<PlayerConfiguration> initialPlayers;
   final PlayerProfileRepository? profileRepository;
   final ChallengeHistoryRepository? challengeHistoryRepository;
   final VoidCallback onBack;
@@ -47,7 +49,11 @@ class _V5QuickGamesPageState extends State<V5QuickGamesPage> {
 
   Future<void> _startTemplate(QuickGameTemplate template) async {
     var configuration = template.configuration;
-    if (_savedProfiles.isNotEmpty) {
+    if (widget.initialPlayers.isNotEmpty) {
+      configuration = configuration.copyWith(
+        players: List<PlayerConfiguration>.of(widget.initialPlayers),
+      );
+    } else if (_savedProfiles.isNotEmpty) {
       if (_savedProfiles.length < template.players) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
