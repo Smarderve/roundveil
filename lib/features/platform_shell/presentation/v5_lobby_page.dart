@@ -94,33 +94,56 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
-    final compact = size.width < 1050 || size.height < 570;
+    final narrow = size.width < 760;
+    final compact = size.width < 1100;
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
     final activeProfile = _selectedProfile;
     return LayoutBuilder(
       builder: (context, constraints) {
-        final side = compact ? 150.0 : 218.0;
-        final right = compact
-            ? (constraints.maxWidth * .29).clamp(250.0, 315.0)
-            : (constraints.maxWidth * .25).clamp(320.0, 400.0);
-        final bottom = compact ? 62.0 : 96.0;
-        final contentTop = compact ? 47.0 : 63.0;
-        final gameRailWidth = math.max(
+        final width = constraints.maxWidth;
+        final height = constraints.maxHeight;
+        final shortLandscape = height < 460;
+        final side = narrow
+            ? 112.0
+            : compact
+            ? 158.0
+            : (width * .17).clamp(196.0, 238.0);
+        final right = narrow
+            ? 184.0
+            : compact
+            ? (width * .25).clamp(222.0, 292.0)
+            : (width * .25).clamp(318.0, 390.0);
+        final bottom = height < 460
+            ? 100.0
+            : height < 640
+            ? 118.0
+            : 150.0;
+        final contentTop = compact ? 55.0 : 72.0;
+        final sideInset = narrow
+            ? 7.0
+            : compact
+            ? 12.0
+            : 22.0;
+        final actionInset = narrow
+            ? 7.0
+            : compact
+            ? 12.0
+            : 24.0;
+        final railInset = narrow
+            ? 9.0
+            : compact
+            ? 18.0
+            : 34.0;
+        final centerLeft = sideInset + side + 5;
+        final centerRight = actionInset + right + 5;
+        final centerWidth = math.max(0.0, width - centerLeft - centerRight);
+        final availableHeroHeight = math.max(
           0.0,
-          math.min(
-            constraints.maxWidth - (compact ? 16 : 44),
-            compact ? 680.0 : 1000.0,
-          ),
+          height - contentTop - bottom - 8,
         );
-        final centerWidth = constraints.maxWidth - side - right - 18;
-        final availableHeroHeight =
-            constraints.maxHeight - contentTop - bottom - 12;
-        final heroWidth = math.min(
-          centerWidth * .68,
-          availableHeroHeight * .66,
-        );
-        final heroHeight = math.min(availableHeroHeight, heroWidth * 220 / 150);
-        final heroLeft = side + (centerWidth - heroWidth) * .29;
+        final heroHeight = math.min(availableHeroHeight, height * .72);
+        final heroWidth = math.min(centerWidth * .86, heroHeight * .84);
+        final heroLeft = centerLeft + (centerWidth - heroWidth) / 2;
         return Stack(
           fit: StackFit.expand,
           children: <Widget>[
@@ -141,7 +164,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
             if (activeProfile != null)
               Positioned(
                 left: heroLeft,
-                top: contentTop + 5,
+                top: contentTop + (height < 500 ? 0 : 7),
                 width: heroWidth,
                 height: heroHeight,
                 child: Align(
@@ -169,9 +192,9 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                 ),
               ),
             Positioned(
-              left: compact ? 7 : 22,
+              left: sideInset,
               top: contentTop,
-              bottom: bottom + (compact ? 9 : 16),
+              bottom: bottom + 9,
               width: side,
               child: _SquadDock(
                 players: widget.players,
@@ -183,24 +206,39 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
               ),
             ),
             Positioned(
-              right: compact ? 8 : 25,
+              right: actionInset,
               top: contentTop,
-              bottom: bottom + (compact ? 9 : 16),
+              bottom: bottom + 9,
               width: right,
               child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   SizedBox(
-                    height: compact ? 43 : 58,
+                    height: shortLandscape
+                        ? 42
+                        : compact
+                        ? 50
+                        : 66,
                     child: _ProfileSelectionRail(
                       profile: activeProfile,
                       profileCount: widget.profiles.length,
                       onStep: _stepProfile,
                     ),
                   ),
-                  SizedBox(height: compact ? 5 : 10),
                   SizedBox(
-                    height: compact ? 54 : 84,
+                    height: shortLandscape
+                        ? 5
+                        : compact
+                        ? 8
+                        : 12,
+                  ),
+                  SizedBox(
+                    height: shortLandscape
+                        ? 58
+                        : compact
+                        ? 70
+                        : 92,
                     child: _CommandCard(
                       title: AppLocalizations.of(context)!.quickGame,
                       subtitle: 'FIND A MATCH AND PLAY INSTANTLY',
@@ -210,9 +248,19 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                       compact: compact,
                     ),
                   ),
-                  SizedBox(height: compact ? 5 : 9),
                   SizedBox(
-                    height: compact ? 48 : 72,
+                    height: shortLandscape
+                        ? 5
+                        : compact
+                        ? 7
+                        : 10,
+                  ),
+                  SizedBox(
+                    height: shortLandscape
+                        ? 52
+                        : compact
+                        ? 66
+                        : 80,
                     child: _CommandCard(
                       title: AppLocalizations.of(context)!.createGame,
                       subtitle: 'SET RULES AND INVITE PLAYERS',
@@ -222,9 +270,19 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                       compact: compact,
                     ),
                   ),
-                  SizedBox(height: compact ? 5 : 9),
                   SizedBox(
-                    height: compact ? 30 : 42,
+                    height: shortLandscape
+                        ? 5
+                        : compact
+                        ? 7
+                        : 10,
+                  ),
+                  SizedBox(
+                    height: shortLandscape
+                        ? 32
+                        : compact
+                        ? 36
+                        : 44,
                     child: Row(
                       children: <Widget>[
                         Expanded(
@@ -234,7 +292,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                             onTap: widget.onDrafts,
                           ),
                         ),
-                        SizedBox(width: compact ? 5 : 8),
+                        SizedBox(width: compact ? 7 : 10),
                         Expanded(
                           child: _FeatureButton(
                             icon: Icons.face_rounded,
@@ -249,17 +307,14 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
               ),
             ),
             Positioned(
-              left: 0,
-              right: 0,
-              bottom: compact ? 5 : 12,
+              left: railInset,
+              right: railInset,
+              bottom: compact ? 7 : 14,
               height: bottom,
               child: Center(
-                child: SizedBox(
-                  width: gameRailWidth,
-                  child: _GameModeRail(
-                    compact: compact,
-                    onSelectGame: widget.onLaunchGame,
-                  ),
+                child: _GameModeRail(
+                  compact: compact,
+                  onSelectGame: widget.onLaunchGame,
                 ),
               ),
             ),
@@ -323,7 +378,7 @@ class _ProfileSelectionRail extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Color(profile.avatar.accentColor),
-                      fontSize: compact ? 8 : 12,
+                      fontSize: compact ? 10 : 13,
                       fontWeight: FontWeight.w900,
                       letterSpacing: .55,
                     ),
@@ -334,7 +389,7 @@ class _ProfileSelectionRail extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       color: Colors.white70,
-                      fontSize: compact ? 5.6 : 7.5,
+                      fontSize: compact ? 7.5 : 9,
                       fontWeight: FontWeight.w700,
                       letterSpacing: .2,
                     ),
@@ -378,8 +433,8 @@ class V5SceneArt extends StatelessWidget {
   );
 }
 
-/// A restrained, code-rendered lobby stage keeps the avatar in focus without
-/// relying on flattened scenery or generated concept art.
+/// A restrained indoor player-select studio keeps the avatar in focus without
+/// borrowing a recognizable map or relying on a flattened concept screenshot.
 class _LobbyEnvironment extends StatelessWidget {
   const _LobbyEnvironment();
 
@@ -411,59 +466,146 @@ class _LobbyEnvironmentPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    final blue = Paint()
-      ..color = const Color(0x3323A7E8)
-      ..strokeWidth = 2;
-    final orange = Paint()
-      ..color = const Color(0x44FF982F)
-      ..strokeWidth = 2;
-    final architecture = Paint()
-      ..color = const Color(0x302C6687)
-      ..strokeWidth = 1;
-    final floor = size.height * .76;
+    final floorY = size.height * .76;
+    final blue = const Color(0xFF2DA9F2);
+    final amber = const Color(0xFFFF8A2B);
+    final stroke = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = math.max(1.0, size.width * .00075);
 
-    for (var index = 0; index < 9; index++) {
-      final x = size.width * index / 8;
-      final inset = (index % 2 == 0) ? 0.0 : size.width * .018;
-      canvas.drawLine(Offset(x, 0), Offset(x + inset, floor), architecture);
-      if (index == 1 || index == 7) {
+    // Diffuse studio spill behind the character, with cooler and warmer sides.
+    for (final (center, color, radius) in <(Offset, Color, double)>[
+      (Offset(size.width * .37, size.height * .47), blue, size.width * .38),
+      (Offset(size.width * .73, size.height * .38), amber, size.width * .24),
+    ]) {
+      final glow = Paint()
+        ..shader = RadialGradient(
+          colors: <Color>[color.withValues(alpha: .16), Colors.transparent],
+        ).createShader(Rect.fromCircle(center: center, radius: radius));
+      canvas.drawRect(Offset.zero & size, glow);
+    }
+
+    // Tall beveled acoustic panels imply a purpose-built indoor character bay.
+    for (var index = 0; index < 5; index++) {
+      final t = index / 4;
+      final x = size.width * (.035 + t * .93);
+      final inward = (index.isEven ? 1 : -1) * size.width * .018;
+      final panel = Path()
+        ..moveTo(x, size.height * .08)
+        ..lineTo(x + inward, size.height * .16)
+        ..lineTo(x + inward, floorY)
+        ..lineTo(x, floorY - size.height * .025);
+      stroke
+        ..color = const Color(0x273A7290)
+        ..strokeWidth = math.max(1, size.width * .0009);
+      canvas.drawPath(panel, stroke);
+      if (index == 0 || index == 4) {
+        final edgeX = x + inward * .52;
+        stroke
+          ..color = (index == 0 ? blue : amber).withValues(alpha: .62)
+          ..strokeWidth = math.max(2, size.width * .0015);
         canvas.drawLine(
-          Offset(x + 5, size.height * .16),
-          Offset(x + 5, floor * .82),
-          index == 1 ? blue : orange,
+          Offset(edgeX, size.height * .2),
+          Offset(edgeX, floorY * .91),
+          stroke,
         );
       }
     }
 
-    final horizon = Offset(size.width * .51, floor);
-    final grid = Paint()
-      ..color = const Color(0x263A8CB4)
-      ..strokeWidth = 1;
-    for (var index = 0; index <= 12; index++) {
-      final x = size.width * index / 12;
-      canvas.drawLine(horizon, Offset(x, size.height), grid);
-    }
-    for (var index = 1; index <= 5; index++) {
-      final t = index / 5;
-      final y = floor + (size.height - floor) * t * t;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    // Receding overhead gantry and paired spotlights; all geometry is drawn
+    // from the available viewport so landscape phones do not inherit desktop
+    // pixel dimensions.
+    final gantry = Path()
+      ..moveTo(size.width * .08, size.height * .04)
+      ..lineTo(size.width * .5, size.height * .13)
+      ..lineTo(size.width * .92, size.height * .04);
+    stroke
+      ..color = const Color(0x304B819B)
+      ..strokeWidth = math.max(2, size.width * .002);
+    canvas.drawPath(gantry, stroke);
+    for (final x in <double>[.2, .8]) {
+      final lightColor = x < .5 ? blue : amber;
+      final beam = Path()
+        ..moveTo(size.width * x, size.height * .14)
+        ..lineTo(size.width * (x - .13), floorY)
+        ..lineTo(size.width * (x + .13), floorY)
+        ..close();
+      canvas.drawPath(
+        beam,
+        Paint()
+          ..shader = LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[
+              lightColor.withValues(alpha: .08),
+              lightColor.withValues(alpha: .008),
+            ],
+          ).createShader(Offset.zero & size),
+      );
+      canvas.drawCircle(
+        Offset(size.width * x, size.height * .14),
+        math.max(3, size.width * .003),
+        Paint()..color = lightColor.withValues(alpha: .85),
+      );
     }
 
-    final glow = Paint()
-      ..shader =
-          RadialGradient(
-            colors: <Color>[
-              const Color(0x3324A8E8),
-              const Color(0x0A24A8E8),
-              Colors.transparent,
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * .51, size.height * .52),
-              radius: size.width * .42,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, glow);
+    // A shallow, illuminated presentation dais anchors the character in the
+    // scene and gives the composition a clear ground plane.
+    final floor = Path()
+      ..moveTo(0, floorY)
+      ..lineTo(size.width * .5, floorY + size.height * .035)
+      ..lineTo(size.width, floorY)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(
+      floor,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[Color(0xFF101D29), Color(0xFF03070D)],
+        ).createShader(Offset.zero & size),
+    );
+
+    final dais = Path()
+      ..moveTo(size.width * .22, floorY + size.height * .08)
+      ..lineTo(size.width * .5, floorY + size.height * .035)
+      ..lineTo(size.width * .78, floorY + size.height * .08)
+      ..lineTo(size.width * .66, floorY + size.height * .15)
+      ..lineTo(size.width * .34, floorY + size.height * .15)
+      ..close();
+    canvas.drawPath(dais, Paint()..color = const Color(0xFF111E2B));
+    stroke
+      ..color = const Color(0x9942BDF0)
+      ..strokeWidth = math.max(2, size.width * .002);
+    canvas.drawLine(
+      Offset(size.width * .26, floorY + size.height * .085),
+      Offset(size.width * .5, floorY + size.height * .045),
+      stroke,
+    );
+    stroke
+      ..color = amber.withValues(alpha: .78)
+      ..strokeWidth = math.max(1.5, size.width * .0013);
+    canvas.drawLine(
+      Offset(size.width * .5, floorY + size.height * .045),
+      Offset(size.width * .74, floorY + size.height * .085),
+      stroke,
+    );
+
+    final horizon = Offset(size.width * .5, floorY + size.height * .1);
+    stroke
+      ..color = const Color(0x1F5A9DB8)
+      ..strokeWidth = 1;
+    for (var index = 0; index <= 10; index++) {
+      final x = size.width * index / 10;
+      canvas.drawLine(horizon, Offset(x, size.height), stroke);
+    }
+    for (var index = 1; index <= 4; index++) {
+      final t = index / 4;
+      final y = horizon.dy + (size.height - horizon.dy) * t * t;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), stroke);
+    }
   }
 
   @override
@@ -830,7 +972,7 @@ class _CommandCardState extends State<_CommandCard> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: widget.color,
-                            fontSize: widget.compact ? 6.2 : 9,
+                            fontSize: widget.compact ? 8 : 10,
                             letterSpacing: 1,
                             fontWeight: FontWeight.w900,
                           ),
@@ -842,7 +984,7 @@ class _CommandCardState extends State<_CommandCard> {
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.white,
-                            fontSize: widget.compact ? 13 : 22,
+                            fontSize: widget.compact ? 17 : 25,
                             height: .95,
                             letterSpacing: .4,
                             fontWeight: FontWeight.w900,
@@ -936,7 +1078,7 @@ class _SquadDock extends StatelessWidget {
                 'SQUAD',
                 style: TextStyle(
                   color: Colors.white,
-                  fontSize: compact ? 9 : 13,
+                  fontSize: compact ? 11 : 14,
                   letterSpacing: 1.4,
                   fontWeight: FontWeight.w900,
                   shadows: const <Shadow>[
@@ -947,11 +1089,11 @@ class _SquadDock extends StatelessWidget {
             ),
             Text(
               '${players.length}/12',
-              style: TextStyle(color: tokens.cyan, fontSize: compact ? 8 : 10),
+              style: TextStyle(color: tokens.cyan, fontSize: compact ? 10 : 11),
             ),
           ],
         ),
-        SizedBox(height: compact ? 8 : 15),
+        SizedBox(height: compact ? 6 : 12),
         Expanded(
           child: ListView(
             padding: EdgeInsets.zero,
@@ -991,23 +1133,6 @@ class _SquadDock extends StatelessWidget {
             ],
           ),
         ),
-        if (players.isNotEmpty)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: () => onRemove(players.last.id),
-              icon: const Icon(Icons.remove_circle_outline_rounded, size: 14),
-              label: const Text('REMOVE LAST'),
-              style: TextButton.styleFrom(
-                foregroundColor: Colors.white70,
-                padding: EdgeInsets.zero,
-                textStyle: const TextStyle(
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ),
-          ),
         TextButton.icon(
           onPressed: onPortraits,
           icon: Icon(Icons.face_retouching_natural, size: compact ? 14 : 17),
@@ -1017,7 +1142,7 @@ class _SquadDock extends StatelessWidget {
             padding: EdgeInsets.zero,
             alignment: Alignment.centerLeft,
             textStyle: TextStyle(
-              fontSize: compact ? 8 : 10,
+              fontSize: compact ? 10 : 12,
               fontWeight: FontWeight.w900,
             ),
           ),
@@ -1050,15 +1175,15 @@ class _PlayerSlot extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
-    final portraitSize = compact ? 39.0 : 54.0;
+    final portraitSize = compact ? 36.0 : 54.0;
     return Padding(
-      padding: EdgeInsets.only(bottom: compact ? 5 : 8),
+      padding: EdgeInsets.only(bottom: compact ? 3 : 8),
       child: Material(
         color: const Color(0x78071325),
         child: InkWell(
           onTap: filled ? null : onTap,
           child: SizedBox(
-            height: compact ? 45 : 62,
+            height: compact ? 40 : 62,
             child: Row(
               children: <Widget>[
                 if (filled && appearance != null)
@@ -1106,7 +1231,7 @@ class _PlayerSlot extends StatelessWidget {
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize: compact ? 7 : 9,
+                          fontSize: compact ? 9 : 11,
                           letterSpacing: .35,
                           fontWeight: FontWeight.w900,
                         ),
@@ -1116,7 +1241,7 @@ class _PlayerSlot extends StatelessWidget {
                           'READY',
                           style: TextStyle(
                             color: tokens.cyan,
-                            fontSize: compact ? 6 : 7,
+                            fontSize: compact ? 8 : 9,
                             letterSpacing: 1,
                             fontWeight: FontWeight.w800,
                           ),
@@ -1177,7 +1302,7 @@ class _FeatureButton extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   color: Colors.white,
-                  fontSize: 7,
+                  fontSize: 9,
                   letterSpacing: .4,
                   fontWeight: FontWeight.w900,
                 ),
@@ -1255,7 +1380,7 @@ class _GameModeRail extends StatelessWidget {
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: compact ? 6.4 : 9,
+                                fontSize: compact ? 12 : 15,
                                 height: 1,
                                 letterSpacing: .15,
                                 fontWeight: FontWeight.w900,
@@ -1271,7 +1396,7 @@ class _GameModeRail extends StatelessWidget {
                                 overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white70,
-                                  fontSize: 6.2,
+                                  fontSize: 9,
                                   letterSpacing: .25,
                                   fontWeight: FontWeight.w700,
                                 ),
@@ -1284,7 +1409,7 @@ class _GameModeRail extends StatelessWidget {
                       left: 0,
                       right: 0,
                       bottom: 0,
-                      height: 2,
+                      height: compact ? 3 : 4,
                       child: ColoredBox(color: tokens.orange),
                     ),
                   ],

@@ -74,6 +74,8 @@ void main() {
     required VoidCallback onQuick,
     required ValueChanged<List<PlayerConfiguration>> onCreate,
     ValueChanged<PlayerProfile>? onProfileChanged,
+    List<PlayerConfiguration>? initialPlayers,
+    ValueChanged<List<PlayerConfiguration>>? onPlayersChanged,
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -89,9 +91,9 @@ void main() {
         supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: V5LobbyPage(
-            players: players,
+            players: initialPlayers ?? players,
             profiles: profiles,
-            onPlayersChanged: (_) {},
+            onPlayersChanged: onPlayersChanged ?? (_) {},
             onCreate: onCreate,
             onQuick: onQuick,
             onDrafts: () {},
@@ -246,8 +248,40 @@ void main() {
         tester.getRect(find.text('CREATE GAME')).right,
         lessThanOrEqualTo(size.width),
       );
+      final modeArtwork = find.byWidgetPredicate(
+        (widget) =>
+            widget is Image &&
+            widget.image is AssetImage &&
+            (widget.image as AssetImage).assetName.contains('/game_modes/'),
+      );
+      expect(modeArtwork, findsNWidgets(3));
+      expect(
+        tester.getRect(modeArtwork.first).height,
+        greaterThanOrEqualTo(size.height < 460 ? 96 : 110),
+        reason: 'game artwork remains a substantial lobby destination',
+      );
       expect(tester.takeException(), isNull);
     }
+  });
+
+  testWidgets('compact landscape keeps Add Player visible and functional', (
+    tester,
+  ) async {
+    List<PlayerConfiguration>? updatedPlayers;
+    await pumpLobby(
+      tester,
+      size: const Size(915, 412),
+      initialPlayers: players.take(2).toList(),
+      onQuick: () {},
+      onCreate: (_) {},
+      onPlayersChanged: (value) => updatedPlayers = value,
+    );
+
+    final addPlayer = find.text('PLAYER 03');
+    expect(addPlayer, findsOneWidget);
+    await tester.tap(addPlayer);
+    expect(updatedPlayers, hasLength(3));
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('changing a saved appearance changes its rendered avatar asset', (
