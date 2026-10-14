@@ -134,6 +134,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
         onGames: () => _select(_ShellDestination.games),
         onLaunchGame: _openConfiguredGame,
         onAvatars: () => _select(_ShellDestination.avatars),
+        onProfileChanged: (profile) => _saveProfile(profile),
         players: _lobbyPlayers,
         profiles: _profiles,
         onPlayersChanged: (players) {
@@ -292,33 +293,11 @@ class _RoundveilShellState extends State<RoundveilShell> {
       setState(() => _lobbyPlayers = chosen);
     }
 
-    final pictureRepository = CharacterPictureRepository();
-    final pictures = gameId == 'guessing_games'
-        ? await pictureRepository.loadAll()
-        : const <Object>[];
-    if (!mounted) return;
-    if (gameId == 'guessing_games' && pictures.length < players.length) {
-      final addPictures = await showDialog<bool>(
-        context: context,
-        builder: (dialogContext) => AlertDialog(
-          title: const Text('Picture Mode needs local images'),
-          content: Text(
-            'Import at least ${players.length} distinct subject pictures before starting Guessing Games. Nothing will be substituted for Picture Mode.',
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: const Text('NOT NOW'),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, true),
-              child: const Text('IMPORT PICTURES'),
-            ),
-          ],
-        ),
-      );
-      if (addPictures == true) await _openPictureLibrary();
-      return;
+    var characterPicturesAvailable = false;
+    if (gameId == 'guessing_games') {
+      final pictures = await CharacterPictureRepository().loadAll();
+      characterPicturesAvailable = pictures.length >= players.length;
+      if (!mounted) return;
     }
 
     final (modules, formats) = switch (gameId) {
@@ -342,8 +321,8 @@ class _RoundveilShellState extends State<RoundveilShell> {
       ),
       _ => (
         const <String>['guess_character', 'guess_country_flags'],
-        const <String>[
-          'character_picture',
+        <String>[
+          if (characterPicturesAvailable) 'character_picture',
           'character_name',
           'country_name',
           'country_flag',

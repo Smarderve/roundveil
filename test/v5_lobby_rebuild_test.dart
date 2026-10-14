@@ -73,6 +73,7 @@ void main() {
     required Size size,
     required VoidCallback onQuick,
     required ValueChanged<List<PlayerConfiguration>> onCreate,
+    ValueChanged<PlayerProfile>? onProfileChanged,
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -97,6 +98,7 @@ void main() {
             onGames: () {},
             onLaunchGame: (_) {},
             onAvatars: () {},
+            onProfileChanged: onProfileChanged ?? (_) {},
           ),
         ),
       ),
@@ -190,6 +192,40 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('1 WINS  ·  3 MATCHES  ·  2 HINTS'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('home character opens browse-and-select avatar overlay', (
+    tester,
+  ) async {
+    PlayerProfile? savedProfile;
+    await pumpLobby(
+      tester,
+      size: const Size(1280, 800),
+      onQuick: () {},
+      onCreate: (_) {},
+      onProfileChanged: (profile) => savedProfile = profile,
+    );
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('home-avatar-selector')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('CHOOSE PLAYER 1’S AVATAR'), findsOneWidget);
+    expect(find.byTooltip('Next avatar'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Next avatar'));
+    await tester.pumpAndSettle();
+    expect(find.text('STRIKER  ·  2/8'), findsOneWidget);
+    expect(savedProfile, isNull, reason: 'Browsing must not save prematurely');
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('save-home-avatar-selection')),
+    );
+    await tester.pumpAndSettle();
+    expect(savedProfile?.id, 'player-1');
+    expect(savedProfile?.avatarId, 'operator_striker');
+    expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

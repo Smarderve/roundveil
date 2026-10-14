@@ -24,6 +24,7 @@ class V5LobbyPage extends StatefulWidget {
     required this.onGames,
     required this.onLaunchGame,
     required this.onAvatars,
+    required this.onProfileChanged,
     super.key,
   });
 
@@ -36,6 +37,7 @@ class V5LobbyPage extends StatefulWidget {
   final VoidCallback onGames;
   final ValueChanged<String> onLaunchGame;
   final VoidCallback onAvatars;
+  final ValueChanged<PlayerProfile> onProfileChanged;
 
   @override
   State<V5LobbyPage> createState() => _V5LobbyPageState();
@@ -79,6 +81,16 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
     widget.players.where((player) => player.id != playerId).toList(),
   );
 
+  Future<void> _openAvatarSelector(PlayerProfile profile) => showDialog<void>(
+    context: context,
+    barrierColor: const Color(0xD9000610),
+    builder: (dialogContext) => _AvatarSelectorDialog(
+      profile: profile,
+      onSelect: (avatarId) =>
+          widget.onProfileChanged(profile.copyWith(avatarId: avatarId)),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) {
     final size = MediaQuery.sizeOf(context);
@@ -89,10 +101,17 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
       builder: (context, constraints) {
         final side = compact ? 150.0 : 218.0;
         final right = compact
-            ? (constraints.maxWidth * .34).clamp(260.0, 360.0)
-            : (constraints.maxWidth * .27).clamp(350.0, 450.0);
+            ? (constraints.maxWidth * .29).clamp(250.0, 315.0)
+            : (constraints.maxWidth * .25).clamp(320.0, 400.0);
         final bottom = compact ? 62.0 : 96.0;
         final contentTop = compact ? 47.0 : 63.0;
+        final gameRailWidth = math.max(
+          0.0,
+          math.min(
+            constraints.maxWidth - (compact ? 16 : 44),
+            compact ? 680.0 : 1000.0,
+          ),
+        );
         final centerWidth = constraints.maxWidth - side - right - 18;
         final availableHeroHeight =
             constraints.maxHeight - contentTop - bottom - 12;
@@ -105,7 +124,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
         return Stack(
           fit: StackFit.expand,
           children: <Widget>[
-            const V5SceneArt(),
+            const _LobbyEnvironment(),
             const DecoratedBox(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
@@ -127,12 +146,25 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                 height: heroHeight,
                 child: Align(
                   alignment: Alignment.bottomCenter,
-                  child: PlayerAvatarFigure(
-                    key: ValueKey<String>('lobby-hero-${activeProfile.id}'),
-                    avatarId: activeProfile.avatarId,
-                    appearance: activeProfile.avatar,
-                    width: heroWidth,
-                    height: heroHeight,
+                  child: Semantics(
+                    button: true,
+                    label: 'Change ${activeProfile.displayName} avatar',
+                    child: Tooltip(
+                      message: 'Choose avatar',
+                      child: InkWell(
+                        key: const ValueKey<String>('home-avatar-selector'),
+                        onTap: () => _openAvatarSelector(activeProfile),
+                        child: PlayerAvatarFigure(
+                          key: ValueKey<String>(
+                            'lobby-hero-${activeProfile.id}',
+                          ),
+                          avatarId: activeProfile.avatarId,
+                          appearance: activeProfile.avatar,
+                          width: heroWidth,
+                          height: heroHeight,
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -168,7 +200,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                   ),
                   SizedBox(height: compact ? 5 : 10),
                   SizedBox(
-                    height: compact ? 58 : 102,
+                    height: compact ? 54 : 84,
                     child: _CommandCard(
                       title: AppLocalizations.of(context)!.quickGame,
                       subtitle: 'FIND A MATCH AND PLAY INSTANTLY',
@@ -180,7 +212,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                   ),
                   SizedBox(height: compact ? 5 : 9),
                   SizedBox(
-                    height: compact ? 52 : 88,
+                    height: compact ? 48 : 72,
                     child: _CommandCard(
                       title: AppLocalizations.of(context)!.createGame,
                       subtitle: 'SET RULES AND INVITE PLAYERS',
@@ -217,13 +249,18 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
               ),
             ),
             Positioned(
-              left: compact ? 7 : 22,
-              right: compact ? 8 : 25,
+              left: 0,
+              right: 0,
               bottom: compact ? 5 : 12,
               height: bottom,
-              child: _GameModeRail(
-                compact: compact,
-                onSelectGame: widget.onLaunchGame,
+              child: Center(
+                child: SizedBox(
+                  width: gameRailWidth,
+                  child: _GameModeRail(
+                    compact: compact,
+                    onSelectGame: widget.onLaunchGame,
+                  ),
+                ),
               ),
             ),
           ],
@@ -338,6 +375,359 @@ class V5SceneArt extends StatelessWidget {
     alignment: Alignment.center,
     filterQuality: FilterQuality.high,
     semanticLabel: 'Cinematic Version 5 ROUNDVEIL arena environment',
+  );
+}
+
+/// A restrained, code-rendered lobby stage keeps the avatar in focus without
+/// relying on flattened scenery or generated concept art.
+class _LobbyEnvironment extends StatelessWidget {
+  const _LobbyEnvironment();
+
+  @override
+  Widget build(BuildContext context) => const Stack(
+    fit: StackFit.expand,
+    children: <Widget>[
+      DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: <Color>[
+              Color(0xFF071422),
+              Color(0xFF0B1C2C),
+              Color(0xFF040A12),
+            ],
+            stops: <double>[0, .58, 1],
+          ),
+        ),
+      ),
+      CustomPaint(painter: _LobbyEnvironmentPainter()),
+    ],
+  );
+}
+
+class _LobbyEnvironmentPainter extends CustomPainter {
+  const _LobbyEnvironmentPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final blue = Paint()
+      ..color = const Color(0x3323A7E8)
+      ..strokeWidth = 2;
+    final orange = Paint()
+      ..color = const Color(0x44FF982F)
+      ..strokeWidth = 2;
+    final architecture = Paint()
+      ..color = const Color(0x302C6687)
+      ..strokeWidth = 1;
+    final floor = size.height * .76;
+
+    for (var index = 0; index < 9; index++) {
+      final x = size.width * index / 8;
+      final inset = (index % 2 == 0) ? 0.0 : size.width * .018;
+      canvas.drawLine(Offset(x, 0), Offset(x + inset, floor), architecture);
+      if (index == 1 || index == 7) {
+        canvas.drawLine(
+          Offset(x + 5, size.height * .16),
+          Offset(x + 5, floor * .82),
+          index == 1 ? blue : orange,
+        );
+      }
+    }
+
+    final horizon = Offset(size.width * .51, floor);
+    final grid = Paint()
+      ..color = const Color(0x263A8CB4)
+      ..strokeWidth = 1;
+    for (var index = 0; index <= 12; index++) {
+      final x = size.width * index / 12;
+      canvas.drawLine(horizon, Offset(x, size.height), grid);
+    }
+    for (var index = 1; index <= 5; index++) {
+      final t = index / 5;
+      final y = floor + (size.height - floor) * t * t;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), grid);
+    }
+
+    final glow = Paint()
+      ..shader =
+          RadialGradient(
+            colors: <Color>[
+              const Color(0x3324A8E8),
+              const Color(0x0A24A8E8),
+              Colors.transparent,
+            ],
+          ).createShader(
+            Rect.fromCircle(
+              center: Offset(size.width * .51, size.height * .52),
+              radius: size.width * .42,
+            ),
+          );
+    canvas.drawRect(Offset.zero & size, glow);
+  }
+
+  @override
+  bool shouldRepaint(covariant _LobbyEnvironmentPainter oldDelegate) => false;
+}
+
+class _AvatarSelectorDialog extends StatefulWidget {
+  const _AvatarSelectorDialog({required this.profile, required this.onSelect});
+
+  final PlayerProfile profile;
+  final ValueChanged<String> onSelect;
+
+  @override
+  State<_AvatarSelectorDialog> createState() => _AvatarSelectorDialogState();
+}
+
+class _AvatarSelectorDialogState extends State<_AvatarSelectorDialog> {
+  late int _previewIndex = PlayerAvatarCatalog.all.indexWhere(
+    (avatar) => avatar.id == widget.profile.avatarId,
+  );
+
+  int get _safeIndex => _previewIndex < 0 ? 0 : _previewIndex;
+
+  void _step(int delta) => setState(() {
+    _previewIndex =
+        (_safeIndex + delta + PlayerAvatarCatalog.all.length) %
+        PlayerAvatarCatalog.all.length;
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.sizeOf(context);
+    final compact = size.width < 760;
+    final avatar = PlayerAvatarCatalog.all[_safeIndex];
+    final preview = Container(
+      decoration: BoxDecoration(
+        gradient: const RadialGradient(
+          colors: <Color>[Color(0xFF153550), Color(0xFF071321)],
+        ),
+        border: Border.all(color: const Color(0x5537B7E9)),
+      ),
+      child: Stack(
+        children: <Widget>[
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: PlayerAvatarFigure(
+              key: ValueKey<String>('avatar-selector-preview-${avatar.id}'),
+              avatarId: avatar.id,
+              appearance: widget.profile.avatar,
+              width: compact ? 210 : 286,
+              height: compact ? 280 : 390,
+            ),
+          ),
+          Positioned(
+            left: 5,
+            top: 0,
+            bottom: 0,
+            child: _AvatarStepButton(
+              label: 'Previous avatar',
+              icon: Icons.chevron_left_rounded,
+              onPressed: () => _step(-1),
+            ),
+          ),
+          Positioned(
+            right: 5,
+            top: 0,
+            bottom: 0,
+            child: _AvatarStepButton(
+              label: 'Next avatar',
+              icon: Icons.chevron_right_rounded,
+              onPressed: () => _step(1),
+            ),
+          ),
+          Positioned(
+            left: 10,
+            bottom: 10,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: Color(0xD9071424)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 6,
+                ),
+                child: Text(
+                  '${avatar.name}  ·  ${_safeIndex + 1}/${PlayerAvatarCatalog.all.length}',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: .8,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    return Dialog(
+      backgroundColor: const Color(0xFF071321),
+      insetPadding: EdgeInsets.all(compact ? 10 : 34),
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 900,
+          maxHeight: size.height * .9,
+          minWidth: compact ? 300 : 620,
+        ),
+        child: Padding(
+          padding: EdgeInsets.all(compact ? 12 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              Row(
+                children: <Widget>[
+                  const Icon(Icons.face_rounded, color: Color(0xFF54D4F5)),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Text(
+                      'CHOOSE ${widget.profile.displayName.toUpperCase()}’S AVATAR',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .8,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: 'Close avatar selector',
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close_rounded),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Expanded(
+                child: compact
+                    ? Column(
+                        children: <Widget>[
+                          Expanded(child: preview),
+                          const SizedBox(height: 10),
+                          SizedBox(
+                            height: 82,
+                            child: _AvatarThumbnailRail(
+                              selectedIndex: _safeIndex,
+                              onSelect: (index) =>
+                                  setState(() => _previewIndex = index),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: <Widget>[
+                          Expanded(flex: 3, child: preview),
+                          const SizedBox(width: 12),
+                          SizedBox(
+                            width: 132,
+                            child: _AvatarThumbnailRail(
+                              selectedIndex: _safeIndex,
+                              vertical: true,
+                              onSelect: (index) =>
+                                  setState(() => _previewIndex = index),
+                            ),
+                          ),
+                        ],
+                      ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                height: 48,
+                child: FilledButton.icon(
+                  key: const ValueKey<String>('save-home-avatar-selection'),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFF49727),
+                    foregroundColor: const Color(0xFF111820),
+                    shape: const BeveledRectangleBorder(),
+                  ),
+                  onPressed: () {
+                    widget.onSelect(avatar.id);
+                    Navigator.pop(context);
+                  },
+                  icon: const Icon(Icons.check_rounded),
+                  label: const Text('SELECT AVATAR'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarThumbnailRail extends StatelessWidget {
+  const _AvatarThumbnailRail({
+    required this.selectedIndex,
+    required this.onSelect,
+    this.vertical = false,
+  });
+
+  final int selectedIndex;
+  final ValueChanged<int> onSelect;
+  final bool vertical;
+
+  @override
+  Widget build(BuildContext context) {
+    final avatars = PlayerAvatarCatalog.all;
+    return ListView.separated(
+      scrollDirection: vertical ? Axis.vertical : Axis.horizontal,
+      itemCount: avatars.length,
+      separatorBuilder: (context, index) =>
+          SizedBox(width: vertical ? 0 : 7, height: vertical ? 7 : 0),
+      itemBuilder: (context, index) => Semantics(
+        button: true,
+        selected: selectedIndex == index,
+        label: '${avatars[index].name} avatar preview',
+        child: InkWell(
+          key: ValueKey<String>('preview-avatar-${avatars[index].id}'),
+          onTap: () => onSelect(index),
+          child: Container(
+            width: vertical ? 112 : 70,
+            height: vertical ? 74 : 78,
+            decoration: BoxDecoration(
+              border: Border.all(
+                color: selectedIndex == index
+                    ? const Color(0xFFF49727)
+                    : const Color(0x5537B7E9),
+                width: selectedIndex == index ? 2 : 1,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset(avatars[index].assetPath, fit: BoxFit.cover),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AvatarStepButton extends StatelessWidget {
+  const _AvatarStepButton({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) => Center(
+    child: IconButton.filled(
+      tooltip: label,
+      onPressed: onPressed,
+      style: IconButton.styleFrom(
+        backgroundColor: const Color(0xCC071321),
+        foregroundColor: const Color(0xFF65D8FF),
+        fixedSize: const Size(44, 52),
+        shape: const BeveledRectangleBorder(),
+      ),
+      icon: Icon(icon),
+    ),
   );
 }
 
