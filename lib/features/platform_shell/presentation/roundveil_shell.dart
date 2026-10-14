@@ -11,6 +11,7 @@ import 'package:roundveil/features/active_match/presentation/active_match_page.d
 import 'package:roundveil/features/guess_character/presentation/character_picture_library_page.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
+import 'package:roundveil/features/platform_shell/presentation/create_player_dialog.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
@@ -48,6 +49,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
     PlayerConfiguration.placeholder(2),
   ];
   List<PlayerProfile> _profiles = const <PlayerProfile>[];
+  String? _selectedProfileId;
   bool _profilesLoaded = false;
 
   @override
@@ -62,6 +64,10 @@ class _RoundveilShellState extends State<RoundveilShell> {
       if (mounted) {
         setState(() {
           _profiles = profiles;
+          _selectedProfileId =
+              profiles.any((profile) => profile.id == _selectedProfileId)
+              ? _selectedProfileId
+              : profiles.firstOrNull?.id;
           _profilesLoaded = true;
         });
       }
@@ -79,21 +85,34 @@ class _RoundveilShellState extends State<RoundveilShell> {
         for (final existing in _profiles)
           if (existing.id == profile.id) profile else existing,
       ];
+      _selectedProfileId = profile.id;
+      _lobbyPlayers = <PlayerConfiguration>[
+        for (final player in _lobbyPlayers)
+          player.id == profile.id
+              ? PlayerConfiguration(
+                  id: player.id,
+                  displayName: profile.displayName,
+                )
+              : player,
+      ];
     });
   }
 
   Future<PlayerProfile> _createProfile(
     String displayName,
     PlayerGender? gender,
+    String avatarId,
   ) async {
     final created = await _playerProfiles.createProfile(
       displayName: displayName,
       gender: gender,
+      avatarId: avatarId,
     );
     if (mounted) {
       setState(() {
         _profiles = <PlayerProfile>[..._profiles, created]
           ..sort((a, b) => a.id.compareTo(b.id));
+        _selectedProfileId = created.id;
       });
     }
     return created;
@@ -104,6 +123,9 @@ class _RoundveilShellState extends State<RoundveilShell> {
     if (!mounted) return;
     setState(() {
       _profiles = _profiles.where((profile) => profile.id != playerId).toList();
+      if (_selectedProfileId == playerId) {
+        _selectedProfileId = _profiles.firstOrNull?.id;
+      }
       _lobbyPlayers = _lobbyPlayers
           .where((player) => player.id != playerId)
           .toList();
@@ -111,9 +133,13 @@ class _RoundveilShellState extends State<RoundveilShell> {
   }
 
   void _useProfileInSquad(PlayerProfile profile) {
-    if (_lobbyPlayers.any((player) => player.id == profile.id)) return;
+    if (_lobbyPlayers.any((player) => player.id == profile.id)) {
+      setState(() => _selectedProfileId = profile.id);
+      return;
+    }
     if (_lobbyPlayers.length >= 12) return;
     setState(() {
+      _selectedProfileId = profile.id;
       _lobbyPlayers = <PlayerConfiguration>[
         ..._lobbyPlayers,
         PlayerConfiguration(id: profile.id, displayName: profile.displayName),
@@ -125,6 +151,10 @@ class _RoundveilShellState extends State<RoundveilShell> {
   Widget build(BuildContext context) {
     final page = switch (_destination) {
       _ShellDestination.home => V5LobbyPage(
+        selectedProfileId: _selectedProfileId,
+        onSelectedProfileChanged: (id) =>
+            setState(() => _selectedProfileId = id),
+        onCreateProfile: _createProfile,
         onCreate: (players) => setState(() {
           _lobbyPlayers = players;
           _destination = _ShellDestination.create;
@@ -173,6 +203,9 @@ class _RoundveilShellState extends State<RoundveilShell> {
       ),
       _ShellDestination.avatars => _AvatarWorkshopPage(
         profiles: _profiles,
+        selectedProfileId: _selectedProfileId,
+        onSelectedProfileChanged: (id) =>
+            setState(() => _selectedProfileId = id),
         profilesLoaded: _profilesLoaded,
         onProfileChanged: _saveProfile,
         onCreateProfile: _createProfile,
@@ -1079,6 +1112,8 @@ class _QuickGamePageState extends State<_QuickGamePage> {
 class _AvatarWorkshopPage extends StatefulWidget {
   const _AvatarWorkshopPage({
     required this.profiles,
+    required this.selectedProfileId,
+    required this.onSelectedProfileChanged,
     required this.profilesLoaded,
     required this.onProfileChanged,
     required this.onCreateProfile,
@@ -1086,9 +1121,12 @@ class _AvatarWorkshopPage extends StatefulWidget {
     required this.onUsePlayer,
   });
   final List<PlayerProfile> profiles;
+  final String? selectedProfileId;
+  final ValueChanged<String> onSelectedProfileChanged;
   final bool profilesLoaded;
   final ValueChanged<PlayerProfile> onProfileChanged;
-  final Future<PlayerProfile> Function(String, PlayerGender?) onCreateProfile;
+  final Future<PlayerProfile> Function(String, PlayerGender?, String)
+  onCreateProfile;
   final Future<void> Function(String) onDeleteProfile;
   final ValueChanged<PlayerProfile> onUsePlayer;
 
@@ -1097,8 +1135,6 @@ class _AvatarWorkshopPage extends StatefulWidget {
 }
 
 class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
-  String? _selectedPlayerId;
-
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
@@ -1126,8 +1162,8 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
       );
     }
     final selectedId =
-        widget.profiles.any((profile) => profile.id == _selectedPlayerId)
-        ? _selectedPlayerId!
+        widget.profiles.any((profile) => profile.id == widget.selectedProfileId)
+        ? widget.selectedProfileId!
         : widget.profiles.first.id;
     final profile = widget.profiles.firstWhere((item) => item.id == selectedId);
     return Container(
@@ -1180,108 +1216,226 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                   ),
               ],
             ),
-            const SizedBox(height: 10),
-            DropdownButtonFormField<String>(
-              initialValue: selectedId,
-              decoration: const InputDecoration(
-                labelText: 'SQUAD PLAYER',
-                isDense: true,
-              ),
-              items: widget.profiles
-                  .map(
-                    (item) => DropdownMenuItem<String>(
-                      value: item.id,
-                      child: Text(item.displayName.toUpperCase()),
-                    ),
-                  )
-                  .toList(),
-              onChanged: (value) => setState(() => _selectedPlayerId = value),
-            ),
-            const SizedBox(height: 6),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: Text(
-                    profile.displayName,
-                    key: const ValueKey<String>('selected-player-callsign'),
-                    style: TextStyle(
-                      color: Color(profile.avatar.accentColor),
-                      fontSize: compact ? 14 : 17,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: .5,
+            if (compact) ...<Widget>[
+              const SizedBox(height: 4),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    flex: 2,
+                    child: DropdownButtonFormField<String>(
+                      key: const ValueKey<String>('squad-player-selector'),
+                      initialValue: selectedId,
+                      decoration: const InputDecoration(
+                        labelText: 'SQUAD PLAYER',
+                        isDense: true,
+                      ),
+                      items: widget.profiles
+                          .map(
+                            (item) => DropdownMenuItem<String>(
+                              value: item.id,
+                              child: Text(item.displayName.toUpperCase()),
+                            ),
+                          )
+                          .toList(),
+                      onChanged: (value) {
+                        if (value != null) {
+                          widget.onSelectedProfileChanged(value);
+                        }
+                      },
                     ),
                   ),
-                ),
-                TextButton.icon(
-                  key: const ValueKey<String>('edit-player-callsign'),
-                  onPressed: () => _editCallsign(context, profile),
-                  icon: const Icon(Icons.edit_outlined, size: 16),
-                  label: const Text('EDIT CALLSIGN'),
-                ),
-                IconButton(
-                  tooltip: 'Delete ${profile.displayName}',
-                  onPressed: () => _confirmDelete(context, profile),
-                  color: tokens.orange,
-                  icon: const Icon(Icons.delete_outline),
-                ),
-              ],
-            ),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: DropdownButtonFormField<PlayerGender?>(
-                    key: ValueKey<String>('player-gender-${profile.id}'),
-                    initialValue: profile.gender,
-                    decoration: const InputDecoration(
-                      labelText: 'OPTIONAL GENDER',
-                      isDense: true,
-                    ),
-                    items: const <DropdownMenuItem<PlayerGender?>>[
-                      DropdownMenuItem<PlayerGender?>(
-                        value: null,
-                        child: Text('NOT SPECIFIED'),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      profile.displayName,
+                      key: const ValueKey<String>('selected-player-callsign'),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Color(profile.avatar.accentColor),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w900,
                       ),
-                      DropdownMenuItem<PlayerGender?>(
-                        value: PlayerGender.woman,
-                        child: Text('WOMAN'),
-                      ),
-                      DropdownMenuItem<PlayerGender?>(
-                        value: PlayerGender.man,
-                        child: Text('MAN'),
-                      ),
-                      DropdownMenuItem<PlayerGender?>(
-                        value: PlayerGender.nonBinary,
-                        child: Text('NON-BINARY'),
-                      ),
-                    ],
-                    onChanged: (gender) => widget.onProfileChanged(
-                      profile.copyWith(gender: gender),
                     ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                TextButton.icon(
-                  key: const ValueKey<String>('use-player-in-squad'),
-                  onPressed: () => widget.onUsePlayer(profile),
-                  icon: const Icon(Icons.group_add_outlined),
-                  label: const Text('USE IN SQUAD'),
-                ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.only(top: 5),
-              child: Text(
-                '${profile.wins} WINS  ·  ${profile.gamesPlayed} MATCHES  ·  ${profile.hintCredits} HINTS',
-                key: const ValueKey<String>('player-profile-stats'),
-                style: TextStyle(
-                  color: tokens.muted,
-                  fontSize: compact ? 9 : 11,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: .5,
+                  IconButton(
+                    key: const ValueKey<String>('edit-player-callsign'),
+                    tooltip: 'Edit callsign',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _editCallsign(context, profile),
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete ${profile.displayName}',
+                    visualDensity: VisualDensity.compact,
+                    onPressed: () => _confirmDelete(context, profile),
+                    color: tokens.orange,
+                    icon: const Icon(Icons.delete_outline, size: 19),
+                  ),
+                ],
+              ),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: DropdownButtonFormField<PlayerGender?>(
+                      key: ValueKey<String>('player-gender-${profile.id}'),
+                      initialValue: profile.gender,
+                      decoration: const InputDecoration(
+                        labelText: 'OPTIONAL GENDER',
+                        isDense: true,
+                      ),
+                      items: const <DropdownMenuItem<PlayerGender?>>[
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('NOT SPECIFIED'),
+                        ),
+                        DropdownMenuItem(
+                          value: PlayerGender.woman,
+                          child: Text('WOMAN'),
+                        ),
+                        DropdownMenuItem(
+                          value: PlayerGender.man,
+                          child: Text('MAN'),
+                        ),
+                        DropdownMenuItem(
+                          value: PlayerGender.nonBinary,
+                          child: Text('NON-BINARY'),
+                        ),
+                      ],
+                      onChanged: (gender) => widget.onProfileChanged(
+                        profile.copyWith(gender: gender),
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey<String>('use-player-in-squad'),
+                    onPressed: () => widget.onUsePlayer(profile),
+                    icon: const Icon(Icons.group_add_outlined, size: 18),
+                    label: const Text('SQUAD'),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Text(
+                  '${profile.wins} WINS  ·  ${profile.gamesPlayed} MATCHES  ·  ${profile.hintCredits} HINTS',
+                  key: const ValueKey<String>('player-profile-stats'),
+                  style: TextStyle(
+                    color: tokens.muted,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .5,
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height: 10),
+              const SizedBox(height: 4),
+            ] else ...<Widget>[
+              const SizedBox(height: 10),
+              DropdownButtonFormField<String>(
+                key: const ValueKey<String>('squad-player-selector'),
+                initialValue: selectedId,
+                decoration: const InputDecoration(
+                  labelText: 'SQUAD PLAYER',
+                  isDense: true,
+                ),
+                items: widget.profiles
+                    .map(
+                      (item) => DropdownMenuItem<String>(
+                        value: item.id,
+                        child: Text(item.displayName.toUpperCase()),
+                      ),
+                    )
+                    .toList(),
+                onChanged: (value) {
+                  if (value != null) widget.onSelectedProfileChanged(value);
+                },
+              ),
+              const SizedBox(height: 6),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: Text(
+                      profile.displayName,
+                      key: const ValueKey<String>('selected-player-callsign'),
+                      style: TextStyle(
+                        color: Color(profile.avatar.accentColor),
+                        fontSize: 17,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: .5,
+                      ),
+                    ),
+                  ),
+                  TextButton.icon(
+                    key: const ValueKey<String>('edit-player-callsign'),
+                    onPressed: () => _editCallsign(context, profile),
+                    icon: const Icon(Icons.edit_outlined, size: 16),
+                    label: const Text('EDIT CALLSIGN'),
+                  ),
+                  IconButton(
+                    tooltip: 'Delete ${profile.displayName}',
+                    onPressed: () => _confirmDelete(context, profile),
+                    color: tokens.orange,
+                    icon: const Icon(Icons.delete_outline),
+                  ),
+                ],
+              ),
+              Row(
+                children: <Widget>[
+                  Expanded(
+                    child: DropdownButtonFormField<PlayerGender?>(
+                      key: ValueKey<String>('player-gender-${profile.id}'),
+                      initialValue: profile.gender,
+                      decoration: const InputDecoration(
+                        labelText: 'OPTIONAL GENDER',
+                        isDense: true,
+                      ),
+                      items: const <DropdownMenuItem<PlayerGender?>>[
+                        DropdownMenuItem(
+                          value: null,
+                          child: Text('NOT SPECIFIED'),
+                        ),
+                        DropdownMenuItem(
+                          value: PlayerGender.woman,
+                          child: Text('WOMAN'),
+                        ),
+                        DropdownMenuItem(
+                          value: PlayerGender.man,
+                          child: Text('MAN'),
+                        ),
+                        DropdownMenuItem(
+                          value: PlayerGender.nonBinary,
+                          child: Text('NON-BINARY'),
+                        ),
+                      ],
+                      onChanged: (gender) => widget.onProfileChanged(
+                        profile.copyWith(gender: gender),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton.icon(
+                    key: const ValueKey<String>('use-player-in-squad'),
+                    onPressed: () => widget.onUsePlayer(profile),
+                    icon: const Icon(Icons.group_add_outlined),
+                    label: const Text('USE IN SQUAD'),
+                  ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.only(top: 5),
+                child: Text(
+                  '${profile.wins} WINS  ·  ${profile.gamesPlayed} MATCHES  ·  ${profile.hintCredits} HINTS',
+                  key: const ValueKey<String>('player-profile-stats'),
+                  style: TextStyle(
+                    color: tokens.muted,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: .5,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
             Expanded(
               child: LayoutBuilder(
                 builder: (context, constraints) {
@@ -1307,10 +1461,25 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                       height: compact ? 145 : 300,
                     ),
                   );
+                  if (size.height < 500) {
+                    return Row(
+                      children: <Widget>[
+                        SizedBox(
+                          width: constraints.maxWidth * .22,
+                          child: stage,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(child: _avatarGallery(profile)),
+                      ],
+                    );
+                  }
                   if (compact) {
+                    final stageHeight = constraints.maxHeight < 110
+                        ? constraints.maxHeight * .35
+                        : (constraints.maxHeight * .42).clamp(60.0, 132.0);
                     return Column(
                       children: <Widget>[
-                        SizedBox(height: 120, child: stage),
+                        SizedBox(height: stageHeight, child: stage),
                         const SizedBox(height: 8),
                         Expanded(child: _avatarGallery(profile)),
                       ],
@@ -1333,69 +1502,17 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
   }
 
   Future<void> _createPlayer(BuildContext context) async {
-    var draftName = '';
-    PlayerGender? gender;
-    final result = await showDialog<(String, PlayerGender?)>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) => AlertDialog(
-          title: const Text('ADD SQUAD PLAYER'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              TextFormField(
-                initialValue: draftName,
-                autofocus: true,
-                maxLength: 24,
-                textCapitalization: TextCapitalization.words,
-                decoration: const InputDecoration(labelText: 'PLAYER NAME'),
-                onChanged: (value) => draftName = value,
-              ),
-              DropdownButtonFormField<PlayerGender?>(
-                initialValue: gender,
-                decoration: const InputDecoration(labelText: 'OPTIONAL GENDER'),
-                items: const <DropdownMenuItem<PlayerGender?>>[
-                  DropdownMenuItem<PlayerGender?>(
-                    value: null,
-                    child: Text('NOT SPECIFIED'),
-                  ),
-                  DropdownMenuItem<PlayerGender?>(
-                    value: PlayerGender.woman,
-                    child: Text('WOMAN'),
-                  ),
-                  DropdownMenuItem<PlayerGender?>(
-                    value: PlayerGender.man,
-                    child: Text('MAN'),
-                  ),
-                  DropdownMenuItem<PlayerGender?>(
-                    value: PlayerGender.nonBinary,
-                    child: Text('NON-BINARY'),
-                  ),
-                ],
-                onChanged: (value) => setDialogState(() => gender = value),
-              ),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('CANCEL'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(dialogContext).pop((draftName, gender)),
-              child: const Text('SAVE PLAYER'),
-            ),
-          ],
-        ),
-      ),
+    final draft = await showCreatePlayerDialog(
+      context,
+      existingProfiles: widget.profiles,
     );
-    if (!mounted || result == null) return;
-    final name = result.$1.trim();
-    if (name.isEmpty) return;
+    if (!mounted || draft == null) return;
     try {
-      final created = await widget.onCreateProfile(name, result.$2);
-      if (mounted) setState(() => _selectedPlayerId = created.id);
+      await widget.onCreateProfile(
+        draft.displayName,
+        draft.gender,
+        draft.avatarId,
+      );
     } on Object catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(
@@ -1430,7 +1547,6 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
     if (confirmed != true || !mounted) return;
     try {
       await widget.onDeleteProfile(profile.id);
-      if (mounted) setState(() => _selectedPlayerId = null);
     } on Object catch (error) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1446,28 +1562,41 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
     var draftName = profile.displayName;
     final name = await showDialog<String>(
       context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('EDIT PLAYER CALLSIGN'),
-        content: TextFormField(
-          autofocus: true,
-          initialValue: profile.displayName,
-          maxLength: 24,
-          textCapitalization: TextCapitalization.words,
-          decoration: const InputDecoration(labelText: 'PLAYER NAME'),
-          onChanged: (value) => draftName = value,
-          onFieldSubmitted: (_) => Navigator.of(dialogContext).pop(draftName),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('CANCEL'),
+      builder: (dialogContext) {
+        final keyboardOpen = MediaQuery.viewInsetsOf(dialogContext).bottom > 0;
+        return AlertDialog(
+          scrollable: true,
+          title: const Text('EDIT PLAYER CALLSIGN'),
+          content: SizedBox(
+            height: keyboardOpen ? 60 : null,
+            child: TextFormField(
+              autofocus: true,
+              initialValue: profile.displayName,
+              maxLength: 24,
+              textCapitalization: TextCapitalization.words,
+              textInputAction: TextInputAction.done,
+              decoration: const InputDecoration(
+                labelText: 'PLAYER NAME',
+                isDense: true,
+                counterText: '',
+              ),
+              onChanged: (value) => draftName = value,
+              onFieldSubmitted: (_) =>
+                  Navigator.of(dialogContext).pop(draftName),
+            ),
           ),
-          FilledButton(
-            onPressed: () => Navigator.of(dialogContext).pop(draftName),
-            child: const Text('SAVE'),
-          ),
-        ],
-      ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(dialogContext).pop(),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(dialogContext).pop(draftName),
+              child: const Text('SAVE'),
+            ),
+          ],
+        );
+      },
     );
     final trimmedName = name?.trim();
     if (trimmedName == null || trimmedName.isEmpty || !mounted) return;
@@ -1477,6 +1606,10 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
   Widget _avatarGallery(PlayerProfile profile) {
     final size = MediaQuery.sizeOf(context);
     final compact = size.width < 850 || size.height < 900;
+    final assignedAvatarIds = widget.profiles
+        .where((item) => item.id != profile.id)
+        .map((item) => item.avatarId)
+        .toSet();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
@@ -1499,15 +1632,18 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
             itemBuilder: (context, index) {
               final avatar = PlayerAvatarCatalog.all[index];
               final selected = profile.avatarId == avatar.id;
+              final assigned = assignedAvatarIds.contains(avatar.id);
               return Semantics(
                 button: true,
                 selected: selected,
                 label: '${avatar.name} avatar',
                 child: InkWell(
                   key: ValueKey<String>('select-avatar-${avatar.id}'),
-                  onTap: () => widget.onProfileChanged(
-                    profile.copyWith(avatarId: avatar.id),
-                  ),
+                  onTap: assigned
+                      ? null
+                      : () => widget.onProfileChanged(
+                          profile.copyWith(avatarId: avatar.id),
+                        ),
                   child: SizedBox(
                     width: compact ? 92 : 116,
                     child: Container(
@@ -1524,7 +1660,24 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
                       child: Stack(
                         fit: StackFit.expand,
                         children: <Widget>[
-                          Image.asset(avatar.assetPath, fit: BoxFit.cover),
+                          Image.asset(
+                            avatar.effectivePortraitAssetPath,
+                            fit: BoxFit.cover,
+                          ),
+                          if (assigned)
+                            const ColoredBox(
+                              color: Color(0x99000000),
+                              child: Center(
+                                child: Text(
+                                  'IN USE',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w900,
+                                  ),
+                                ),
+                              ),
+                            ),
                           Align(
                             alignment: Alignment.bottomCenter,
                             child: Container(
@@ -1566,11 +1719,13 @@ class _AvatarWorkshopPageState extends State<_AvatarWorkshopPage> {
             },
           ),
         ),
-        const SizedBox(height: 6),
-        const Text(
-          '8 ready characters · 5 new originals · roster target: 30',
-          style: TextStyle(color: Color(0xFF8B9BB1), fontSize: 10),
-        ),
+        if (!compact) ...<Widget>[
+          const SizedBox(height: 6),
+          Text(
+            '${PlayerAvatarCatalog.all.length} ready characters · ${PlayerAvatarCatalog.all.length - 8} new originals',
+            style: const TextStyle(color: Color(0xFF8B9BB1), fontSize: 10),
+          ),
+        ],
       ],
     );
   }

@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/data/repositories/player_profile_repository.dart';
@@ -53,8 +54,8 @@ void main() {
         directoryProvider: () async => directory,
       );
 
-      expect((await reloaded.loadAll()).single.hintCredits, 4);
-      for (var index = 2; index <= 5; index++) {
+      expect((await reloaded.loadAll()).single.hintCredits, 14);
+      for (var index = 2; index <= 15; index++) {
         expect(
           await reloaded.spendHintCredit(
             matchId: 'match-a',
@@ -68,7 +69,7 @@ void main() {
         await reloaded.spendHintCredit(
           matchId: 'match-a',
           playerId: 'player-1',
-          challengeId: 'quiz-6',
+          challengeId: 'quiz-16',
         ),
         isFalse,
       );
@@ -115,7 +116,7 @@ void main() {
       expect(receipt.applied, isTrue);
       expect(duplicate.applied, isFalse);
       final profiles = await repository.loadAll();
-      expect(profiles.map((profile) => profile.hintCredits), [5, 3, 1, 0]);
+      expect(profiles.map((profile) => profile.hintCredits), [15, 13, 11, 10]);
       expect(profiles.every((profile) => profile.gamesPlayed == 1), isTrue);
       expect(profiles.map((profile) => profile.wins), [1, 0, 0, 0]);
     },
@@ -143,7 +144,7 @@ void main() {
       ),
       isFalse,
     );
-    expect((await repository.loadAll()).single.hintCredits, 5);
+    expect((await repository.loadAll()).single.hintCredits, 15);
   });
 
   test(
@@ -235,6 +236,99 @@ void main() {
 
       final replacement = await reloaded.createProfile(displayName: 'Orion');
       expect(replacement.id, 'player-2');
+    },
+  );
+
+  test(
+    'legacy duplicate avatar assignments migrate without losing profiles',
+    () async {
+      final repository = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      await repository.ensureProfiles(<PlayerConfiguration>[
+        PlayerConfiguration.placeholder(1),
+        PlayerConfiguration.placeholder(2),
+      ]);
+      await repository.updateProfile(
+        (await repository.loadAll())[0].copyWith(displayName: 'Nova'),
+      );
+      final file = File(
+        '${directory.path}${Platform.pathSeparator}roundveil_players.json',
+      );
+      final data =
+          jsonDecode(await file.readAsString()) as Map<String, Object?>;
+      final saved = (data['profiles']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      saved[1]['avatarId'] = saved[0]['avatarId'];
+      await file.writeAsString(jsonEncode(data));
+
+      final migrated = await LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      ).loadAll();
+      expect(migrated.map((profile) => profile.id), ['player-1', 'player-2']);
+      expect(migrated.first.displayName, 'Nova');
+      expect(migrated.map((profile) => profile.avatarId).toSet(), hasLength(2));
+      final created = await LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      ).createProfile(displayName: 'Orion');
+      expect(
+        migrated.map((profile) => profile.avatarId),
+        isNot(contains(created.avatarId)),
+      );
+    },
+  );
+
+  test(
+    'existing hint balances reset once and spent credits survive reloads',
+    () async {
+      final repository = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      await repository.ensureProfiles(<PlayerConfiguration>[
+        PlayerConfiguration.placeholder(1),
+        PlayerConfiguration.placeholder(2),
+        PlayerConfiguration.placeholder(3),
+      ]);
+      final file = File(
+        '${directory.path}${Platform.pathSeparator}roundveil_players.json',
+      );
+      final data =
+          jsonDecode(await file.readAsString()) as Map<String, Object?>;
+      data.remove('hintCreditResetVersion');
+      final saved = (data['profiles']! as List<Object?>)
+          .cast<Map<String, Object?>>();
+      saved[0]['hintCredits'] = 1;
+      saved[1]['hintCredits'] = 7;
+      saved[2]['hintCredits'] = 0;
+      await file.writeAsString(jsonEncode(data));
+
+      final migratedRepository = LocalPlayerProfileRepository(
+        directoryProvider: () async => directory,
+      );
+      expect((await migratedRepository.loadAll()).map((p) => p.hintCredits), [
+        10,
+        10,
+        10,
+      ]);
+      expect((await migratedRepository.loadAll()).map((p) => p.hintCredits), [
+        10,
+        10,
+        10,
+      ]);
+      expect(
+        await migratedRepository.spendHintCredit(
+          matchId: 'migration-test',
+          playerId: 'player-1',
+          challengeId: 'one',
+        ),
+        isTrue,
+      );
+      expect(
+        (await LocalPlayerProfileRepository(
+          directoryProvider: () async => directory,
+        ).loadAll()).map((p) => p.hintCredits),
+        [9, 10, 10],
+      );
     },
   );
 }

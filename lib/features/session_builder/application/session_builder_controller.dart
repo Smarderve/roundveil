@@ -75,7 +75,7 @@ class QuickGameTemplate {
     roundCount: rounds,
     isMixed: moduleIds.length > 1,
     challengeSeconds: 45,
-    winCountdownSeconds: 3,
+    winCountdownSeconds: 10,
     hintsEnabled: true,
     scoringEnabled: true,
     countryRegion: 'worldwide',

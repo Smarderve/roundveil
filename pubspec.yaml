@@ -67,6 +67,7 @@ flutter:
     - assets/brand/
     - assets/brand/v5/
     - assets/brand/avatars/
+    - assets/brand/avatars/characters/
     - assets/brand/game_modes/
 
   # Production assets are curated under assets/app/.

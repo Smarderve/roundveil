@@ -72,7 +72,7 @@ void main() {
         1,
       ]);
       final persisted = await profiles.loadAll();
-      expect(persisted.map((profile) => profile.hintCredits), <int>[5, 3, 1]);
+      expect(persisted.map((profile) => profile.hintCredits), <int>[15, 13, 11]);
       match.dispose();
     },
   );

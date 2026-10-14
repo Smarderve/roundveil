@@ -21,6 +21,44 @@ String _nextProfileId(Iterable<String> existingIds) {
   return 'player-$number';
 }
 
+List<PlayerProfile> _profilesWithUniqueAvatars(Iterable<PlayerProfile> source) {
+  final profiles = source.toList()..sort((a, b) => a.id.compareTo(b.id));
+  final assigned = <String>{};
+  return <PlayerProfile>[
+    for (final profile in profiles) _withAvailableAvatar(profile, assigned),
+  ];
+}
+
+PlayerProfile _withAvailableAvatar(
+  PlayerProfile profile,
+  Set<String> assigned,
+) {
+  String? avatarId = profile.avatarId;
+  if (!PlayerAvatarCatalog.contains(avatarId) || assigned.contains(avatarId)) {
+    avatarId = PlayerAvatarCatalog.firstUnusedId(assigned);
+  }
+  if (avatarId == null) {
+    throw StateError('No unused ROUNDVEIL avatars remain for saved players.');
+  }
+  assigned.add(avatarId);
+  return profile.avatarId == avatarId
+      ? profile
+      : profile.copyWith(avatarId: avatarId);
+}
+
+String _avatarIdForNewProfile(
+  Iterable<PlayerProfile> profiles, {
+  String? requestedAvatarId,
+}) {
+  final assigned = profiles.map((profile) => profile.avatarId).toSet();
+  final avatarId =
+      requestedAvatarId ?? PlayerAvatarCatalog.firstUnusedId(assigned);
+  if (!PlayerAvatarCatalog.contains(avatarId) || assigned.contains(avatarId)) {
+    throw StateError('Choose an unused ROUNDVEIL avatar.');
+  }
+  return avatarId!;
+}
+
 class PlayerMatchResult {
   const PlayerMatchResult({
     required this.playerId,
@@ -69,6 +107,7 @@ abstract interface class PlayerProfileRepository {
   Future<PlayerProfile> createProfile({
     required String displayName,
     PlayerGender? gender,
+    String? avatarId,
   });
   Future<void> deleteProfile(String playerId);
   Future<List<PlayerProfile>> ensureProfiles(
@@ -129,7 +168,8 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
     final source = file.existsSync() ? file : File('${file.path}.bak');
     if (!await source.exists()) {
       return <String, Object?>{
-        'schemaVersion': 1,
+        'schemaVersion': 2,
+        'hintCreditResetVersion': 1,
         'profiles': <Object?>[],
         'deletedProfileIds': <Object?>[],
         'spentHintKeys': <Object?>[],
@@ -139,6 +179,25 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
     final decoded = jsonDecode(await source.readAsString());
     if (decoded is! Map<String, Object?>) {
       throw const FormatException('Player profile store has invalid shape.');
+    }
+    final resetVersion = decoded['hintCreditResetVersion'] as int? ?? 0;
+    if (resetVersion < 1) {
+      final rawProfiles = decoded['profiles'];
+      if (rawProfiles != null && rawProfiles is! List<Object?>) {
+        throw const FormatException(
+          'Player profile list has invalid shape; hint migration was not applied.',
+        );
+      }
+      decoded['profiles'] = <Object?>[
+        for (final value in rawProfiles as List<Object?>? ?? const <Object?>[])
+          if (value is Map<String, Object?>)
+            <String, Object?>{...value, 'hintCredits': 10}
+          else
+            value,
+      ];
+      decoded['hintCreditResetVersion'] = 1;
+      decoded['schemaVersion'] = 2;
+      await _write(decoded);
     }
     return decoded;
   }
@@ -152,19 +211,38 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
         ..sort((a, b) => a.id.compareTo(b.id));
 
   @override
-  Future<List<PlayerProfile>> loadAll() async => _profiles(await _read());
+  Future<List<PlayerProfile>> loadAll() async {
+    late List<PlayerProfile> result;
+    await _serialize(() async {
+      final data = await _read();
+      final original = _profiles(data);
+      result = _profilesWithUniqueAvatars(original);
+      final changed =
+          original.length != result.length ||
+          List<bool>.generate(
+            original.length,
+            (index) => original[index].avatarId != result[index].avatarId,
+          ).any((value) => value);
+      if (changed) {
+        data['profiles'] = result.map((profile) => profile.toJson()).toList();
+        await _write(data);
+      }
+    });
+    return result;
+  }
 
   @override
   Future<PlayerProfile> createProfile({
     required String displayName,
     PlayerGender? gender,
+    String? avatarId,
   }) async {
     final name = displayName.trim();
     if (name.isEmpty) throw ArgumentError.value(displayName, 'displayName');
     late PlayerProfile created;
     await _serialize(() async {
       final data = await _read();
-      final profiles = _profiles(data);
+      final profiles = _profilesWithUniqueAvatars(_profiles(data));
       final deletedIds =
           (data['deletedProfileIds'] as List<Object?>? ?? const <Object?>[])
               .cast<String>();
@@ -177,7 +255,7 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
         id: id,
         displayName: name,
         gender: gender,
-        avatarId: PlayerAvatarCatalog.idForPlayer(position),
+        avatarId: _avatarIdForNewProfile(profiles, requestedAvatarId: avatarId),
         avatar: PlayerAvatarAppearance.forPlayer(position),
       );
       profiles.add(created);
@@ -217,7 +295,8 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
               .cast<String>()
               .toSet();
       final existing = <String, PlayerProfile>{
-        for (final profile in _profiles(data)) profile.id: profile,
+        for (final profile in _profilesWithUniqueAvatars(_profiles(data)))
+          profile.id: profile,
       };
       for (final player in players) {
         if (deletedIds.contains(player.id)) continue;
@@ -231,19 +310,16 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
           }
           continue;
         }
-        final position =
-            int.tryParse(
-              RegExp(r'(\d+)$').firstMatch(player.id)?.group(1) ?? '',
-            ) ??
-            existing.length + 1;
+        final position = existing.length + 1;
         existing[player.id] = PlayerProfile(
           id: player.id,
           displayName: player.displayName,
-          avatarId: PlayerAvatarCatalog.idForPlayer(position),
+          avatarId: _avatarIdForNewProfile(existing.values),
           avatar: PlayerAvatarAppearance.forPlayer(position),
         );
       }
-      data['profiles'] = existing.values
+      final uniqueProfiles = _profilesWithUniqueAvatars(existing.values);
+      data['profiles'] = uniqueProfiles
           .map((profile) => profile.toJson())
           .toList();
       await _write(data);
@@ -288,6 +364,14 @@ class LocalPlayerProfileRepository implements PlayerProfileRepository {
     final profiles = _profiles(data);
     final index = profiles.indexWhere((item) => item.id == profile.id);
     if (index < 0) throw StateError('Unknown local player ${profile.id}.');
+    if (!PlayerAvatarCatalog.contains(profile.avatarId)) {
+      throw StateError('Choose a ROUNDVEIL avatar from the local catalog.');
+    }
+    if (profiles.any(
+      (item) => item.id != profile.id && item.avatarId == profile.avatarId,
+    )) {
+      throw StateError('That avatar is already assigned to another player.');
+    }
     profiles[index] = profile;
     data['profiles'] = profiles.map((item) => item.toJson()).toList();
     await _write(data);
@@ -401,12 +485,19 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
   final Set<String> _completedMatches = <String>{};
 
   @override
-  Future<List<PlayerProfile>> loadAll() async => _sortedProfiles;
+  Future<List<PlayerProfile>> loadAll() async {
+    final unique = _profilesWithUniqueAvatars(_sortedProfiles);
+    _profiles
+      ..clear()
+      ..addEntries(unique.map((profile) => MapEntry(profile.id, profile)));
+    return unique;
+  }
 
   @override
   Future<PlayerProfile> createProfile({
     required String displayName,
     PlayerGender? gender,
+    String? avatarId,
   }) async {
     final name = displayName.trim();
     if (name.isEmpty) throw ArgumentError.value(displayName, 'displayName');
@@ -418,8 +509,9 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
       id: id,
       displayName: name,
       gender: gender,
-      avatarId: PlayerAvatarCatalog.idForPlayer(
-        int.parse(id.substring('player-'.length)),
+      avatarId: _avatarIdForNewProfile(
+        _profiles.values,
+        requestedAvatarId: avatarId,
       ),
       avatar: PlayerAvatarAppearance.forPlayer(
         int.parse(id.substring('player-'.length)),
@@ -441,18 +533,18 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
   Future<List<PlayerProfile>> ensureProfiles(
     Iterable<PlayerConfiguration> players,
   ) async {
+    final unique = _profilesWithUniqueAvatars(_sortedProfiles);
+    _profiles
+      ..clear()
+      ..addEntries(unique.map((profile) => MapEntry(profile.id, profile)));
     for (final player in players) {
       if (_deletedProfileIds.contains(player.id)) continue;
       _profiles.putIfAbsent(player.id, () {
-        final position =
-            int.tryParse(
-              RegExp(r'(\d+)$').firstMatch(player.id)?.group(1) ?? '',
-            ) ??
-            _profiles.length + 1;
+        final position = _profiles.length + 1;
         return PlayerProfile(
           id: player.id,
           displayName: player.displayName,
-          avatarId: PlayerAvatarCatalog.idForPlayer(position),
+          avatarId: _avatarIdForNewProfile(_profiles.values),
           avatar: PlayerAvatarAppearance.forPlayer(position),
         );
       });
@@ -466,7 +558,7 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
         );
       }
     }
-    return _sortedProfiles;
+    return loadAll();
   }
 
   @override
@@ -494,6 +586,14 @@ class InMemoryPlayerProfileRepository implements PlayerProfileRepository {
   Future<void> updateProfile(PlayerProfile profile) async {
     if (!_profiles.containsKey(profile.id)) {
       throw StateError('Unknown local player ${profile.id}.');
+    }
+    if (!PlayerAvatarCatalog.contains(profile.avatarId)) {
+      throw StateError('Choose a ROUNDVEIL avatar from the local catalog.');
+    }
+    if (_profiles.values.any(
+      (item) => item.id != profile.id && item.avatarId == profile.avatarId,
+    )) {
+      throw StateError('That avatar is already assigned to another player.');
     }
     _profiles[profile.id] = profile;
   }

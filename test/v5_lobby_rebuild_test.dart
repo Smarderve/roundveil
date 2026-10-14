@@ -7,6 +7,7 @@ import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
+import 'package:roundveil/features/platform_shell/presentation/create_player_dialog.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
 void main() {
@@ -79,6 +80,7 @@ void main() {
   }) async {
     await tester.binding.setSurfaceSize(size);
     addTearDown(() => tester.binding.setSurfaceSize(null));
+    var selectedProfileId = profiles.firstOrNull?.id;
     await tester.pumpWidget(
       MaterialApp(
         theme: RoundveilThemeFactory.versionFive(dark: true),
@@ -89,18 +91,30 @@ void main() {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: Scaffold(
-          body: V5LobbyPage(
-            players: initialPlayers ?? players,
-            profiles: profiles,
-            onPlayersChanged: onPlayersChanged ?? (_) {},
-            onCreate: onCreate,
-            onQuick: onQuick,
-            onDrafts: () {},
-            onGames: () {},
-            onLaunchGame: (_) {},
-            onAvatars: () {},
-            onProfileChanged: onProfileChanged ?? (_) {},
+        home: StatefulBuilder(
+          builder: (context, setHarnessState) => Scaffold(
+            body: V5LobbyPage(
+              players: initialPlayers ?? players,
+              profiles: profiles,
+              selectedProfileId: selectedProfileId,
+              onSelectedProfileChanged: (id) =>
+                  setHarnessState(() => selectedProfileId = id),
+              onCreateProfile: (name, gender, avatarId) async => PlayerProfile(
+                id: 'player-new',
+                displayName: name,
+                gender: gender,
+                avatarId: avatarId,
+                avatar: const PlayerAvatarAppearance(),
+              ),
+              onPlayersChanged: onPlayersChanged ?? (_) {},
+              onCreate: onCreate,
+              onQuick: onQuick,
+              onDrafts: () {},
+              onGames: () {},
+              onLaunchGame: (_) {},
+              onAvatars: () {},
+              onProfileChanged: onProfileChanged ?? (_) {},
+            ),
           ),
         ),
       ),
@@ -218,7 +232,7 @@ void main() {
 
     await tester.tap(find.byTooltip('Next avatar'));
     await tester.pumpAndSettle();
-    expect(find.text('STRIKER  ·  2/8'), findsOneWidget);
+    expect(find.text('WINTERGUARD  ·  4/38'), findsOneWidget);
     expect(savedProfile, isNull, reason: 'Browsing must not save prematurely');
 
     await tester.tap(
@@ -226,7 +240,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(savedProfile?.id, 'player-1');
-    expect(savedProfile?.avatarId, 'operator_striker');
+    expect(savedProfile?.avatarId, 'operator_winterguard');
     expect(find.byType(Dialog), findsNothing);
     expect(tester.takeException(), isNull);
   });
@@ -280,7 +294,63 @@ void main() {
     final addPlayer = find.text('PLAYER 03');
     expect(addPlayer, findsOneWidget);
     await tester.tap(addPlayer);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField).first, 'Nova');
+    await tester.pumpAndSettle();
+    final availableAvatar = find.byKey(
+      const ValueKey<String>('new-player-avatar-operator_winterguard'),
+    );
+    await tester.ensureVisible(availableAvatar);
+    await tester.tap(availableAvatar);
+    await tester.pumpAndSettle();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'CREATE PLAYER'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.widgetWithText(FilledButton, 'CREATE PLAYER'));
+    await tester.pumpAndSettle();
     expect(updatedPlayers, hasLength(3));
+    expect(updatedPlayers!.last.displayName, 'Nova');
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('create-player dialog adapts when landscape keyboard is open', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(915, 412));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(context)
+              .copyWith(viewInsets: const EdgeInsets.only(bottom: 260)),
+          child: child!,
+        ),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Center(
+              child: FilledButton(
+                onPressed: () =>
+                    showCreatePlayerDialog(context, existingProfiles: profiles),
+                child: const Text('OPEN PLAYER CREATION'),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+    await tester.tap(find.text('OPEN PLAYER CREATION'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Dismiss the keyboard to choose a character.'),
+      findsNothing,
+    );
+    expect(find.byType(TextFormField), findsOneWidget);
+    expect(find.text('CHOOSE AN UNUSED CHARACTER'), findsNothing);
     expect(tester.takeException(), isNull);
   });
 

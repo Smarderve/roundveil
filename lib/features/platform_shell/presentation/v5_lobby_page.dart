@@ -8,6 +8,7 @@ import 'package:roundveil/domain/player/player_avatar_catalog.dart';
 import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
+import 'package:roundveil/features/platform_shell/presentation/create_player_dialog.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
 /// Interactive Version 5 lobby composition. The scene plate is artwork only;
@@ -17,6 +18,9 @@ class V5LobbyPage extends StatefulWidget {
   const V5LobbyPage({
     required this.players,
     required this.profiles,
+    required this.selectedProfileId,
+    required this.onSelectedProfileChanged,
+    required this.onCreateProfile,
     required this.onPlayersChanged,
     required this.onCreate,
     required this.onQuick,
@@ -30,6 +34,10 @@ class V5LobbyPage extends StatefulWidget {
 
   final List<PlayerConfiguration> players;
   final List<PlayerProfile> profiles;
+  final String? selectedProfileId;
+  final ValueChanged<String> onSelectedProfileChanged;
+  final Future<PlayerProfile> Function(String, PlayerGender?, String)
+  onCreateProfile;
   final ValueChanged<List<PlayerConfiguration>> onPlayersChanged;
   final ValueChanged<List<PlayerConfiguration>> onCreate;
   final VoidCallback onQuick;
@@ -44,11 +52,9 @@ class V5LobbyPage extends StatefulWidget {
 }
 
 class _V5LobbyPageState extends State<V5LobbyPage> {
-  String? _selectedProfileId;
-
   PlayerProfile? get _selectedProfile =>
       widget.profiles
-          .where((profile) => profile.id == _selectedProfileId)
+          .where((profile) => profile.id == widget.selectedProfileId)
           .firstOrNull ??
       widget.profiles.firstOrNull;
 
@@ -58,34 +64,81 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
     final current = widget.profiles.indexWhere((item) => item.id == profile.id);
     final next =
         (current + direction + widget.profiles.length) % widget.profiles.length;
-    setState(() => _selectedProfileId = widget.profiles[next].id);
+    widget.onSelectedProfileChanged(widget.profiles[next].id);
   }
 
-  void _addPlayer() {
+  Future<void> _addPlayer() async {
     if (widget.players.length >= 12) return;
-    final usedNumbers = widget.players
-        .map((player) => int.tryParse(player.id.replaceFirst('player-', '')))
-        .whereType<int>()
-        .toSet();
-    var nextNumber = 1;
-    while (usedNumbers.contains(nextNumber)) {
-      nextNumber++;
+    final draft = await showCreatePlayerDialog(
+      context,
+      existingProfiles: widget.profiles,
+    );
+    if (!mounted || draft == null) return;
+    try {
+      final profile = await widget.onCreateProfile(
+        draft.displayName,
+        draft.gender,
+        draft.avatarId,
+      );
+      if (!mounted) return;
+      widget.onPlayersChanged(<PlayerConfiguration>[
+        ...widget.players,
+        PlayerConfiguration(id: profile.id, displayName: profile.displayName),
+      ]);
+      widget.onSelectedProfileChanged(profile.id);
+    } on Object catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not create player: $error')),
+      );
     }
-    widget.onPlayersChanged(<PlayerConfiguration>[
-      ...widget.players,
-      PlayerConfiguration.placeholder(nextNumber),
-    ]);
   }
 
   void _removePlayer(String playerId) => widget.onPlayersChanged(
     widget.players.where((player) => player.id != playerId).toList(),
   );
 
+  Future<void> _editCallsSign(PlayerProfile? profile) async {
+    if (profile == null) return;
+    var draft = profile.displayName;
+    final name = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('RENAME PLAYER'),
+        content: TextFormField(
+          autofocus: true,
+          initialValue: draft,
+          maxLength: 24,
+          textCapitalization: TextCapitalization.words,
+          onChanged: (value) => draft = value,
+          onFieldSubmitted: (_) => Navigator.of(dialogContext).pop(draft),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, draft),
+            child: const Text('SAVE'),
+          ),
+        ],
+      ),
+    );
+    final trimmed = name?.trim();
+    if (trimmed == null || trimmed.isEmpty || !mounted) return;
+    widget.onProfileChanged(profile.copyWith(displayName: trimmed));
+  }
+
   Future<void> _openAvatarSelector(PlayerProfile profile) => showDialog<void>(
     context: context,
     barrierColor: const Color(0xD9000610),
     builder: (dialogContext) => _AvatarSelectorDialog(
       profile: profile,
+      assignedAvatarIds: widget.profiles
+          .where((item) => item.id != profile.id)
+          .map((item) => item.avatarId)
+          .toSet(),
       onSelect: (avatarId) =>
           widget.onProfileChanged(profile.copyWith(avatarId: avatarId)),
     ),
@@ -202,6 +255,8 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                 compact: compact,
                 onAdd: _addPlayer,
                 onRemove: _removePlayer,
+                selectedProfileId: widget.selectedProfileId,
+                onSelectProfile: widget.onSelectedProfileChanged,
                 onPortraits: widget.onAvatars,
               ),
             ),
@@ -224,6 +279,7 @@ class _V5LobbyPageState extends State<V5LobbyPage> {
                       profile: activeProfile,
                       profileCount: widget.profiles.length,
                       onStep: _stepProfile,
+                      onRename: () => _editCallsSign(activeProfile),
                     ),
                   ),
                   SizedBox(
@@ -330,10 +386,12 @@ class _ProfileSelectionRail extends StatelessWidget {
     required this.profile,
     required this.profileCount,
     required this.onStep,
+    required this.onRename,
   });
   final PlayerProfile? profile;
   final int profileCount;
   final ValueChanged<int> onStep;
+  final VoidCallback onRename;
 
   @override
   Widget build(BuildContext context) {
@@ -397,6 +455,14 @@ class _ProfileSelectionRail extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+          IconButton(
+            tooltip: 'Rename ${profile.displayName}',
+            visualDensity: VisualDensity.compact,
+            constraints: const BoxConstraints.tightFor(width: 26, height: 30),
+            padding: EdgeInsets.zero,
+            onPressed: onRename,
+            icon: const Icon(Icons.edit_outlined, size: 15),
           ),
           IconButton(
             tooltip: 'Previous player',
@@ -613,9 +679,14 @@ class _LobbyEnvironmentPainter extends CustomPainter {
 }
 
 class _AvatarSelectorDialog extends StatefulWidget {
-  const _AvatarSelectorDialog({required this.profile, required this.onSelect});
+  const _AvatarSelectorDialog({
+    required this.profile,
+    required this.assignedAvatarIds,
+    required this.onSelect,
+  });
 
   final PlayerProfile profile;
+  final Set<String> assignedAvatarIds;
   final ValueChanged<String> onSelect;
 
   @override
@@ -630,9 +701,23 @@ class _AvatarSelectorDialogState extends State<_AvatarSelectorDialog> {
   int get _safeIndex => _previewIndex < 0 ? 0 : _previewIndex;
 
   void _step(int delta) => setState(() {
-    _previewIndex =
-        (_safeIndex + delta + PlayerAvatarCatalog.all.length) %
-        PlayerAvatarCatalog.all.length;
+    var index = _safeIndex;
+    for (
+      var attempts = 0;
+      attempts < PlayerAvatarCatalog.all.length;
+      attempts++
+    ) {
+      index =
+          (index + delta + PlayerAvatarCatalog.all.length) %
+          PlayerAvatarCatalog.all.length;
+      if (index == _safeIndex ||
+          !widget.assignedAvatarIds.contains(
+            PlayerAvatarCatalog.all[index].id,
+          )) {
+        _previewIndex = index;
+        return;
+      }
+    }
   });
 
   @override
@@ -752,6 +837,7 @@ class _AvatarSelectorDialogState extends State<_AvatarSelectorDialog> {
                             height: 82,
                             child: _AvatarThumbnailRail(
                               selectedIndex: _safeIndex,
+                              unavailableIds: widget.assignedAvatarIds,
                               onSelect: (index) =>
                                   setState(() => _previewIndex = index),
                             ),
@@ -767,6 +853,7 @@ class _AvatarSelectorDialogState extends State<_AvatarSelectorDialog> {
                             child: _AvatarThumbnailRail(
                               selectedIndex: _safeIndex,
                               vertical: true,
+                              unavailableIds: widget.assignedAvatarIds,
                               onSelect: (index) =>
                                   setState(() => _previewIndex = index),
                             ),
@@ -784,10 +871,12 @@ class _AvatarSelectorDialogState extends State<_AvatarSelectorDialog> {
                     foregroundColor: const Color(0xFF111820),
                     shape: const BeveledRectangleBorder(),
                   ),
-                  onPressed: () {
-                    widget.onSelect(avatar.id);
-                    Navigator.pop(context);
-                  },
+                  onPressed: widget.assignedAvatarIds.contains(avatar.id)
+                      ? null
+                      : () {
+                          widget.onSelect(avatar.id);
+                          Navigator.pop(context);
+                        },
                   icon: const Icon(Icons.check_rounded),
                   label: const Text('SELECT AVATAR'),
                 ),
@@ -804,11 +893,13 @@ class _AvatarThumbnailRail extends StatelessWidget {
   const _AvatarThumbnailRail({
     required this.selectedIndex,
     required this.onSelect,
+    required this.unavailableIds,
     this.vertical = false,
   });
 
   final int selectedIndex;
   final ValueChanged<int> onSelect;
+  final Set<String> unavailableIds;
   final bool vertical;
 
   @override
@@ -825,20 +916,46 @@ class _AvatarThumbnailRail extends StatelessWidget {
         label: '${avatars[index].name} avatar preview',
         child: InkWell(
           key: ValueKey<String>('preview-avatar-${avatars[index].id}'),
-          onTap: () => onSelect(index),
+          onTap: unavailableIds.contains(avatars[index].id)
+              ? null
+              : () => onSelect(index),
           child: Container(
             width: vertical ? 112 : 70,
             height: vertical ? 74 : 78,
             decoration: BoxDecoration(
               border: Border.all(
-                color: selectedIndex == index
+                color: unavailableIds.contains(avatars[index].id)
+                    ? Colors.white24
+                    : selectedIndex == index
                     ? const Color(0xFFF49727)
                     : const Color(0x5537B7E9),
                 width: selectedIndex == index ? 2 : 1,
               ),
             ),
             clipBehavior: Clip.antiAlias,
-            child: Image.asset(avatars[index].assetPath, fit: BoxFit.cover),
+            child: Stack(
+              fit: StackFit.expand,
+              children: <Widget>[
+                Image.asset(
+                  avatars[index].effectivePortraitAssetPath,
+                  fit: BoxFit.cover,
+                ),
+                if (unavailableIds.contains(avatars[index].id))
+                  const ColoredBox(
+                    color: Color(0x99000000),
+                    child: Center(
+                      child: Text(
+                        'IN USE',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
@@ -1047,6 +1164,8 @@ class _SquadDock extends StatelessWidget {
   const _SquadDock({
     required this.players,
     required this.profiles,
+    required this.selectedProfileId,
+    required this.onSelectProfile,
     required this.compact,
     required this.onAdd,
     required this.onRemove,
@@ -1054,6 +1173,8 @@ class _SquadDock extends StatelessWidget {
   });
   final List<PlayerConfiguration> players;
   final List<PlayerProfile> profiles;
+  final String? selectedProfileId;
+  final ValueChanged<String> onSelectProfile;
   final bool compact;
   final VoidCallback onAdd;
   final ValueChanged<String> onRemove;
@@ -1101,7 +1222,12 @@ class _SquadDock extends StatelessWidget {
               for (var index = 0; index < players.length; index++)
                 _PlayerSlot(
                   number: index + 1,
-                  name: players[index].displayName,
+                  name:
+                      profiles
+                          .where((profile) => profile.id == players[index].id)
+                          .firstOrNull
+                          ?.displayName ??
+                      players[index].displayName,
                   playerId: players[index].id,
                   filled: true,
                   compact: compact,
@@ -1117,7 +1243,9 @@ class _SquadDock extends StatelessWidget {
                           .firstOrNull
                           ?.avatar ??
                       PlayerAvatarAppearance.forPlayer(index + 1),
-                  onTap: () => onRemove(players[index].id),
+                  selected: players[index].id == selectedProfileId,
+                  onTap: () => onSelectProfile(players[index].id),
+                  onRemove: () => onRemove(players[index].id),
                 ),
               if (players.length < 12)
                 _PlayerSlot(
@@ -1128,7 +1256,9 @@ class _SquadDock extends StatelessWidget {
                   compact: compact,
                   avatarId: null,
                   appearance: null,
+                  selected: false,
                   onTap: onAdd,
+                  onRemove: () {},
                 ),
             ],
           ),
@@ -1162,6 +1292,8 @@ class _PlayerSlot extends StatelessWidget {
     required this.avatarId,
     required this.appearance,
     required this.onTap,
+    required this.onRemove,
+    required this.selected,
   });
   final int number;
   final String name;
@@ -1171,6 +1303,8 @@ class _PlayerSlot extends StatelessWidget {
   final String? avatarId;
   final PlayerAvatarAppearance? appearance;
   final VoidCallback onTap;
+  final VoidCallback onRemove;
+  final bool selected;
 
   @override
   Widget build(BuildContext context) {
@@ -1179,9 +1313,18 @@ class _PlayerSlot extends StatelessWidget {
     return Padding(
       padding: EdgeInsets.only(bottom: compact ? 3 : 8),
       child: Material(
-        color: const Color(0x78071325),
+        color: selected ? const Color(0xB52276A4) : const Color(0x78071325),
+        shape: Border(
+          left: BorderSide(
+            color: selected ? tokens.orange : Colors.transparent,
+            width: selected ? 3 : 0,
+          ),
+        ),
         child: InkWell(
-          onTap: filled ? null : onTap,
+          key: playerId == null
+              ? const ValueKey<String>('squad-add-player')
+              : ValueKey<String>('squad-player-slot-$playerId'),
+          onTap: onTap,
           child: SizedBox(
             height: compact ? 40 : 62,
             child: Row(
@@ -1252,7 +1395,7 @@ class _PlayerSlot extends StatelessWidget {
                 if (filled)
                   IconButton(
                     tooltip: 'Remove $name',
-                    onPressed: onTap,
+                    onPressed: onRemove,
                     visualDensity: VisualDensity.compact,
                     constraints: const BoxConstraints.tightFor(
                       width: 28,

@@ -294,6 +294,36 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  testWidgets('home squad selection is shared with the Avatars page', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      RoundveilApp(profileRepository: InMemoryPlayerProfileRepository()),
+    );
+    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump(const Duration(milliseconds: 280));
+
+    await tester.tap(
+      find.byKey(const ValueKey<String>('squad-player-slot-player-2')),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.byKey(const ValueKey<String>('lobby-hero-player-2')),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('AVATARS').first);
+    await tester.pumpAndSettle();
+    final selector = tester.widget<DropdownButtonFormField<String>>(
+      find.byKey(const ValueKey<String>('squad-player-selector')),
+    );
+    expect(selector.initialValue, 'player-2');
+    expect(find.text('Player 2'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('avatar workshop selects and persists a ready-made character', (
     tester,
   ) async {
@@ -309,10 +339,10 @@ void main() {
     expect(find.text('SQUAD ARMORY'), findsOneWidget);
     expect(find.text('SKIN TONE'), findsNothing);
     expect(find.text('CHOOSE YOUR OPERATOR'), findsOneWidget);
-    await tester.tap(find.text('STRIKER'));
+    await tester.tap(find.text('VANGUARD'));
     await tester.pumpAndSettle();
-    expect((await profiles.loadAll()).first.avatarId, 'operator_striker');
-    expect(PlayerAvatarCatalog.all, hasLength(8));
+    expect((await profiles.loadAll()).first.avatarId, 'operator_vanguard');
+    expect(PlayerAvatarCatalog.all, hasLength(38));
     await tester.tap(
       find.byKey(const ValueKey<String>('edit-player-callsign')),
     );
@@ -322,6 +352,25 @@ void main() {
     await tester.pumpAndSettle();
     expect((await profiles.loadAll()).first.displayName, 'Captain Nova');
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('avatar workshop fits compact landscape without overflow', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(915, 412));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      RoundveilApp(profileRepository: InMemoryPlayerProfileRepository()),
+    );
+    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump(const Duration(milliseconds: 280));
+    await tester.tap(find.text('AVATARS').first);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(
+      find.byKey(const ValueKey<String>('selected-player-callsign')),
+      findsOneWidget,
+    );
   });
 
   testWidgets(
@@ -339,13 +388,24 @@ void main() {
       await tester.tap(find.byTooltip('Create player'));
       await tester.pumpAndSettle();
       await tester.enterText(find.byType(TextField).last, 'Nova Prime');
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      final assignedAvatarIds = (await profiles.loadAll())
+          .map((profile) => profile.avatarId)
+          .toSet();
+      final availableAvatar = PlayerAvatarCatalog.all.firstWhere(
+        (avatar) => !assignedAvatarIds.contains(avatar.id),
+      );
+      await tester.tap(
+        find.byKey(ValueKey<String>('new-player-avatar-${availableAvatar.id}')),
+      );
       await tester.tap(
         find.byType(DropdownButtonFormField<PlayerGender?>).last,
       );
       await tester.pumpAndSettle();
       await tester.tap(find.text('NON-BINARY').last);
       await tester.pumpAndSettle();
-      await tester.tap(find.text('SAVE PLAYER'));
+      await tester.tap(find.widgetWithText(FilledButton, 'CREATE PLAYER'));
       await tester.pumpAndSettle();
 
       var saved = await profiles.loadAll();
@@ -359,7 +419,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('HOME').first);
       await tester.pumpAndSettle();
-      expect(find.text('NOVA PRIME'), findsOneWidget);
+      expect(find.text('NOVA PRIME'), findsNWidgets(2));
 
       await tester.tap(find.text('AVATARS').first);
       await tester.pumpAndSettle();
@@ -441,6 +501,28 @@ void main() {
     await tester.pump();
     expect(find.text('Friday Match'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('rename dialog fits compact landscape with keyboard open', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(915, 412));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(
+      RoundveilApp(profileRepository: InMemoryPlayerProfileRepository()),
+    );
+    await tester.pump(const Duration(milliseconds: 1200));
+    await tester.pump(const Duration(milliseconds: 280));
+    await tester.tap(find.text('AVATARS').first);
+    await tester.pumpAndSettle();
+    tester.view.viewInsets = const FakeViewPadding(bottom: 235);
+    await tester.tap(
+      find.byKey(const ValueKey<String>('edit-player-callsign')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('EDIT PLAYER CALLSIGN'), findsOneWidget);
   });
 
   testWidgets('quick template Start Match opens the selected game directly', (
@@ -603,7 +685,7 @@ void main() {
       await tester.tap(find.text('CORRECT'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 550));
-      expect(find.text('3'), findsOneWidget);
+      expect(find.text('10'), findsOneWidget);
     },
   );
 
@@ -637,7 +719,7 @@ void main() {
     await tester.tap(find.text('CORRECT'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 550));
-    expect(find.text('3'), findsOneWidget);
+    expect(find.text('10'), findsOneWidget);
   });
 
   testWidgets('word play accepts a typed offline answer', (tester) async {
@@ -662,7 +744,7 @@ void main() {
     await tester.tap(find.text('SUBMIT WORD'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 550));
-    expect(find.text('3'), findsOneWidget);
+    expect(find.text('10'), findsOneWidget);
   });
 
   testWidgets('word challenge fits a compact landscape viewport', (
@@ -714,12 +796,58 @@ void main() {
       await _startVisibleTurn(tester);
       final challenge = _visibleChallenge(tester, quizChallenges);
       expect(answered.add(challenge.id), isTrue);
+      await tester.ensureVisible(find.text(challenge.answer));
       await tester.tap(find.text(challenge.answer));
       await tester.pump();
-      await tester.pump(const Duration(seconds: 4));
+      await tester.pump(const Duration(seconds: 11));
     }
     expect(find.text('MATCH COMPLETE'), findsOneWidget);
-    expect(find.text('BACK TO LOBBY'), findsOneWidget);
+    expect(find.text('PLAY AGAIN'), findsOneWidget);
+    expect(find.text('HOME'), findsOneWidget);
+    expect(find.textContaining('HINT ·'), findsNothing);
+    expect(find.textContaining('TURN '), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('Play Again reuses rules and players with a fresh challenge', (
+    tester,
+  ) async {
+    final history = InMemoryChallengeHistoryRepository();
+    final profiles = InMemoryPlayerProfileRepository();
+    final configuration = SessionConfiguration(
+      players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+      selectedModuleIds: const <String>['quiz'],
+      roundCount: 1,
+    );
+    await tester.pumpWidget(
+      _TestApp(
+        child: ActiveMatchPage(
+          challengeHistoryRepository: history,
+          profileRepository: profiles,
+          configuration: configuration,
+        ),
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    await _startVisibleTurn(tester);
+    final firstChallenge = _visibleChallenge(tester, quizChallenges);
+    await tester.tap(find.text(firstChallenge.answer));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 11));
+    expect(find.text('MATCH COMPLETE'), findsOneWidget);
+    expect((await history.loadRecentIds()), contains(firstChallenge.id));
+    expect((await profiles.loadAll()).single.hintCredits, 15);
+    expect((await profiles.loadAll()).single.gamesPlayed, 1);
+
+    await tester.tap(find.byKey(const ValueKey<String>('play-again')));
+    await tester.pumpAndSettle();
+    expect(find.text('ROUND 1'), findsOneWidget);
+    await _startVisibleTurn(tester);
+    final nextChallenge = _visibleChallenge(tester, quizChallenges);
+    expect(nextChallenge.id, isNot(firstChallenge.id));
+    expect(find.text('0 PTS'), findsOneWidget);
+    expect((await profiles.loadAll()).single.hintCredits, 15);
+    expect((await profiles.loadAll()).single.gamesPlayed, 1);
     expect(tester.takeException(), isNull);
   });
 

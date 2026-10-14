@@ -143,6 +143,9 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
         if (match.state.phase == MatchPhase.winCountdown) {
           return _countdownScreen(match.state.secondsRemaining);
         }
+        final showGameplayChrome =
+            match.state.phase != MatchPhase.complete &&
+            match.state.phase != MatchPhase.completing;
         return Scaffold(
           backgroundColor: const Color(0xFF05030D),
           body: SafeArea(
@@ -172,11 +175,13 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   ),
                   child: Column(
                     children: <Widget>[
-                      _header(tokens),
-                      SizedBox(height: compactLandscape ? 8 : 16),
+                      if (showGameplayChrome) _header(tokens),
+                      if (showGameplayChrome)
+                        SizedBox(height: compactLandscape ? 8 : 16),
                       Expanded(child: _body(tokens)),
-                      SizedBox(height: compactLandscape ? 8 : 12),
-                      _footer(tokens),
+                      if (showGameplayChrome)
+                        SizedBox(height: compactLandscape ? 8 : 12),
+                      if (showGameplayChrome) _footer(tokens),
                     ],
                   ),
                 ),
@@ -483,39 +488,45 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     );
   }
 
-  Widget _scoreAward(RoundveilBrandTokens tokens) => Center(
-    child: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: <Widget>[
-        const Text(
-          'CORRECT',
-          style: TextStyle(
-            color: Color(0xFF6EE7FF),
-            fontSize: 28,
-            letterSpacing: 3,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0, end: 1),
-          duration: const Duration(milliseconds: 420),
-          builder: (context, value, child) => Transform.translate(
-            offset: Offset(0, -24 * value),
-            child: Opacity(opacity: value, child: child),
-          ),
-          child: Text(
-            '+${_activeMatch.state.pointsAwarded}',
-            style: TextStyle(
-              color: tokens.orange,
-              fontSize: 62,
-              fontWeight: FontWeight.w900,
+  Widget _scoreAward(RoundveilBrandTokens tokens) {
+    final compact = MediaQuery.sizeOf(context).height < 500;
+    return Center(
+      child: FittedBox(
+        fit: BoxFit.scaleDown,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Text(
+              'CORRECT',
+              style: TextStyle(
+                color: const Color(0xFF6EE7FF),
+                fontSize: compact ? 18 : 28,
+                letterSpacing: compact ? 2 : 3,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
+            SizedBox(height: compact ? 2 : 8),
+            TweenAnimationBuilder<double>(
+              tween: Tween<double>(begin: 0, end: 1),
+              duration: const Duration(milliseconds: 420),
+              builder: (context, value, child) => Transform.translate(
+                offset: Offset(0, (compact ? -12 : -24) * value),
+                child: Opacity(opacity: value, child: child),
+              ),
+              child: Text(
+                '+${_activeMatch.state.pointsAwarded}',
+                style: TextStyle(
+                  color: tokens.orange,
+                  fontSize: compact ? 40 : 62,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+          ],
         ),
-      ],
-    ),
-  );
+      ),
+    );
+  }
 
   Widget _challenge(RoundveilBrandTokens tokens) {
     final state = _activeMatch.state;
@@ -772,17 +783,30 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     child: Wrap(
       alignment: WrapAlignment.center,
       spacing: 12,
+      runSpacing: 8,
       children: <Widget>[
-        FilledButton.icon(
-          onPressed: () => _activeMatch.judge(correct: true),
-          icon: const Icon(Icons.check),
-          label: const Text('CORRECT'),
-        ),
-        OutlinedButton.icon(
-          onPressed: () => _activeMatch.judge(correct: false),
-          icon: const Icon(Icons.close),
-          label: const Text('WRONG'),
-        ),
+        for (final judgment in const <(bool, String, IconData, Color)>[
+          (true, 'CORRECT', Icons.check_rounded, Color(0xFF167A62)),
+          (false, 'WRONG', Icons.close_rounded, Color(0xFF9D3542)),
+        ])
+          SizedBox(
+            width: 146,
+            height: 46,
+            child: FilledButton.icon(
+              onPressed: () => _activeMatch.judge(correct: judgment.$1),
+              icon: Icon(judgment.$3),
+              label: Text(judgment.$2),
+              style: FilledButton.styleFrom(
+                backgroundColor: judgment.$4,
+                foregroundColor: Colors.white,
+                elevation: 2,
+                animationDuration: const Duration(milliseconds: 120),
+                shape: const BeveledRectangleBorder(
+                  borderRadius: BorderRadius.all(Radius.circular(5)),
+                ),
+              ),
+            ),
+          ),
       ],
     ),
   );
@@ -911,15 +935,55 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                 ),
               ),
             const SizedBox(height: 8),
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              style: FilledButton.styleFrom(minimumSize: const Size(0, 44)),
-              child: const Text('BACK TO LOBBY'),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 12,
+              runSpacing: 8,
+              children: <Widget>[
+                FilledButton.icon(
+                  key: const ValueKey<String>('play-again'),
+                  onPressed: _playAgain,
+                  icon: const Icon(Icons.replay_rounded),
+                  label: const Text('PLAY AGAIN'),
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(160, 44),
+                  ),
+                ),
+                OutlinedButton.icon(
+                  key: const ValueKey<String>('results-home'),
+                  onPressed: _returnHome,
+                  icon: const Icon(Icons.home_rounded),
+                  label: const Text('HOME'),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size(140, 44),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
+  }
+
+  void _playAgain() {
+    if (_activeMatch.state.phase != MatchPhase.complete) return;
+    Navigator.of(context).pushReplacement<void, void>(
+      MaterialPageRoute<void>(
+        builder: (_) => ActiveMatchPage(
+          configuration: widget.configuration,
+          enableTimers: widget.enableTimers,
+          profileRepository: _profileRepository,
+          challengeHistoryRepository: _challengeHistoryRepository,
+          characterPictureRepository: _pictureRepository,
+        ),
+      ),
+    );
+  }
+
+  void _returnHome() {
+    if (_activeMatch.state.phase != MatchPhase.complete) return;
+    Navigator.of(context).popUntil((route) => route.isFirst);
   }
 
   Widget _centerMessage(String title, String detail) => Center(

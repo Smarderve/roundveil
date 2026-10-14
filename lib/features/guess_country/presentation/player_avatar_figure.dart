@@ -40,87 +40,28 @@ class PlayerAvatarFigure extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isPortrait = portrait ?? width / height > .84;
-    final outfitAndHair = Color.lerp(
-      Color(appearance.outfitColor),
-      Color(appearance.hairColor),
-      .18,
-    )!;
-    final paletteTint = Color.lerp(
-      outfitAndHair,
-      Color(appearance.skinTone),
-      .16,
-    )!;
+    final assetPath = avatarId == null
+        ? _artPath
+        : isPortrait
+        ? PlayerAvatarCatalog.byId(avatarId).effectivePortraitAssetPath
+        : _artPath;
     return SizedBox(
       width: width,
       height: height,
       child: Stack(
         fit: StackFit.expand,
         children: <Widget>[
-          ColorFiltered(
-            colorFilter: ColorFilter.mode(
-              paletteTint.withValues(alpha: .13),
-              BlendMode.softLight,
-            ),
-            child: Image.asset(
-              _artPath,
-              fit: isPortrait ? BoxFit.cover : BoxFit.contain,
-              alignment: isPortrait
-                  ? Alignment.topCenter
-                  : Alignment.bottomCenter,
-              filterQuality: FilterQuality.high,
-              semanticLabel: isPortrait
-                  ? 'Individual ROUNDVEIL player avatar portrait'
-                  : 'Individual ROUNDVEIL full-body 2D character artwork; 3D integration pending',
-            ),
+          Image.asset(
+            assetPath,
+            fit: isPortrait ? BoxFit.cover : BoxFit.contain,
+            alignment: isPortrait
+                ? Alignment.topCenter
+                : Alignment.bottomCenter,
+            filterQuality: FilterQuality.high,
+            semanticLabel: isPortrait ? 'ROUNDVEIL player avatar portrait' : 'ROUNDVEIL original full-body character illustration; 3D integration pending',
           ),
-          if (appearance.accessory != AvatarAccessory.none)
-            Align(
-              alignment: const Alignment(0, -.73),
-              child: _AppearanceAccessory(appearance: appearance),
-            ),
         ],
       ),
     );
-  }
-}
-
-class _AppearanceAccessory extends StatelessWidget {
-  const _AppearanceAccessory({required this.appearance});
-  final PlayerAvatarAppearance appearance;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = Color(appearance.accentColor);
-    return switch (appearance.accessory) {
-      AvatarAccessory.none => const SizedBox.shrink(),
-      AvatarAccessory.visor => Container(
-        width: 46,
-        height: 7,
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: .9),
-          border: Border.all(color: const Color(0xFF07111D), width: 1.2),
-          boxShadow: <BoxShadow>[
-            BoxShadow(color: color.withValues(alpha: .35), blurRadius: 8),
-          ],
-        ),
-      ),
-      AvatarAccessory.headband => Container(
-        width: 37,
-        height: 3,
-        decoration: BoxDecoration(
-          color: color,
-          boxShadow: <BoxShadow>[
-            BoxShadow(color: color.withValues(alpha: .4), blurRadius: 5),
-          ],
-        ),
-      ),
-      AvatarAccessory.comms => Align(
-        alignment: Alignment.centerRight,
-        child: Padding(
-          padding: const EdgeInsets.only(right: 10),
-          child: Icon(Icons.sensors_rounded, size: 12, color: color),
-        ),
-      ),
-    };
   }
 }
