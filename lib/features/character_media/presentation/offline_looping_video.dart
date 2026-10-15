@@ -50,9 +50,11 @@ class _OfflineLoopingVideoState extends State<OfflineLoopingVideo>
   Future<void> _initialize() async {
     final assetPath = widget.assetPath;
     if (assetPath == null || assetPath.isEmpty) return;
-    if (!kIsWeb &&
-        defaultTargetPlatform != TargetPlatform.android &&
-        defaultTargetPlatform != TargetPlatform.windows) {
+    // video_player_win's unsigned native DLL is rejected by this host's
+    // Enterprise Application Control policy. Keep Windows on the supplied
+    // still-art fallback until an organization-approved signed backend exists.
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) return;
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.android) {
       setState(
         () => _error = UnsupportedError(
           'Character video playback is supported only on Android and Windows.',

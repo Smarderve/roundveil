@@ -414,7 +414,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     if (state.phase == MatchPhase.roundIntro) return _roundIntro(tokens);
     if (state.phase == MatchPhase.playerIntro) return _playerIntro(tokens);
     if (state.phase == MatchPhase.paused) {
-      return _centerMessage('MATCH PAUSED', 'Resume when your squad is ready.');
+      return _paused(tokens);
     }
     return _challenge(tokens);
   }
@@ -1028,7 +1028,15 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   }
 
   void _playAgain() {
-    if (_activeMatch.state.phase != MatchPhase.complete) return;
+    _replaceWithFreshMatch();
+  }
+
+  void _restartMatch() {
+    if (_activeMatch.state.phase == MatchPhase.complete) return;
+    _replaceWithFreshMatch();
+  }
+
+  void _replaceWithFreshMatch() {
     Navigator.of(context).pushReplacement<void, void>(
       MaterialPageRoute<void>(
         builder: (_) => ActiveMatchPage(
@@ -1043,9 +1051,82 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   }
 
   void _returnHome() {
-    if (_activeMatch.state.phase != MatchPhase.complete) return;
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
+
+  void _quitGame() {
+    if (Platform.isWindows) exit(0);
+  }
+
+  Widget _paused(RoundveilBrandTokens tokens) => SingleChildScrollView(
+    padding: const EdgeInsets.all(12),
+    child: Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                Icons.pause_circle_filled_rounded,
+                color: tokens.orange,
+                size: 64,
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'MATCH PAUSED',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Resume when your squad is ready.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: tokens.muted),
+              ),
+              const SizedBox(height: 24),
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: 12,
+                runSpacing: 10,
+                children: <Widget>[
+                  FilledButton.icon(
+                    key: const ValueKey<String>('resume-match'),
+                    onPressed: _activeMatch.resume,
+                    icon: const Icon(Icons.play_arrow_rounded),
+                    label: const Text('RESUME'),
+                  ),
+                  OutlinedButton.icon(
+                    key: const ValueKey<String>('restart-match'),
+                    onPressed: _restartMatch,
+                    icon: const Icon(Icons.replay_rounded),
+                    label: const Text('RESTART'),
+                  ),
+                  OutlinedButton.icon(
+                    key: const ValueKey<String>('leave-match'),
+                    onPressed: _returnHome,
+                    icon: const Icon(Icons.home_rounded),
+                    label: const Text('LEAVE MATCH'),
+                  ),
+                  if (Platform.isWindows)
+                    TextButton.icon(
+                      key: const ValueKey<String>('quit-game'),
+                      onPressed: _quitGame,
+                      icon: const Icon(Icons.exit_to_app_rounded),
+                      label: const Text('QUIT GAME'),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 
   Widget _centerMessage(String title, String detail) => Center(
     child: Column(
