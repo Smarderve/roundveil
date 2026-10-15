@@ -163,10 +163,23 @@ void main() {
     );
 
     final items = await repository.loadAll();
-    expect(items, hasLength(2));
+    expect(items, hasLength(12));
     expect(
       items.map((item) => item.name),
-      containsAll(['George Washington', 'Abraham Lincoln']),
+      containsAll([
+        'George Washington',
+        'Abraham Lincoln',
+        'Sylvester Stallone',
+        'Bruce Willis',
+        'Tina Fey',
+        'Charlie Hunnam',
+        'Stone Cold Steve Austin',
+        'Garrett Hedlund',
+        'Charlie Day',
+        'Andy Whitfield',
+        'Zoe Saldana',
+        'Karen Gillan',
+      ]),
     );
     expect(items.every((item) => File(item.path).existsSync()), isTrue);
     expect(
@@ -180,7 +193,7 @@ void main() {
     );
 
     final reloaded = await repository.loadAll();
-    expect(reloaded, hasLength(2));
-    expect(reloaded.map((item) => item.sha256).toSet(), hasLength(2));
+    expect(reloaded, hasLength(12));
+    expect(reloaded.map((item) => item.sha256).toSet(), hasLength(12));
   });
 }

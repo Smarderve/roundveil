@@ -46,54 +46,60 @@ whether Win Countdown starts.
 
 ## Verified inventory
 
-As of 2026-10-15, the repository contains **2 bundled, authentic picture
-challenges** in `assets/brand/character_pictures/`: George Washington (Charles
-Willson Peale's 1772 portrait) and Abraham Lincoln (Alexander Gardner's 1863
-Library of Congress photograph). The sources identify the subjects and indicate
-public-domain/no-known-publication-restrictions status. Source URLs, attribution,
-license notes, clue context and aliases are in `manifest.json`; image dimensions
-and SHA-256 are calculated and validated when the collection is installed into
-the app-private offline library. The portraits are copied locally on first load,
-so game-time display does not require a network connection. See the [Washington
-Commons file page](https://commons.wikimedia.org/wiki/File:Washington_1772.jpg)
-and the [Lincoln Commons file page](https://commons.wikimedia.org/wiki/File:Abraham_Lincoln,_Sunday,_November_8,_1863_LCCN2008680252.jpg).
+As of 2026-10-15, the repository contains **12 bundled, distinct picture
+challenges** in `assets/brand/character_pictures/`: George Washington and
+Abraham Lincoln (Historical Presidents); Sylvester Stallone, Bruce Willis,
+Tina Fey, Charlie Hunnam, Garrett Hedlund, Charlie Day, Andy Whitfield, Zoe
+Saldana and Karen Gillan (Hollywood Actors); and Stone Cold Steve Austin
+(Athletes and Entertainers). The ten new images are direct Flickr-hosted
+photographs by Gage Skidmore at 1024 × 683. Each Flickr photo page was checked
+individually and states CC BY-SA 2.0; creator attribution and per-image links
+are recorded in `manifest.json`. See [Gage Skidmore's Flickr photo of Sylvester
+Stallone](https://www.flickr.com/photos/22007612@N05/4840620570) and the
+[Creative Commons BY-SA 2.0 terms](https://creativecommons.org/licenses/by-sa/2.0/).
+Openverse was used to discover Flickr entries, not as a license authority;
+Openverse explicitly cautions that license metadata may be inaccurate, so the
+underlying Flickr pages were checked individually. These original Flickr
+variants were bundled without edits. The two earlier portraits retain their
+public-domain/no-known-publication-restrictions source records. All source URLs,
+attributions, license notes, clues, dimensions and SHA-256 hashes are kept in
+the manifest; the existing first-install path copies bundled images into the
+device-private offline library.
 
-The 760-entry requested target is still **incomplete**. Only two distinct
-subjects are bundled and both are in Historical Presidents; no Marvel, DC,
-Indian/Hollywood actor, Disney/DreamWorks, cartoon, footballer, or anime
-collection has been bundled by this batch. The previously imported emulator
-library also contained the same two identities; it is device-local evidence and
-is not counted as additional unique content. Tests use synthetic images only for
-importer processing and never count them as game content. Anime is proposed as
-an additional **100-entry** target (total proposed target: 860), pending product
-owner confirmation; it is not an approved count and has no bundled entries.
+The 760-entry requested target is still **incomplete**: 748 additional entries
+are needed. The first 50-image milestone is also incomplete: 38 additional
+distinct entries are needed. No footballers, Indian actors, Marvel, DC, Disney/DreamWorks,
+cartoon or anime entries are included. The ten new faces make Picture Mode more
+usable but do not satisfy the requested 50-image first milestone. The earlier
+19 Wikimedia Commons candidates remain unqualified and uncounted: Commons
+returned HTTP 429 and asked for thumbnail requests, which this batch did not
+retry. The previously imported emulator library only repeated the two original
+subjects and is not counted. Synthetic test images are not game content. Anime
+remains a proposed additional **100-entry** target (proposed total 860), pending
+owner approval; it is not approved or populated.
 
 ### 2026-10-15 content-production attempt
 
-This batch did **not** reach the 50-image milestone. Nineteen possible
-actor-photo records were identified from Commons; metadata queries returned
-their file pages, dimensions and license labels, but their images were not
-visually inspected, attribution was not finalized, and **zero** new image
-files were downloaded or added to the manifest. Wikimedia Commons returned HTTP 429
-(`Too many requests`) for direct image-file downloads, including a spaced
-retry; its response specifically requested use of thumbnail images rather
-than original files. Candidate subjects are therefore not included in any
-inventory or playable count. No restriction was bypassed and no alternate
-mirror was used. Resume only after the service's request window permits it,
-using Commons' documented thumbnail endpoint with conservative pacing; then
-decode each downloaded file and verify the output dimensions/hash before
-counting it. The available verified total remains **2**.
+The Commons attempt delivered zero images: nineteen possible actor-photo
+records were identified, but their images were not visually inspected or added.
+Direct image downloads returned HTTP 429 even after a spaced retry; the response
+asked for Commons thumbnails. No workaround or alternate mirror was used.
+These candidates remain unqualified and uncounted. Collection development
+continued through Flickr, an independent source, and yielded the ten verified
+images listed above. Return to Commons only when its request window permits,
+using its documented thumbnails and conservative pacing.
 
 | Collection | Current target | Bundled distinct subjects | Verified playable |
 |---|---:|---:|---:|
 | Indian actors and actresses | 100 | 0 | 0 |
 | Marvel characters | 100 | 0 | 0 |
 | DC characters | 100 | 0 | 0 |
-| Hollywood actors and movie characters | 100 | 0 | 0 |
+| Hollywood actors and movie characters | 100 | 9 | 9 |
 | Disney and DreamWorks characters | 200 | 0 | 0 |
 | Cartoon characters | 100 | 0 | 0 |
 | Footballers | 10 | 0 | 0 |
 | Historical presidents | 50 | 2 | 2 |
+| Athletes and entertainers (additional) | Not set | 1 | 1 |
 | Anime (proposed) | 100 (not approved) | 0 | 0 |
 
 The package importer continues to support owner-supplied/private collections
@@ -108,6 +114,23 @@ previous private-import batch is stored at
 `docs/evidence/picture_collections_avatars_2026-10-14/`. It shows the imported
 two-entry library, the turn-away phase, Lincoln displayed to clue-givers,
 Washington displayed for the next player, and advancement after host Correct.
-Windows debug compilation and app launch succeeded, but the desktop window was
-not exposed to the computer-use capture session; no Windows import/gameplay
-visual result is claimed.
+### 2026-10-15 Android gameplay verification
+
+The complete Flutter analysis passed and the full Flutter test suite passed.
+The test output reported all tests passed (104 tests). A fresh debug APK built
+successfully, was installed on `emulator-5554`, and the foreground
+`com.example.roundveil/.MainActivity` process remained alive. The emulator is
+x86_64 with ARM64 translation; no native ARM64 device was tested. Android
+captures in `docs/evidence/picture_collections_2026-10-15/` show the live
+Guessing Games session setup, player-turn-away prompt, a real bundled Karen
+Gillan photograph shown to clue-givers, and the next player's turn after
+timeout. The verified image was a bundled offline file, not a network-loaded
+photo. The test suite also exercises bundle seeding, all 12 unique image
+records, no-repeat assignment while the eligible pool lasts, turn-away/reveal,
+host judgement, countdown and progression.
+
+Windows debug compilation succeeded and the launched executable process
+remained alive during the check. A visible desktop screenshot/gameplay check
+was not completed: the computer-use capture session was stopped with the
+physical Escape key. This is process-level launch evidence only, not visual
+verification of the Windows Picture Mode screen.

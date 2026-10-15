@@ -40,6 +40,206 @@
         "license": "Library of Congress: no known restrictions on publication; public domain photograph",
         "attribution": "Alexander Gardner; Library of Congress Prints and Photographs Division"
       }
+    },
+    {
+      "id": "flickr-gage-skidmore-sylvester-stallone-4840620570",
+      "name": "Sylvester Stallone",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/sylvester_stallone_gage_skidmore.jpg",
+      "aliases": ["Sly Stallone"],
+      "hint": "An American actor and filmmaker who created and starred as Rocky Balboa.",
+      "subjectType": "Actor",
+      "difficulty": "Easy",
+      "description": "Portrait of Sylvester Stallone at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "196e71b2493012b1a6cacbdfa603417f0395ddcd146e83a9523a812c43f18231",
+      "source": {
+        "title": "Sylvester Stallone",
+        "url": "https://www.flickr.com/photos/22007612@N05/4840620570",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-bruce-willis-4839930769",
+      "name": "Bruce Willis",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/bruce_willis_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "An American actor known for playing John McClane in the Die Hard films.",
+      "subjectType": "Actor",
+      "difficulty": "Easy",
+      "description": "Portrait of Bruce Willis at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "5063ee049c7e2ba23767f147a9e77c549ffe68ace5e0becc52e923a33f91185f",
+      "source": {
+        "title": "Bruce Willis",
+        "url": "https://www.flickr.com/photos/22007612@N05/4839930769",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-tina-fey-4840341698",
+      "name": "Tina Fey",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/tina_fey_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "An American comedian and actor who played Liz Lemon in 30 Rock.",
+      "subjectType": "Actor",
+      "difficulty": "Medium",
+      "description": "Portrait of Tina Fey at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "53515afb34c201c6d0d11f07ed4f37045138b86f898075a504ce7a4a6c8cdbec",
+      "source": {
+        "title": "Tina Fey",
+        "url": "https://www.flickr.com/photos/22007612@N05/4840341698",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-charlie-hunnam-4843176810",
+      "name": "Charlie Hunnam",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/charlie_hunnam_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "A British actor who played Jackson Teller in Sons of Anarchy.",
+      "subjectType": "Actor",
+      "difficulty": "Medium",
+      "description": "Portrait of Charlie Hunnam at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "0eee0ddc1531722c9c10f4c554fbb4d655512b86c32696ce9f4e53f4d53f65f7",
+      "source": {
+        "title": "Charlie Hunnam",
+        "url": "https://www.flickr.com/photos/22007612@N05/4843176810",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-stone-cold-steve-austin-4840047167",
+      "name": "Stone Cold Steve Austin",
+      "category": "Athletes and Entertainers",
+      "assetPath": "assets/brand/character_pictures/stone_cold_steve_austin_gage_skidmore.jpg",
+      "aliases": ["Stone Cold", "Steve Austin"],
+      "hint": "An American professional wrestler and actor whose nickname begins with the words in this answer.",
+      "subjectType": "Professional wrestler and actor",
+      "difficulty": "Easy",
+      "description": "Portrait of Steve Austin at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "3bed17627077d98b84e68231b15d8b62f6ee3711741b5a8ed27151e80aec3585",
+      "source": {
+        "title": "Stone Cold Steve Austin",
+        "url": "https://www.flickr.com/photos/22007612@N05/4840047167",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-garrett-hedlund-4840365444",
+      "name": "Garrett Hedlund",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/garrett_hedlund_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "An American actor who starred as Sam Flynn in Tron: Legacy.",
+      "subjectType": "Actor",
+      "difficulty": "Medium",
+      "description": "Portrait of Garrett Hedlund at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "9f0c125082f5837e4d2d4e96f6b52288ee8b91bef637438c75761b8a2e0fc4d6",
+      "source": {
+        "title": "Garrett Hedlund",
+        "url": "https://www.flickr.com/photos/22007612@N05/4840365444",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-charlie-day-4842621427",
+      "name": "Charlie Day",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/charlie_day_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "An American actor and comedian who plays Charlie Kelly in It's Always Sunny in Philadelphia.",
+      "subjectType": "Actor",
+      "difficulty": "Medium",
+      "description": "Portrait of Charlie Day at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "b03cd488a44099c374e0748b99732efaf78cead39aab9d4316521d4e3d96ad70",
+      "source": {
+        "title": "Charlie Day",
+        "url": "https://www.flickr.com/photos/22007612@N05/4842621427",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-andy-whitfield-4841705969",
+      "name": "Andy Whitfield",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/andy_whitfield_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "A Welsh actor who starred as Spartacus in Spartacus: Blood and Sand.",
+      "subjectType": "Actor",
+      "difficulty": "Medium",
+      "description": "Portrait of Andy Whitfield at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "3dd38a0b5afa2baa4cc673b99039eaf32c2cc2165dfadc7c21248e817111291f",
+      "source": {
+        "title": "Andy Whitfield",
+        "url": "https://www.flickr.com/photos/22007612@N05/4841705969",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-zoe-saldana-9361544301",
+      "name": "Zoe Saldana",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/zoe_saldana_gage_skidmore.jpg",
+      "aliases": ["Zoë Saldaña"],
+      "hint": "An American actor who played Neytiri in Avatar and Gamora in Guardians of the Galaxy.",
+      "subjectType": "Actor",
+      "difficulty": "Easy",
+      "description": "Portrait of Zoe Saldana at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "8015b659036b951bda0bc626a1f0fbdd3a81bee1e231dede103ee345b5d9fe75",
+      "source": {
+        "title": "Zoe Saldana",
+        "url": "https://www.flickr.com/photos/22007612@N05/9361544301",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
+    },
+    {
+      "id": "flickr-gage-skidmore-karen-gillan-9361525963",
+      "name": "Karen Gillan",
+      "category": "Hollywood Actors",
+      "assetPath": "assets/brand/character_pictures/karen_gillan_gage_skidmore.jpg",
+      "aliases": [],
+      "hint": "A Scottish actor who played Amy Pond in Doctor Who and Nebula in Marvel films.",
+      "subjectType": "Actor",
+      "difficulty": "Easy",
+      "description": "Portrait of Karen Gillan at a public convention panel, photographed by Gage Skidmore.",
+      "width": 1024,
+      "height": 683,
+      "sha256": "b77372c64073cf223e6793647da4160a65db090693216cd44ec09f110943a208",
+      "source": {
+        "title": "Karen Gillan",
+        "url": "https://www.flickr.com/photos/22007612@N05/9361525963",
+        "license": "CC BY-SA 2.0",
+        "attribution": "Gage Skidmore"
+      }
     }
   ]
 }

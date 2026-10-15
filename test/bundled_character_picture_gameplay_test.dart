@@ -23,7 +23,7 @@ void main() {
         players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
         selectedModuleIds: const <String>['guess_character'],
         roundFormatIds: const <String>['character_picture'],
-        roundCount: 2,
+        roundCount: pictures.length,
       );
       final challenges = pictures
           .map(
@@ -53,7 +53,7 @@ void main() {
       );
       match.start();
       final seenIds = <String>{};
-      for (var turn = 0; turn < 2; turn++) {
+      for (var turn = 0; turn < pictures.length; turn++) {
         if (match.state.phase == MatchPhase.roundIntro) match.beginRound();
         match.beginChallenge();
         expect(match.state.phase, MatchPhase.turnAway);
@@ -67,7 +67,7 @@ void main() {
         expect(match.state.phase, MatchPhase.winCountdown);
         match.completeCountdown();
       }
-      expect(seenIds, hasLength(2));
+      expect(seenIds, hasLength(pictures.length));
       expect(match.state.phase, MatchPhase.complete);
     },
   );
