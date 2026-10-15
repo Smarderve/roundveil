@@ -61,3 +61,7 @@ Run `flutter doctor -v` before building Android. Do not attempt an Android build
 ### Security and release
 
 No embedded secrets, private family photos in Git, or unlicensed game imagery. Use `docs/quality/SECURITY_PRIVACY.md` and `docs/release/RELEASE_PLAN.md`.
+
+### Downloads
+
+When an approved release is published, download the directly installable Windows setup executable or Android APK from [ROUNDVEIL GitHub Releases](https://github.com/Smarderve/roundveil/releases). Windows users should use the Setup `.exe`; Android users should use the `.apk`. Source-code archives are not installers. No stable v1.0.0 release is published yet; see [`docs/releases/DISTRIBUTION_PACKAGING.md`](docs/releases/DISTRIBUTION_PACKAGING.md) for current signing, identity and installation-test gates.

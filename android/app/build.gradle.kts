@@ -29,11 +29,45 @@ android {
         versionName = flutter.versionName
     }
 
+    val releaseStorePath = System.getenv("ROUNDVEIL_ANDROID_KEYSTORE")
+    val releaseStorePassword = System.getenv("ROUNDVEIL_ANDROID_STORE_PASSWORD")
+    val releaseKeyAlias = System.getenv("ROUNDVEIL_ANDROID_KEY_ALIAS")
+    val releaseKeyPassword = System.getenv("ROUNDVEIL_ANDROID_KEY_PASSWORD")
+    val releaseSigningValues = listOf(
+        releaseStorePath,
+        releaseStorePassword,
+        releaseKeyAlias,
+        releaseKeyPassword,
+    )
+    val hasReleaseSigningValues = releaseSigningValues.all { !it.isNullOrBlank() }
+    val isReleaseBuild = gradle.startParameter.taskNames.any {
+        it.contains("release", ignoreCase = true)
+    }
+
+    if (isReleaseBuild && !hasReleaseSigningValues) {
+        throw GradleException(
+            "Android release signing is not configured. Set " +
+                "ROUNDVEIL_ANDROID_KEYSTORE, ROUNDVEIL_ANDROID_STORE_PASSWORD, " +
+                "ROUNDVEIL_ANDROID_KEY_ALIAS, and ROUNDVEIL_ANDROID_KEY_PASSWORD " +
+                "in the current build environment. Debug-key release signing is disabled.",
+        )
+    }
+    if (hasReleaseSigningValues && !file(releaseStorePath!!).isFile) {
+        throw GradleException("ROUNDVEIL_ANDROID_KEYSTORE does not point to a file.")
+    }
+
+    if (hasReleaseSigningValues) {
+        signingConfigs.create("roundveilRelease") {
+            storeFile = file(releaseStorePath!!)
+            storePassword = releaseStorePassword
+            keyAlias = releaseKeyAlias
+            keyPassword = releaseKeyPassword
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("roundveilRelease")
         }
     }
 }
