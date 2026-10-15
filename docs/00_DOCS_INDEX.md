@@ -76,6 +76,11 @@
 - [`docs/architecture/WINDOWS_ANDROID_BEHAVIOR.md`](architecture/WINDOWS_ANDROID_BEHAVIOR.md)
 - [`docs/architecture/ANDROID_BUILD_ENVIRONMENT.md`](architecture/ANDROID_BUILD_ENVIRONMENT.md) — verified Android toolchain notes and the temporary Codex-only Java workaround.
 
+### Avatar and character media
+- [`docs/avatars/CHARACTER_ROSTER_200.md`](avatars/CHARACTER_ROSTER_200.md) — measured roster inventory and the 200-character completion rule.
+- [`docs/avatars/CHARACTER_VIDEO_MANIFEST.md`](avatars/CHARACTER_VIDEO_MANIFEST.md) — offline idle/background video record schema and real media inventory.
+- [`docs/avatars/CHARACTER_IMPLEMENTATION_STATUS.md`](avatars/CHARACTER_IMPLEMENTATION_STATUS.md) — Option A decision, playback stack and platform verification status.
+
 ### Quality
 - [`docs/quality/ACCEPTANCE_CRITERIA.md`](quality/ACCEPTANCE_CRITERIA.md)
 - [`docs/quality/REQUIREMENTS_TRACEABILITY.md`](quality/REQUIREMENTS_TRACEABILITY.md)

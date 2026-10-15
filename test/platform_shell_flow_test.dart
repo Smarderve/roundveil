@@ -55,6 +55,35 @@ void _activateButton(WidgetTester tester, String label) {
 }
 
 void main() {
+  testWidgets('match startup shows the real failure and supports retry', (
+    tester,
+  ) async {
+    final profiles = _FailingPlayerProfileRepository();
+    await tester.pumpWidget(
+      _TestApp(
+        child: ActiveMatchPage(
+          profileRepository: profiles,
+          configuration: SessionConfiguration(
+            players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
+            selectedModuleIds: const <String>['word_play'],
+            roundCount: 1,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('MATCH COULD NOT START'), findsOneWidget);
+    expect(find.textContaining('profile store test failure'), findsOneWidget);
+    expect(find.text('Could not load local player profiles.'), findsNothing);
+    expect(profiles.attempts, 1);
+
+    await tester.tap(find.text('RETRY'));
+    await tester.pumpAndSettle();
+    expect(profiles.attempts, 2);
+    expect(find.textContaining('profile store test failure'), findsOneWidget);
+  });
+
   test(
     'builder enforces single and mixed selection and persists a draft',
     () async {
@@ -1015,6 +1044,18 @@ class _MemoryDraftRepository implements DraftRepository {
   @override
   Future<void> delete(String id) async =>
       items.removeWhere((item) => item.id == id);
+}
+
+class _FailingPlayerProfileRepository extends InMemoryPlayerProfileRepository {
+  int attempts = 0;
+
+  @override
+  Future<List<PlayerProfile>> ensureProfiles(
+    Iterable<PlayerConfiguration> players,
+  ) async {
+    attempts++;
+    throw StateError('profile store test failure');
+  }
 }
 
 class _TestApp extends StatelessWidget {

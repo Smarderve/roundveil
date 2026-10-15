@@ -43,7 +43,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   late final ChallengeHistoryRepository _challengeHistoryRepository;
   late final CharacterPictureRepository _pictureRepository =
       widget.characterPictureRepository ?? CharacterPictureRepository();
-  late final Future<void> _startup;
+  late Future<void> _startup;
+  Object? _startupError;
   final TextEditingController _answer = TextEditingController();
 
   @override
@@ -57,46 +58,115 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   }
 
   Future<void> _startMatch() async {
-    final profiles = await _profileRepository.ensureProfiles(
-      widget.configuration.players,
-    );
-    final recentChallengeIds = await _challengeHistoryRepository
-        .loadRecentIds();
-    final needsPictures = widget.configuration.effectiveRoundFormatIds.contains(
-      'character_picture',
-    );
-    final pictures = needsPictures
-        ? await _pictureRepository.loadAll()
-        : const <CharacterPicture>[];
-    if (!mounted) return;
-    final match = ActiveMatchController(
-      configuration: widget.configuration,
-      enableTimers: widget.enableTimers,
-      profileRepository: _profileRepository,
-      profiles: <String, PlayerProfile>{
-        for (final profile in profiles) profile.id: profile,
-      },
-      recentChallengeIds: recentChallengeIds,
-      pictureChallenges: pictures
-          .map(
-            (picture) => OfflineChallenge(
-              id: picture.id,
-              prompt: 'Identify the person or character shown.',
-              answer: picture.name,
-              hint: picture.hint,
-              imageFilePath: picture.path,
-              imageSource: picture.sourceTitle,
-            ),
-          )
-          .toList(growable: false),
-      onChallengeDrawn: (id) {
-        unawaited(_recordChallenge(id));
-      },
-    );
-    _match = match;
-    match.start();
-    setState(() {});
+    try {
+      final profiles = await _profileRepository.ensureProfiles(
+        widget.configuration.players,
+      );
+      final recentChallengeIds = await _challengeHistoryRepository
+          .loadRecentIds();
+      final needsPictures = widget.configuration.effectiveRoundFormatIds
+          .contains('character_picture');
+      final pictures = needsPictures
+          ? await _pictureRepository.loadAll()
+          : const <CharacterPicture>[];
+      if (!mounted) return;
+      final match = ActiveMatchController(
+        configuration: widget.configuration,
+        enableTimers: widget.enableTimers,
+        profileRepository: _profileRepository,
+        profiles: <String, PlayerProfile>{
+          for (final profile in profiles) profile.id: profile,
+        },
+        recentChallengeIds: recentChallengeIds,
+        pictureChallenges: pictures
+            .map(
+              (picture) => OfflineChallenge(
+                id: picture.id,
+                prompt: 'Identify the person or character shown.',
+                answer: picture.name,
+                hint: picture.hint,
+                imageFilePath: picture.path,
+                imageSource: picture.sourceTitle,
+              ),
+            )
+            .toList(growable: false),
+        onChallengeDrawn: (id) {
+          unawaited(_recordChallenge(id));
+        },
+      );
+      _match = match;
+      match.start();
+      setState(() {});
+    } on Object catch (error) {
+      debugPrint('ROUNDVEIL match startup failed: $error');
+      if (!mounted) return;
+      _startupError = error;
+      setState(() {});
+    }
   }
+
+  void _retryStartup() {
+    setState(() => _startupError = null);
+    _startup = _startMatch();
+  }
+
+  Widget _startupFailure(Object error) => Scaffold(
+    backgroundColor: const Color(0xFF05030D),
+    body: SafeArea(
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 620),
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: <Widget>[
+                const Icon(
+                  Icons.warning_amber_rounded,
+                  color: Color(0xFFFFA24A),
+                  size: 44,
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'MATCH COULD NOT START',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 1,
+                  ),
+                ),
+                const SizedBox(height: 10),
+                SelectableText(
+                  error.toString(),
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white70),
+                ),
+                const SizedBox(height: 20),
+                Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 12,
+                  runSpacing: 8,
+                  children: <Widget>[
+                    FilledButton.icon(
+                      onPressed: _retryStartup,
+                      icon: const Icon(Icons.refresh_rounded),
+                      label: const Text('RETRY'),
+                    ),
+                    OutlinedButton(
+                      onPressed: () => Navigator.of(context).maybePop(),
+                      child: const Text('RETURN'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    ),
+  );
 
   Future<void> _recordChallenge(String id) async {
     try {
@@ -122,14 +192,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       return FutureBuilder<void>(
         future: _startup,
         builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Scaffold(
-              backgroundColor: const Color(0xFF05030D),
-              body: Center(
-                child: Text('Could not load local player profiles.'),
-              ),
-            );
-          }
+          if (_startupError != null) return _startupFailure(_startupError!);
+          if (snapshot.hasError) return _startupFailure(snapshot.error!);
           return const Scaffold(
             backgroundColor: Color(0xFF05030D),
             body: Center(child: CircularProgressIndicator()),

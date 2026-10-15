@@ -6,7 +6,7 @@
 > **Rule:** This file must not be used to revive removed features or to treat rejected prototype UX as approved.
 
 ## The active scope
-One-device host-configured multiplayer sessions with exactly four core game types: Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country (Flags); shared GameRuntime, robust clocks, Win Countdown, profiles, local content, settings, recovery and responsive visual themes. By the 2026-10-12 approved decision, Riddles and Memory are removed from the active product. Guess the Country's target is flag-only, spoken answer and host reveal/judgement; the old multiple-choice/typed candidate must be replaced.
+One-device host-configured multiplayer sessions with exactly four core game types: Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country (Flags); shared GameRuntime, robust clocks, Win Countdown, profiles, local content, settings, recovery and responsive visual themes. Option A animated character videos are the v1.0.0 direction, with a 200-character/400-unique-video offline target for Windows and Android; 360-degree 3D interaction is deferred. By the 2026-10-12 approved decision, Riddles and Memory are removed from the active product. Guess the Country's target is flag-only, spoken answer and host reveal/judgement; the old multiple-choice/typed candidate must be replaced.
 
 ## Hard exclusions
 1. **Mystery/investigation**: no “Solve the Mystery”, crime cases, suspects, evidence boards, detective content, mystery assets, module registration, tests or navigation.

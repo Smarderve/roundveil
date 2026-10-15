@@ -16,10 +16,11 @@
 - **PR-005 MUST:** Supported live host commands include pause/resume, result judgement where necessary and recovery; exact control placement PENDING UX approval.
 
 ### Players and content
-- **PR-010 MUST:** Placeholder names `Player 1`, `Player 2`, ...; rename/avatar customization by host.
+- **PR-010 MUST:** Placeholder names `Player 1`, `Player 2`, ...; hosts can rename saved player profiles and select complete stable-ID characters from the verified offline gallery. Do not expose the rejected hair/skin/clothing/accessory appearance editor.
 - **PR-011 MUST:** Saved and temporary guest participants; changes must not corrupt active session history.
 - **PR-012 MUST:** Offline local content and ability to select categories/difficulty; prevent repeated content according to selected policy.
 - **PR-013 SHOULD:** Private custom family questions/character photos and content packs; local by default.
+- **PR-014 MUST:** Option A is the v1.0.0 character-presentation direction: target 200 genuinely unique characters, each with its own visibly moving character-idle video and unique animated environment video, selectable as a functional profile and playable offline on Windows and Android. Never substitute static-image motion or describe video as 3D; true 360-degree interaction is deferred. Counts must come from validated manifest records and real runtime evidence; see `docs/avatars/`.
 
 ### Turn outcomes and timers
 - **PR-020 MUST:** A successful result starts Win Countdown **immediately**, without a blocking congratulation screen; when it expires play advances.

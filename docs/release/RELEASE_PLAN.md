@@ -20,6 +20,7 @@ Dev, Beta, Release flavors with separate identifiers, settings and clear version
 ## Release gate matrix
 - Tests pass on Windows and Android.
 - Real host-configured gameplay works offline.
+- Character release inventory contains 200 distinct functional profiles; each has a unique character-idle video and a unique background video, with checksums/provenance and offline playback evidence on Windows and Android. No 3D claim is made for video; 360-degree rotation remains deferred.
 - Shared countdown behavior and character reveal invariants verified.
 - Every shipped Guess the Country flag has a retained source revision/license record and offline native-ratio render check; territory inclusion policy is visible and versioned.
 - Mystery absent.
