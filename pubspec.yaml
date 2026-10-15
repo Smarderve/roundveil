@@ -70,6 +70,7 @@ flutter:
     - assets/brand/avatars/
     - assets/brand/avatars/characters/
     - assets/brand/game_modes/
+    - assets/brand/character_pictures/
 
   # Production assets are curated under assets/app/.
   # Design-reference screenshots are intentionally not bundled with the app.

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "id": "builtin-president-george-washington-1772",
+      "name": "George Washington",
+      "category": "Historical Presidents",
+      "assetPath": "assets/brand/character_pictures/Washington 1772.jpg",
+      "aliases": ["Washington"],
+      "hint": "First president of the United States; commanded the Continental Army during the American Revolution.",
+      "subjectType": "Historical president",
+      "difficulty": "Easy",
+      "description": "Portrait shows Washington in the uniform of a British Colonial Colonel, painted by Charles Willson Peale in 1772.",
+      "width": 2418,
+      "height": 3000,
+      "sha256": "b279678ca9db33c0078bd36324810326bd97ed58d3fecd3258cfd947deb4f59e",
+      "source": {
+        "title": "Washington in the Uniform of a British Colonial Colonel, Wikimedia Commons",
+        "url": "https://commons.wikimedia.org/wiki/File:Washington_1772.jpg",
+        "license": "Public domain (PD-Art; original 1772 painting)",
+        "attribution": "Charles Willson Peale (1741–1827)"
+      }
+    },
+    {
+      "id": "builtin-president-abraham-lincoln-1863",
+      "name": "Abraham Lincoln",
+      "category": "Historical Presidents",
+      "assetPath": "assets/brand/character_pictures/Abraham Lincoln, Sunday, November 8, 1863 LCCN2008680252.jpg",
+      "aliases": ["Lincoln", "Abe Lincoln"],
+      "hint": "U.S. president during the Civil War; issued the Emancipation Proclamation.",
+      "subjectType": "Historical president",
+      "difficulty": "Easy",
+      "description": "An 1863 portrait photograph by Alexander Gardner, held by the Library of Congress.",
+      "width": 5299,
+      "height": 6826,
+      "sha256": "9f24cb4d885f0e2e69ccabb08124f25dc6ce44bcc1b07b15a87b7f887a182289",
+      "source": {
+        "title": "Abraham Lincoln, Sunday, November 8, 1863, Library of Congress",
+        "url": "https://commons.wikimedia.org/wiki/File:Abraham_Lincoln,_Sunday,_November_8,_1863_LCCN2008680252.jpg",
+        "license": "Library of Congress: no known restrictions on publication; public domain photograph",
+        "attribution": "Alexander Gardner; Library of Congress Prints and Photographs Division"
+      }
+    }
+  ]
+}

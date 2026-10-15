@@ -30,6 +30,7 @@ void main() {
       addTearDown(() => temporary.delete(recursive: true));
       final repository = CharacterPictureRepository(
         directoryProvider: () async => temporary,
+        includeBundledImages: false,
       );
       final bytes = await _testPng();
       final first = await repository.addImageBytes(
@@ -46,6 +47,7 @@ void main() {
 
       final recreated = CharacterPictureRepository(
         directoryProvider: () async => temporary,
+        includeBundledImages: false,
       );
       final loaded = await recreated.loadAll();
       expect(loaded, hasLength(1));
@@ -73,6 +75,7 @@ void main() {
     addTearDown(() => temporary.delete(recursive: true));
     final repository = CharacterPictureRepository(
       directoryProvider: () async => temporary,
+      includeBundledImages: false,
     );
     expect(
       () => repository.addImageBytes(
@@ -91,6 +94,7 @@ void main() {
       addTearDown(() => temporary.delete(recursive: true));
       final repository = CharacterPictureRepository(
         directoryProvider: () async => temporary,
+        includeBundledImages: false,
       );
       final image = await _testPng();
       final package = Archive()
@@ -98,7 +102,7 @@ void main() {
         ..add(
           ArchiveFile.string(
             'manifest.json',
-            '{"schemaVersion":1,"items":[{"id":"hero-one","name":"Hero One","category":"Marvel","imageFilename":"hero.png","aliases":["Hero"],"hint":"A useful clue","source":{"title":"Local source","url":"https://example.test/hero","license":"Personal collection"}}]}',
+            '{"schemaVersion":1,"items":[{"id":"hero-one","name":"Hero One","category":"Marvel","imageFilename":"hero.png","aliases":["Hero"],"hint":"A useful clue","subjectType":"Fictional character","franchise":"Example series","description":"A sample description","source":{"title":"Local source","url":"https://example.test/hero","license":"Personal collection","attribution":"Example artist"}}]}',
           ),
         );
       final packageBytes = ZipEncoder().encodeBytes(package);
@@ -111,6 +115,10 @@ void main() {
       expect(loaded.category, 'Marvel');
       expect(loaded.aliases, ['Hero']);
       expect(loaded.sourceTitle, 'Local source');
+      expect(loaded.subjectType, 'Fictional character');
+      expect(loaded.franchise, 'Example series');
+      expect(loaded.description, 'A sample description');
+      expect(loaded.attribution, 'Example artist');
 
       final repeated = await repository.importPackageBytes(packageBytes);
       expect(repeated.imported, 0);
@@ -133,6 +141,7 @@ void main() {
     addTearDown(() => temporary.delete(recursive: true));
     final repository = CharacterPictureRepository(
       directoryProvider: () async => temporary,
+      includeBundledImages: false,
     );
     final package = Archive()
       ..add(ArchiveFile.bytes('../outside.png', await _testPng()))
@@ -144,5 +153,34 @@ void main() {
       throwsFormatException,
     );
     expect(await repository.loadAll(), isEmpty);
+  });
+
+  test('fresh installations seed verified bundled portraits offline', () async {
+    final temporary = await Directory.systemTemp.createTemp('rv-builtin-');
+    addTearDown(() => temporary.delete(recursive: true));
+    final repository = CharacterPictureRepository(
+      directoryProvider: () async => temporary,
+    );
+
+    final items = await repository.loadAll();
+    expect(items, hasLength(2));
+    expect(
+      items.map((item) => item.name),
+      containsAll(['George Washington', 'Abraham Lincoln']),
+    );
+    expect(items.every((item) => File(item.path).existsSync()), isTrue);
+    expect(
+      items.every((item) => item.width >= 640 && item.height >= 400),
+      isTrue,
+    );
+    expect(items.every((item) => item.license.isNotEmpty), isTrue);
+    expect(
+      items.every((item) => item.sourceUrl.startsWith('https://')),
+      isTrue,
+    );
+
+    final reloaded = await repository.loadAll();
+    expect(reloaded, hasLength(2));
+    expect(reloaded.map((item) => item.sha256).toSet(), hasLength(2));
   });
 }

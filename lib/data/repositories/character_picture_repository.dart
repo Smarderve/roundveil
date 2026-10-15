@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:archive/archive.dart';
 import 'package:crypto/crypto.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 
 class CharacterPicture {
   const CharacterPicture({
@@ -18,6 +19,13 @@ class CharacterPicture {
     this.sourceTitle = '',
     this.sourceUrl = '',
     this.license = '',
+    this.attribution = '',
+    this.subjectType = '',
+    this.franchise = '',
+    this.description = '',
+    this.difficulty = 'Mixed',
+    this.width = 0,
+    this.height = 0,
     this.sha256 = '',
   });
 
@@ -30,6 +38,13 @@ class CharacterPicture {
   final String sourceTitle;
   final String sourceUrl;
   final String license;
+  final String attribution;
+  final String subjectType;
+  final String franchise;
+  final String description;
+  final String difficulty;
+  final int width;
+  final int height;
   final String sha256;
 
   Map<String, Object?> toJson() => <String, Object?>{
@@ -42,6 +57,13 @@ class CharacterPicture {
     'sourceTitle': sourceTitle,
     'sourceUrl': sourceUrl,
     'license': license,
+    'attribution': attribution,
+    'subjectType': subjectType,
+    'franchise': franchise,
+    'description': description,
+    'difficulty': difficulty,
+    'width': width,
+    'height': height,
     'sha256': sha256,
   };
 
@@ -58,6 +80,13 @@ class CharacterPicture {
         sourceTitle: json['sourceTitle'] as String? ?? '',
         sourceUrl: json['sourceUrl'] as String? ?? '',
         license: json['license'] as String? ?? '',
+        attribution: json['attribution'] as String? ?? '',
+        subjectType: json['subjectType'] as String? ?? '',
+        franchise: json['franchise'] as String? ?? '',
+        description: json['description'] as String? ?? '',
+        difficulty: json['difficulty'] as String? ?? 'Mixed',
+        width: json['width'] as int? ?? 0,
+        height: json['height'] as int? ?? 0,
         sha256: json['sha256'] as String? ?? '',
       );
 }
@@ -79,10 +108,13 @@ class PicturePackageImportReport {
 /// Nothing is downloaded or uploaded. Importing copies the chosen local image
 /// into ROUNDVEIL's app-private data directory and retains optional provenance.
 class CharacterPictureRepository {
-  CharacterPictureRepository({Future<Directory> Function()? directoryProvider})
-    : _directoryProvider = directoryProvider ?? _applicationDataDirectory;
+  CharacterPictureRepository({
+    Future<Directory> Function()? directoryProvider,
+    this.includeBundledImages = true,
+  }) : _directoryProvider = directoryProvider ?? _applicationDataDirectory;
 
   final Future<Directory> Function() _directoryProvider;
+  final bool includeBundledImages;
 
   Future<Directory> get _libraryDirectory async {
     final root = await _directoryProvider();
@@ -99,16 +131,115 @@ class CharacterPictureRepository {
 
   Future<List<CharacterPicture>> loadAll() async {
     final file = await _indexFile;
-    if (!await file.exists()) return const <CharacterPicture>[];
-    final decoded = jsonDecode(await file.readAsString());
-    if (decoded is! Map<String, Object?> || decoded['items'] is! List) {
-      throw const FormatException('Character picture index is invalid.');
+    var items = <CharacterPicture>[];
+    if (await file.exists()) {
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map<String, Object?> || decoded['items'] is! List) {
+        throw const FormatException('Character picture index is invalid.');
+      }
+      items = (decoded['items']! as List<Object?>)
+          .map(
+            (item) => CharacterPicture.fromJson(item! as Map<String, Object?>),
+          )
+          .where((item) => File(item.path).existsSync())
+          .toList();
     }
-    final items = (decoded['items']! as List<Object?>)
-        .map((item) => CharacterPicture.fromJson(item! as Map<String, Object?>))
-        .where((item) => File(item.path).existsSync())
-        .toList(growable: false);
+    if (includeBundledImages) items = await _installBundledImages(items);
     return List<CharacterPicture>.unmodifiable(items);
+  }
+
+  Future<List<CharacterPicture>> _installBundledImages(
+    List<CharacterPicture> current,
+  ) async {
+    const manifestAsset = 'assets/brand/character_pictures/manifest.json';
+    final String manifestText;
+    try {
+      manifestText = await rootBundle.loadString(manifestAsset);
+    } on FlutterError {
+      return current;
+    }
+    final decoded = jsonDecode(manifestText);
+    if (decoded is! Map<String, Object?> ||
+        decoded['schemaVersion'] != 1 ||
+        decoded['items'] is! List<Object?>) {
+      throw const FormatException(
+        'Bundled character picture manifest is invalid.',
+      );
+    }
+    final result = current.toList();
+    final knownIds = result.map((item) => item.id).toSet();
+    final knownHashes = <String>{
+      for (final item in result) await _digestFor(item),
+    };
+    final library = await _libraryDirectory;
+    var changed = false;
+    for (final raw in decoded['items']! as List<Object?>) {
+      if (raw is! Map<String, Object?>) continue;
+      final id = raw['id'];
+      final assetPath = raw['assetPath'];
+      final name = raw['name'];
+      final category = raw['category'];
+      if (id is! String ||
+          name is! String ||
+          category is! String ||
+          assetPath is! String ||
+          !assetPath.startsWith('assets/brand/character_pictures/') ||
+          knownIds.contains(id)) {
+        continue;
+      }
+      final extension = assetPath.split('.').last.toLowerCase();
+      final asset = await rootBundle.load(assetPath);
+      final bytes = asset.buffer.asUint8List(
+        asset.offsetInBytes,
+        asset.lengthInBytes,
+      );
+      final dimensions = await _validatedDimensions(extension, bytes);
+      if (dimensions == null) continue;
+      final digest = sha256.convert(bytes).toString();
+      final expectedDigest = raw['sha256'] as String?;
+      if (expectedDigest != null &&
+          expectedDigest.isNotEmpty &&
+          expectedDigest.toLowerCase() != digest) {
+        continue;
+      }
+      final expectedWidth = raw['width'] as int?;
+      final expectedHeight = raw['height'] as int?;
+      if ((expectedWidth != null && expectedWidth != dimensions.$1) ||
+          (expectedHeight != null && expectedHeight != dimensions.$2)) {
+        continue;
+      }
+      if (!knownHashes.add(digest)) continue;
+      final source = raw['source'] as Map<String, Object?>? ?? const {};
+      final path = '${library.path}${Platform.pathSeparator}$id.$extension';
+      await File(path).writeAsBytes(bytes, flush: true);
+      result.add(
+        CharacterPicture(
+          id: id,
+          name: name,
+          path: path,
+          category: category,
+          aliases: (raw['aliases'] as List<Object?>? ?? const <Object?>[])
+              .whereType<String>()
+              .toList(growable: false),
+          hint: raw['hint'] as String? ?? '',
+          sourceTitle: source['title'] as String? ?? '',
+          sourceUrl: source['url'] as String? ?? '',
+          license: source['license'] as String? ?? '',
+          attribution: source['attribution'] as String? ?? '',
+          subjectType: raw['subjectType'] as String? ?? '',
+          franchise: raw['franchise'] as String? ?? '',
+          description: raw['description'] as String? ?? '',
+          difficulty: raw['difficulty'] as String? ?? 'Mixed',
+          width: dimensions.$1,
+          height: dimensions.$2,
+          sha256: digest,
+        ),
+      );
+      knownIds.add(id);
+      changed = true;
+    }
+    if (changed) await _writeIndex(result);
+    return result;
   }
 
   Future<List<CharacterPicture>> importImages({
@@ -117,6 +248,11 @@ class CharacterPictureRepository {
     String sourceTitle = '',
     String sourceUrl = '',
     String license = '',
+    String attribution = '',
+    String subjectType = '',
+    String franchise = '',
+    String description = '',
+    String difficulty = 'Mixed',
   }) async {
     final name = subjectName.trim();
     if (name.isEmpty) throw ArgumentError.value(name, 'subjectName');
@@ -141,6 +277,11 @@ class CharacterPictureRepository {
         sourceTitle: sourceTitle,
         sourceUrl: sourceUrl,
         license: license,
+        attribution: attribution,
+        subjectType: subjectType,
+        franchise: franchise,
+        description: description,
+        difficulty: difficulty,
       );
       if (item != null) imported++;
     }
@@ -160,6 +301,11 @@ class CharacterPictureRepository {
     String sourceTitle = '',
     String sourceUrl = '',
     String license = '',
+    String attribution = '',
+    String subjectType = '',
+    String franchise = '',
+    String description = '',
+    String difficulty = 'Mixed',
     String category = 'Uncategorized',
     List<String> aliases = const <String>[],
   }) async {
@@ -211,6 +357,13 @@ class CharacterPictureRepository {
       sourceTitle: sourceTitle.trim(),
       sourceUrl: sourceUrl.trim(),
       license: license.trim(),
+      attribution: attribution.trim(),
+      subjectType: subjectType.trim(),
+      franchise: franchise.trim(),
+      description: description.trim(),
+      difficulty: difficulty.trim(),
+      width: width,
+      height: height,
       sha256: digest,
     );
     await _writeIndex(<CharacterPicture>[...existing, item]);
@@ -363,6 +516,13 @@ class CharacterPictureRepository {
             sourceTitle: metadata['title'] as String? ?? '',
             sourceUrl: metadata['url'] as String? ?? '',
             license: metadata['license'] as String? ?? '',
+            attribution: metadata['attribution'] as String? ?? '',
+            subjectType: raw['subjectType'] as String? ?? '',
+            franchise: raw['franchise'] as String? ?? '',
+            description: raw['description'] as String? ?? '',
+            difficulty: raw['difficulty'] as String? ?? 'Mixed',
+            width: dimensions.$1,
+            height: dimensions.$2,
             sha256: digest,
           ),
         );
@@ -393,6 +553,13 @@ class CharacterPictureRepository {
             sourceTitle: pending.sourceTitle,
             sourceUrl: pending.sourceUrl,
             license: pending.license,
+            attribution: pending.attribution,
+            subjectType: pending.subjectType,
+            franchise: pending.franchise,
+            description: pending.description,
+            difficulty: pending.difficulty,
+            width: pending.width,
+            height: pending.height,
             sha256: pending.sha256,
           ),
         );
@@ -426,10 +593,15 @@ class CharacterPictureRepository {
         'imageFilename': filename,
         'aliases': item.aliases,
         'hint': item.hint,
+        'subjectType': item.subjectType,
+        'franchise': item.franchise,
+        'description': item.description,
+        'difficulty': item.difficulty,
         'source': <String, Object?>{
           'title': item.sourceTitle,
           'url': item.sourceUrl,
           'license': item.license,
+          'attribution': item.attribution,
         },
       });
     }

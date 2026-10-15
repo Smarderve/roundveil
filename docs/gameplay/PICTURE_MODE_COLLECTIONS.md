@@ -46,19 +46,49 @@ whether Win Countdown starts.
 
 ## Verified inventory
 
-As of 2026-10-14, **2 real subject images** were imported into the existing
-Android emulator's app-private library and used in a live Picture Mode session:
-Abraham Lincoln (1863 Library of Congress photograph) and George Washington
-(1772 Charles Willson Peale portrait). Both were high-resolution public-domain
-images from Wikimedia Commons and are kept in the user's local private package,
-not bundled in this repository. Repository-bundled Picture Mode subject count
-remains **0**. The remaining requested 758 entries are not populated; the
-760-entry target is incomplete. Tests use synthetic images only for importer
-processing and never count them as game content. Retain correct names, aliases,
-category and source notes in all package manifests. Do not bundle downloaded
-third-party collections in the public source repository without permission.
+As of 2026-10-15, the repository contains **2 bundled, authentic picture
+challenges** in `assets/brand/character_pictures/`: George Washington (Charles
+Willson Peale's 1772 portrait) and Abraham Lincoln (Alexander Gardner's 1863
+Library of Congress photograph). The sources identify the subjects and indicate
+public-domain/no-known-publication-restrictions status. Source URLs, attribution,
+license notes, clue context and aliases are in `manifest.json`; image dimensions
+and SHA-256 are calculated and validated when the collection is installed into
+the app-private offline library. The portraits are copied locally on first load,
+so game-time display does not require a network connection. See the [Washington
+Commons file page](https://commons.wikimedia.org/wiki/File:Washington_1772.jpg)
+and the [Lincoln Commons file page](https://commons.wikimedia.org/wiki/File:Abraham_Lincoln,_Sunday,_November_8,_1863_LCCN2008680252.jpg).
 
-Android runtime evidence (2400x1080 landscape emulator captures) is stored at
+The 760-entry requested target is still **incomplete**. Only two distinct
+subjects are bundled and both are in Historical Presidents; no Marvel, DC,
+Indian/Hollywood actor, Disney/DreamWorks, cartoon, footballer, or anime
+collection has been bundled by this batch. The previously imported emulator
+library also contained the same two identities; it is device-local evidence and
+is not counted as additional unique content. Tests use synthetic images only for
+importer processing and never count them as game content. Anime is proposed as
+an additional **100-entry** target (total proposed target: 860), pending product
+owner confirmation; it is not an approved count and has no bundled entries.
+
+| Collection | Current target | Bundled distinct subjects | Verified playable |
+|---|---:|---:|---:|
+| Indian actors and actresses | 100 | 0 | 0 |
+| Marvel characters | 100 | 0 | 0 |
+| DC characters | 100 | 0 | 0 |
+| Hollywood actors and movie characters | 100 | 0 | 0 |
+| Disney and DreamWorks characters | 200 | 0 | 0 |
+| Cartoon characters | 100 | 0 | 0 |
+| Footballers | 10 | 0 | 0 |
+| Historical presidents | 50 | 2 | 2 |
+| Anime (proposed) | 100 (not approved) | 0 | 0 |
+
+The package importer continues to support owner-supplied/private collections
+and retains source, attribution, subject type, franchise, description, clue,
+dimensions and content hash metadata. Future bundled packs must have per-file
+identity and reuse-rights verification; a category label or working URL alone
+is not rights clearance. Do not bundle recognizable copyrighted franchise
+artwork into publicly downloadable builds without permission.
+
+Android runtime evidence (2400x1080 landscape emulator captures) from the
+previous private-import batch is stored at
 `docs/evidence/picture_collections_avatars_2026-10-14/`. It shows the imported
 two-entry library, the turn-away phase, Lincoln displayed to clue-givers,
 Washington displayed for the next player, and advancement after host Correct.
