@@ -68,6 +68,22 @@ importer processing and never count them as game content. Anime is proposed as
 an additional **100-entry** target (total proposed target: 860), pending product
 owner confirmation; it is not an approved count and has no bundled entries.
 
+### 2026-10-15 content-production attempt
+
+This batch did **not** reach the 50-image milestone. Nineteen possible
+actor-photo records were identified from Commons; metadata queries returned
+their file pages, dimensions and license labels, but their images were not
+visually inspected, attribution was not finalized, and **zero** new image
+files were downloaded or added to the manifest. Wikimedia Commons returned HTTP 429
+(`Too many requests`) for direct image-file downloads, including a spaced
+retry; its response specifically requested use of thumbnail images rather
+than original files. Candidate subjects are therefore not included in any
+inventory or playable count. No restriction was bypassed and no alternate
+mirror was used. Resume only after the service's request window permits it,
+using Commons' documented thumbnail endpoint with conservative pacing; then
+decode each downloaded file and verify the output dimensions/hash before
+counting it. The available verified total remains **2**.
+
 | Collection | Current target | Bundled distinct subjects | Verified playable |
 |---|---:|---:|---:|
 | Indian actors and actresses | 100 | 0 | 0 |
