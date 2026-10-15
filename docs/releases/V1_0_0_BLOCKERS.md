@@ -5,7 +5,7 @@ Baseline `2f897156a6531de48a4da29ea98deb6401cef659`, audited 2026-10-15. All fea
 ## P0 — release blockers
 
 ### RLS-01 — Android app identity and signing
-- **Evidence:** `android/app/build.gradle.kts` declares `applicationId = "com.example.roundveil"`; release selects debug signing. Release APK build passed, but artifact was not installed/run.
+- **Evidence:** `android/app/build.gradle.kts` declares `applicationId = "com.example.roundveil"`; the release build type selects debug signing. The v1.0.0-alpha.1 debug APK installed and launched on the API 37 x86_64 emulator, but is not a production-signed release.
 - **Repro:** Inspect Gradle release config; inspect APK signature metadata.
 - **Cause:** No production package identity or protected signing configuration.
 - **Dependencies:** Owner chooses unique ID; protected key/secret-management and upgrade policy.
@@ -15,13 +15,13 @@ Baseline `2f897156a6531de48a4da29ea98deb6401cef659`, audited 2026-10-15. All fea
 - **Release blocker:** Yes. **Target:** v1.0.0.
 
 ### RLS-02 — Windows distributable and policy-approved runtime
-- **Evidence:** Release folder has 339 files / 143,878,684 bytes; no archive/installer or clean-machine test. Code Integrity events 3077/3033 named prior blocked `roundveil.exe` attempts under policy `0283ac0f-fff1-49ae-ada1-8a933130cad6`. A later debug app did launch and profile flows were operated.
-- **Repro:** Prior event logs contain executable path and policy; no packaged clean test exists.
-- **Cause:** No distributable packaging/signing and managed policy acceptance unverified.
+- **Evidence:** From source commit `11b0264183e7d1ccc34e48e7b87129f7d86a9b89`, Windows Release compiled and produced a 123,475,368-byte portable test ZIP (SHA-256 `cf26c9f0c9667423c89f5cc9701d54cb3d6e7081076ebf0b19b98cb877c0ee82`). Extraction succeeded. Launching its `roundveil.exe` was blocked. Fresh Code Integrity events 3077 and 3033 at 2026-10-15 12:30 named that exact extracted executable and policy `0283ac0f-fff1-49ae-ada1-8a933130cad6`.
+- **Repro:** Extract `build/release-candidates/ROUNDVEIL-Windows-v1.0.0-alpha.1-test.zip` and launch `roundveil.exe`; Windows reports “An Application Control policy has blocked this file.”
+- **Cause:** The managed Enterprise signing-level policy rejects this unsigned Release executable. This is not a compile or missing-DLL failure.
 - **Dependencies:** Admin/IT-approved signer or test host, clean Windows VM, package-format decision.
-- **Work:** Produce ZIP or signed installer with exe, Flutter DLL, data and native dependencies. Do not weaken/bypass security.
+- **Work:** Keep the ZIP as a local test candidate. Obtain an organization-approved signing identity and policy route or an approved Windows test host. Do not weaken/bypass security.
 - **Acceptance:** Download/extract/install, launch offline, play, persist/restart and uninstall on clean approved Windows; no missing DLL/assets; checksum and SHA recorded.
-- **Test:** Release build, package manifest, clean VM runtime, Code Integrity review.
+- **Test:** Release build and ZIP manifest pass; packaged runtime is blocked pending approved signing/test environment.
 - **Release blocker:** Yes. **Target:** v1.0.0.
 
 ### GAME-01 — Current mixed scheduling has no post-fix device proof
@@ -37,7 +37,7 @@ Baseline `2f897156a6531de48a4da29ea98deb6401cef659`, audited 2026-10-15. All fea
 ### GAME-03 — Correct-answer Win Countdown timing
 - **Prior evidence:** Correct answers passed through a 500 ms `scoreAward` phase before the configured countdown.
 - **Correction:** Removed that intermediate phase. The controller now enters `winCountdown` and sets its configured seconds in the same synchronous answer-resolution call. Correct/points feedback is displayed on the countdown screen.
-- **Automated verification:** Controller and compact-landscape widget tests pass; full current-turn device timing remains pending.
+- **Verification:** Full Flutter tests pass; the alpha.1 debug APK showed countdown `10` and `+1 POINTS` in an Android screenshot captured about 350 ms after submitting the correct answer. Windows timing could not be tested because Application Control blocked the packaged executable.
 - **Release blocker:** Closed in source; keep live acceptance under GAME-01/GAME-02. **Target:** v1.0.0.
 
 ### GAME-02 — Release-included formats not individually accepted

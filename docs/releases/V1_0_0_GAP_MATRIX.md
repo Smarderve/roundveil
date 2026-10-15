@@ -25,7 +25,7 @@
 | G-17 | Object Picture, 10,000 | No active module/assets | Absent; outside exact four-module lineup; decision needed | Registry | Scope gate |
 | G-18 | Mixed same format per round, different challenge/player | Source + tests updated | Latest device verification absent; historical pre-fix screenshots contradict | Scheduler/runtime | P0 |
 | G-19 | Full match/results/replay | Code and widget coverage | No latest device full replay evidence | Results/controller | P1 |
-| G-20 | Correct → immediate configured Win Countdown | Controller enters `winCountdown` synchronously and preserves correct/points feedback on that screen | Automated tests verify immediate state and configured seconds; live platform timing acceptance remains open | Match controller/UI | FIXED IN SOURCE; runtime QA pending |
+| G-20 | Correct → immediate configured Win Countdown | Controller enters `winCountdown` synchronously and preserves correct/points feedback on that screen | Automated tests pass; Android alpha.1 runtime showed `10` and `+1 POINTS` within 350 ms after answer; Windows execution remains blocked by policy | Match controller/UI | ANDROID VERIFIED; WINDOWS BLOCKED |
 | G-21 | Correct scoring/reward once | Controller/repository tests | Full multi-match device acceptance missing | Score/reward repos | P1 |
 | G-22 | Per-player useful hints | Default 10; stable IDs | Weak/repeated hint text and incomplete device proof | Hints/content | P1 |
 | G-23 | Wrong/timeout progression | Code/tests exist | Cross-format hardware acceptance incomplete | Match controller | P1 |
@@ -61,17 +61,17 @@
 | O-01 | Complete offline play | Local content; historic Wi-Fi-off flag test | No full fresh-install airplane-mode suite | App/assets | P1 |
 | O-02 | Offline Picture | Private import repository | Fresh install has no images | Picture content | P1 |
 | T-01 | Analyze/tests | Clean; 95 tests passed (2026-10-15) | Not full gameplay acceptance; runtime coverage remains separate | Flutter tests | PASS with limitation |
-| T-02 | Android debug runtime | Emulator x86_64, API37, landscape | Not release/physical/ARM64 renderer test | Android | Partial PASS |
-| T-03 | Windows debug runtime | Actual app/profile flows launched | Prior policy block; no clean packaged release | Windows | Partial PASS |
+| T-02 | Android debug runtime | v1.0.0-alpha.1 debug APK installed/launched on API37 x86_64 landscape; Quiz answer showed 10-second Win Countdown and +1 points; process remained active and advanced | Not production-signed, physical or ARM64 renderer test; no full session completed | Android | PASS for tested flow |
+| T-03 | Windows packaged runtime | Release build and ZIP extraction passed | Launch blocked by fresh Code Integrity 3077/3033 under policy `0283ac0f-fff1-49ae-ada1-8a933130cad6`; approved signer/host still required | Windows | BLOCKED |
 | R-01 | Android release APK | Build succeeds; 168,351,268 bytes | Debug signing; not installed/run | Gradle | P0 |
 | R-02 | Android app ID | `com.example.roundveil` | Placeholder identity | Gradle | P0 |
 | R-03 | Protected Android key | Debug signer used | No release key setup | Signing/CI | P0 |
-| R-04 | Android landscape | `sensorLandscape` | Release runtime still needs test | Manifest | P1 |
-| R-05 | Windows release build | 339 files/143,878,684 bytes | Build only; no ZIP/installer/clean test | Windows runner | P0 |
+| R-04 | Android landscape | `sensorLandscape`; alpha.1 debug APK ran in landscape on API37 emulator | Production release runtime still needs test | Manifest | PARTIAL PASS |
+| R-05 | Windows release build | Release folder compiled and packaged into a 123,475,368-byte local test ZIP from commit `11b0264` | Extracts successfully; does not run under current Application Control policy | Windows runner | PARTIAL / P0 open |
 | R-06 | Approved Windows signing/runtime | Debug run passed here; 3077/3033 historical blocks | Need approved signer/test environment; no bypass | Code Integrity | P0 |
 | R-07 | Same-revision artifacts | Local script builds from a clean `git archive HEAD` and writes source SHA, artifact type, size and SHA-256 | Scripted Windows portable Release ZIP and Android debug APK are local test candidates only; no publishing, protected APK signing or packaged runtime certification | Build/release | PARTIAL |
 | R-08 | GitHub release | 0 releases, no tags | No downloadable artifacts, workflow or `gh` CLI | GitHub | P0 |
-| R-09 | Portable Windows dependencies | Release folder has exe/DLL/data | Not archived or clean-tested | Packaging | P0 |
+| R-09 | Portable Windows dependencies | ZIP contains executable, Flutter runtime, data and plugin DLLs; archive extraction passed | Packaged app cannot be runtime-tested on this policy-managed host | Packaging | PARTIAL / P0 open |
 | R-10 | Native ARM64 renderer | x86_64 translation attempted only | Native device test absent | Isolated renderer | P2 unless v1 gate |
 
 ## Counting rules

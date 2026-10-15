@@ -9,7 +9,7 @@ Run from the repository with Flutter available on `PATH`, or pass its path expli
   -FlutterPath 'C:\path\to\flutter\bin\flutter.bat'
 ```
 
-Outputs go under `build/release-candidates/` by default:
+Outputs go under `build/release-candidates/` by default. The metadata field `runtimeVerifiedByBuildScript` remains false because compilation and packaging are not runtime verification; record any subsequent manual runtime result separately.
 
 - `ROUNDVEIL-Windows-v1.0.0-alpha.1-test.zip`: Windows Release-mode portable folder, including executable, Flutter runtime, bundled assets and plugin DLLs.
 - `ROUNDVEIL-Android-v1.0.0-alpha.1-debug.apk`: installable debug APK. It is debug-signed and is not a production release.

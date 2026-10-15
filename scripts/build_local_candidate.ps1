@@ -100,7 +100,8 @@ try {
         product = 'ROUNDVEIL'
         version = $VersionLabel
         sourceCommit = $commit
-        artifactType = 'Windows portable test package; Release build; runtime not verified by this script'
+        artifactType = 'Windows portable test package; Release build'
+        runtimeVerifiedByBuildScript = $false
         builtUtc = [DateTime]::UtcNow.ToString('o')
     }
     $windowsMetadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $stagingPath 'ROUNDVEIL_BUILD_METADATA.json') -Encoding utf8
@@ -116,17 +117,18 @@ try {
         androidVersionName = $androidBuildName
         flutterBuildNumber = $buildNumber
         builtUtc = [DateTime]::UtcNow.ToString('o')
+        runtimeVerification = $null
         windows = [ordered]@{
             file = [IO.Path]::GetFileName($windowsZip)
             kind = 'Portable Release-mode test ZIP; not a signed installer'
-            runtimeVerified = $false
+            runtimeVerifiedByBuildScript = $false
             sha256 = (Get-FileHash -LiteralPath $windowsZip -Algorithm SHA256).Hash.ToLowerInvariant()
             bytes = (Get-Item -LiteralPath $windowsZip).Length
         }
         android = [ordered]@{
             file = [IO.Path]::GetFileName($androidApk)
             kind = 'Debug APK; debug signing; not a production release'
-            runtimeVerified = $false
+            runtimeVerifiedByBuildScript = $false
             sha256 = (Get-FileHash -LiteralPath $androidApk -Algorithm SHA256).Hash.ToLowerInvariant()
             bytes = (Get-Item -LiteralPath $androidApk).Length
         }

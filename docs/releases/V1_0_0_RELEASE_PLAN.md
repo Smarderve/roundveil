@@ -31,7 +31,7 @@ In parallel after Gate 0, inventory validated unique content by subject/difficul
 5. Install exact APK on clean emulator and physical supported Android; test offline play, lifecycle, upgrade, profiles and migrations.
 6. Inspect package identity, permissions, signer and logs.
 
-**Current blockers:** placeholder `com.example.roundveil`; release uses debug signing; release APK not installed/run. **Exit:** approved identity/signer, physical install/upgrade/runtime/offline pass.
+**Current blockers:** placeholder `com.example.roundveil`; release uses debug signing. The alpha.1 debug APK installed/launched on API 37 x86_64 and the Quiz answer → countdown interaction was verified; a production release APK was not built or tested. **Exit:** approved identity/signer, physical install/upgrade/runtime/offline pass.
 
 ## Gate 4 — Windows package
 
@@ -41,7 +41,7 @@ In parallel after Gate 0, inventory validated unique content by subject/difficul
 4. Test outside dev checkout on a clean policy-approved Windows VM/user; launch, play offline, resize, keyboard/mouse, persistence, update and uninstall.
 5. Record Code Integrity/missing DLL issue exactly; do not bypass policy.
 
-**Current blockers:** no archive/installer or clean runtime test; prior Code Integrity blocks (although debug runtime passed in current dev environment). **Exit:** complete package passes clean approved-machine test.
+**Current blockers:** local portable test ZIP now exists and extracts, but launching its executable is blocked by fresh Code Integrity 3077/3033 events under policy `0283ac0f-fff1-49ae-ada1-8a933130cad6`. Obtain an approved signer or test host; do not modify security policy. **Exit:** complete package passes a clean approved-machine test.
 
 ## Gate 5 — RC and authorized GitHub release
 
