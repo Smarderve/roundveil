@@ -48,9 +48,8 @@ void main() {
         );
         roundPlayers.add(state.activePlayer.id);
         _answerCorrectly(match);
-        expect(match.state.phase, MatchPhase.scoreAward);
-        match.beginWinCountdown();
         expect(match.state.phase, MatchPhase.winCountdown);
+        expect(match.state.secondsRemaining, configuration.winCountdownSeconds);
         match.completeCountdown();
       }
 
@@ -72,7 +71,11 @@ void main() {
         1,
       ]);
       final persisted = await profiles.loadAll();
-      expect(persisted.map((profile) => profile.hintCredits), <int>[15, 13, 11]);
+      expect(persisted.map((profile) => profile.hintCredits), <int>[
+        15,
+        13,
+        11,
+      ]);
       match.dispose();
     },
   );
@@ -100,7 +103,7 @@ void main() {
         match.beginChallenge();
         expect(challengeIds.add(match.state.challenge.id), isTrue);
         _answerCorrectly(match);
-        match.beginWinCountdown();
+        expect(match.state.phase, MatchPhase.winCountdown);
         match.completeCountdown();
       }
       expect(challengeIds, hasLength(24));
@@ -146,7 +149,7 @@ void main() {
         expect(state.challenge.choices, <String>['True', 'False']);
       }
       _answerCorrectly(match);
-      match.beginWinCountdown();
+      expect(match.state.phase, MatchPhase.winCountdown);
       match.completeCountdown();
     }
     expect(formatByRound.length, 4);
@@ -186,7 +189,7 @@ void main() {
       expect(match.state.challenge.moduleId, isNot('quiz'));
       expect(challengeIds.add(match.state.challenge.id), isTrue);
       _answerCorrectly(match);
-      match.beginWinCountdown();
+      expect(match.state.phase, MatchPhase.winCountdown);
       match.completeCountdown();
     }
     expect(match.formatSchedule.toSet(), configuration.roundFormatIds.toSet());
@@ -238,9 +241,8 @@ void main() {
     expect(match.state.phase, MatchPhase.awaitingJudgement);
     expect(match.state.challenge.imageFilePath, picture.imageFilePath);
     match.judge(correct: true);
-    expect(match.state.phase, MatchPhase.scoreAward);
-    match.beginWinCountdown();
     expect(match.state.phase, MatchPhase.winCountdown);
+    expect(match.state.secondsRemaining, configuration.winCountdownSeconds);
     match.dispose();
   });
 

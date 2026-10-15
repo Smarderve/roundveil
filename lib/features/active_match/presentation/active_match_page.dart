@@ -205,7 +205,10 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       animation: match,
       builder: (context, _) {
         if (match.state.phase == MatchPhase.winCountdown) {
-          return _countdownScreen(match.state.secondsRemaining);
+          return _countdownScreen(
+            match.state.secondsRemaining,
+            pointsAwarded: match.state.pointsAwarded,
+          );
         }
         final showGameplayChrome =
             match.state.phase != MatchPhase.complete &&
@@ -257,55 +260,92 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     );
   }
 
-  Widget _countdownScreen(int seconds) => Scaffold(
-    backgroundColor: const Color(0xFF030916),
-    body: SafeArea(
-      child: Stack(
-        fit: StackFit.expand,
-        children: <Widget>[
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: RadialGradient(
-                center: Alignment(0, -.08),
-                radius: .9,
-                colors: <Color>[
-                  Color(0xFF162E4A),
-                  Color(0xFF091626),
-                  Color(0xFF030916),
-                ],
-              ),
-            ),
-          ),
-          Center(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 280),
-              transitionBuilder: (child, animation) => ScaleTransition(
-                scale: CurvedAnimation(
-                  parent: animation,
-                  curve: Curves.easeOut,
-                ),
-                child: FadeTransition(opacity: animation, child: child),
-              ),
-              child: Text(
-                '$seconds',
-                key: ValueKey<int>(seconds),
-                style: TextStyle(
-                  color: seconds == 0 ? const Color(0xFFFF963D) : Colors.white,
-                  fontSize: MediaQuery.sizeOf(context).height * .42,
-                  height: .9,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -2,
-                  shadows: const <Shadow>[
-                    Shadow(color: Color(0x9958D7FF), blurRadius: 42),
-                  ],
+  Widget _countdownScreen(int seconds, {required int pointsAwarded}) =>
+      Scaffold(
+        backgroundColor: const Color(0xFF030916),
+        body: SafeArea(
+          child: Stack(
+            fit: StackFit.expand,
+            children: <Widget>[
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: Alignment(0, -.08),
+                    radius: .9,
+                    colors: <Color>[
+                      Color(0xFF162E4A),
+                      Color(0xFF091626),
+                      Color(0xFF030916),
+                    ],
+                  ),
                 ),
               ),
-            ),
+              Center(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 280),
+                        transitionBuilder: (child, animation) =>
+                            ScaleTransition(
+                              scale: CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOut,
+                              ),
+                              child: FadeTransition(
+                                opacity: animation,
+                                child: child,
+                              ),
+                            ),
+                        child: Text(
+                          '$seconds',
+                          key: ValueKey<int>(seconds),
+                          style: TextStyle(
+                            color: seconds == 0
+                                ? const Color(0xFFFF963D)
+                                : Colors.white,
+                            fontSize: MediaQuery.sizeOf(context).height * .42,
+                            height: .9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -2,
+                            shadows: const <Shadow>[
+                              Shadow(color: Color(0x9958D7FF), blurRadius: 42),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 18),
+                      const Text(
+                        'CORRECT',
+                        style: TextStyle(
+                          color: Color(0xFF6EE7FF),
+                          fontSize: 18,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 3,
+                        ),
+                      ),
+                      if (pointsAwarded > 0) ...<Widget>[
+                        const SizedBox(height: 5),
+                        Text(
+                          '+$pointsAwarded POINTS',
+                          style: const TextStyle(
+                            color: Color(0xFFFF963D),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
   Widget _header(RoundveilBrandTokens tokens) => Row(
     children: <Widget>[
@@ -375,9 +415,6 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     if (state.phase == MatchPhase.playerIntro) return _playerIntro(tokens);
     if (state.phase == MatchPhase.paused) {
       return _centerMessage('MATCH PAUSED', 'Resume when your squad is ready.');
-    }
-    if (state.phase == MatchPhase.scoreAward) {
-      return _scoreAward(tokens);
     }
     return _challenge(tokens);
   }
@@ -547,46 +584,6 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _scoreAward(RoundveilBrandTokens tokens) {
-    final compact = MediaQuery.sizeOf(context).height < 500;
-    return Center(
-      child: FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: <Widget>[
-            Text(
-              'CORRECT',
-              style: TextStyle(
-                color: const Color(0xFF6EE7FF),
-                fontSize: compact ? 18 : 28,
-                letterSpacing: compact ? 2 : 3,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            SizedBox(height: compact ? 2 : 8),
-            TweenAnimationBuilder<double>(
-              tween: Tween<double>(begin: 0, end: 1),
-              duration: const Duration(milliseconds: 420),
-              builder: (context, value, child) => Transform.translate(
-                offset: Offset(0, (compact ? -12 : -24) * value),
-                child: Opacity(opacity: value, child: child),
-              ),
-              child: Text(
-                '+${_activeMatch.state.pointsAwarded}',
-                style: TextStyle(
-                  color: tokens.orange,
-                  fontSize: compact ? 40 : 62,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-            ),
-          ],
         ),
       ),
     );

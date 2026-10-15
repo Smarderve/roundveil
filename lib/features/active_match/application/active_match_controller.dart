@@ -15,7 +15,6 @@ enum MatchPhase {
   challenge,
   turnAway,
   awaitingJudgement,
-  scoreAward,
   winCountdown,
   paused,
   completing,
@@ -114,7 +113,6 @@ class ActiveMatchController extends ChangeNotifier {
     List<OfflineChallenge> pictureChallenges = const <OfflineChallenge>[],
     this.onChallengeDrawn,
     this.introductionDuration = const Duration(milliseconds: 1800),
-    this.scoreAwardDuration = const Duration(milliseconds: 500),
   }) : _configuration = configuration,
        _profiles = Map<String, PlayerProfile>.from(
          profiles ??
@@ -189,7 +187,6 @@ class ActiveMatchController extends ChangeNotifier {
   final PlayerProfileRepository? profileRepository;
   final String matchId;
   final Duration introductionDuration;
-  final Duration scoreAwardDuration;
   final int challengeSeconds;
   final int winCountdownSeconds;
   final bool scoringEnabled;
@@ -447,18 +444,6 @@ class ActiveMatchController extends ChangeNotifier {
     _resolve(false, timedOut: true);
   }
 
-  void beginWinCountdown() {
-    if (_state.phase != MatchPhase.scoreAward) return;
-    _set(
-      _copy(
-        phase: MatchPhase.winCountdown,
-        secondsRemaining: winCountdownSeconds,
-      ),
-    );
-    _emit(GameAudioCue.winCountdownStart);
-    _runCountdownTimer();
-  }
-
   void pause() {
     if (_state.phase == MatchPhase.complete ||
         _state.phase == MatchPhase.completing ||
@@ -484,8 +469,6 @@ class ActiveMatchController extends ChangeNotifier {
       case MatchPhase.challenge:
       case MatchPhase.awaitingJudgement:
         _runChallengeTimer();
-      case MatchPhase.scoreAward:
-        _scheduleWinCountdown();
       case MatchPhase.winCountdown:
         _runCountdownTimer();
       case MatchPhase.turnAway:
@@ -541,22 +524,18 @@ class ActiveMatchController extends ChangeNotifier {
     }
     _set(
       _copy(
-        phase: MatchPhase.scoreAward,
+        phase: MatchPhase.winCountdown,
         answerVisible: true,
         feedback: 'CORRECT',
         scores: scores,
         pointsAwarded: awarded,
+        secondsRemaining: winCountdownSeconds,
       ),
     );
     _emit(GameAudioCue.correctAnswer);
     if (awarded > 0) _emit(GameAudioCue.pointsAwarded);
-    _scheduleWinCountdown();
-  }
-
-  void _scheduleWinCountdown() {
-    _timer?.cancel();
-    if (!enableTimers) return;
-    _timer = Timer(scoreAwardDuration, beginWinCountdown);
+    _emit(GameAudioCue.winCountdownStart);
+    _runCountdownTimer();
   }
 
   void _advance() {

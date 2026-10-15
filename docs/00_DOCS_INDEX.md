@@ -89,6 +89,9 @@
 
 ### Release
 - [`docs/release/RELEASE_PLAN.md`](release/RELEASE_PLAN.md)
+- [`docs/releases/LOCAL_CANDIDATE_BUILDS.md`](releases/LOCAL_CANDIDATE_BUILDS.md)
+- [`docs/releases/V1_0_0_GAP_MATRIX.md`](releases/V1_0_0_GAP_MATRIX.md)
+- [`docs/releases/V1_0_0_BLOCKERS.md`](releases/V1_0_0_BLOCKERS.md)
 
 ### Decisions
 - [`docs/decisions/0001-use-flutter.md`](decisions/0001-use-flutter.md)
