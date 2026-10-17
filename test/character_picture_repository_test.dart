@@ -163,7 +163,7 @@ void main() {
     );
 
     final items = await repository.loadAll();
-    expect(items, hasLength(12));
+    expect(items, hasLength(50));
     expect(
       items.map((item) => item.name),
       containsAll([
@@ -179,11 +179,54 @@ void main() {
         'Andy Whitfield',
         'Zoe Saldana',
         'Karen Gillan',
+        'Aamir Khan',
+        'Amitabh Bachchan',
+        'Aishwarya Rai Bachchan',
+        'Deepika Padukone',
+        'Katrina Kaif',
+        'Rajinikanth',
+        'Ranveer Singh',
+        'Vidya Balan',
+        'Rani Mukerji',
+        'Anya Singh',
+        'Mammootty',
+        'Kareena Kapoor Khan',
+        'Kamal Haasan',
+        'Akshay Kumar',
+        'Kajol',
+        'Sonam Kapoor',
+        'Sushmita Sen',
+        'Lionel Messi',
+        'Cristiano Ronaldo',
+        'Neymar',
+        'Kylian Mbappé',
+        'Alex Morgan',
+        'Mohamed Salah',
+        'Pelé',
+        'David Villa',
+        'Marta',
+        'Zinedine Zidane',
+        'Tom Hanks',
+        'Dwayne Johnson',
+        'Emma Watson',
+        'Meryl Streep',
+        'Robert Downey Jr.',
+        'Jimmy Carter',
+        'George W. Bush',
+        'Donald Trump',
+        'Joe Biden',
+        'Lyndon B. Johnson',
+        'Gerald Ford',
       ]),
     );
     expect(items.every((item) => File(item.path).existsSync()), isTrue);
     expect(
-      items.every((item) => item.width >= 640 && item.height >= 400),
+      items.every(
+        (item) =>
+            item.width >= 400 &&
+            item.height >= 400 &&
+            (item.width >= 640 || item.height >= 640),
+      ),
       isTrue,
     );
     expect(items.every((item) => item.license.isNotEmpty), isTrue);
@@ -193,7 +236,34 @@ void main() {
     );
 
     final reloaded = await repository.loadAll();
-    expect(reloaded, hasLength(12));
-    expect(reloaded.map((item) => item.sha256).toSet(), hasLength(12));
+    expect(reloaded, hasLength(50));
+    expect(reloaded.map((item) => item.sha256).toSet(), hasLength(50));
+    expect(
+      reloaded.where((item) => item.category == 'Indian Actors and Actresses'),
+      hasLength(17),
+    );
+    expect(
+      reloaded.where((item) => item.category == 'Footballers'),
+      hasLength(10),
+    );
+    expect(
+      reloaded.where((item) => item.category == 'Hollywood Actors'),
+      hasLength(14),
+    );
+    expect(
+      reloaded.where((item) => item.category == 'Historical Presidents'),
+      hasLength(8),
+    );
+    expect(
+      reloaded.where((item) => item.category == 'Athletes and Entertainers'),
+      hasLength(1),
+    );
+    expect(
+      reloaded.every(
+        (item) =>
+            item.sourceUrl.startsWith('https://') && item.license.isNotEmpty,
+      ),
+      isTrue,
+    );
   });
 }

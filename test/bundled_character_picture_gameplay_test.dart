@@ -63,12 +63,21 @@ void main() {
         match.revealCharacterAfterPlayerTurnsAway();
         expect(match.state.phase, MatchPhase.awaitingJudgement);
         expect(match.state.challenge.imageFilePath, isNotNull);
-        match.judge(correct: true);
-        expect(match.state.phase, MatchPhase.winCountdown);
-        match.completeCountdown();
+        final correct = turn.isEven;
+        match.judge(correct: correct);
+        if (correct) {
+          expect(match.state.phase, MatchPhase.winCountdown);
+          match.completeCountdown();
+        } else {
+          expect(match.state.phase, isNot(MatchPhase.winCountdown));
+        }
       }
       expect(seenIds, hasLength(pictures.length));
+      expect(match.state.correctAnswers.values.single, pictures.length ~/ 2);
+      expect(match.state.wrongAnswers.values.single, pictures.length ~/ 2);
       expect(match.state.phase, MatchPhase.complete);
+      expect(match.state.rankings.single.correctAnswers, pictures.length ~/ 2);
+      expect(match.state.rankings.single.wrongAnswers, pictures.length ~/ 2);
     },
   );
 }

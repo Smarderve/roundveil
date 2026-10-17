@@ -44,93 +44,92 @@ the image stays visible for the clue/guess phases, the subject name remains
 hidden until host judgement, and the existing Correct/Wrong flow decides
 whether Win Countdown starts.
 
-## Verified inventory
+## Verified inventory — 2026-10-17
 
-As of 2026-10-15, the repository contains **12 bundled, distinct picture
-challenges** in `assets/brand/character_pictures/`: George Washington and
-Abraham Lincoln (Historical Presidents); Sylvester Stallone, Bruce Willis,
-Tina Fey, Charlie Hunnam, Garrett Hedlund, Charlie Day, Andy Whitfield, Zoe
-Saldana and Karen Gillan (Hollywood Actors); and Stone Cold Steve Austin
-(Athletes and Entertainers). The ten new images are direct Flickr-hosted
-photographs by Gage Skidmore at 1024 × 683. Each Flickr photo page was checked
-individually and states CC BY-SA 2.0; creator attribution and per-image links
-are recorded in `manifest.json`. See [Gage Skidmore's Flickr photo of Sylvester
-Stallone](https://www.flickr.com/photos/22007612@N05/4840620570) and the
-[Creative Commons BY-SA 2.0 terms](https://creativecommons.org/licenses/by-sa/2.0/).
-Openverse was used to discover Flickr entries, not as a license authority;
-Openverse explicitly cautions that license metadata may be inaccurate, so the
-underlying Flickr pages were checked individually. These original Flickr
-variants were bundled without edits. The two earlier portraits retain their
-public-domain/no-known-publication-restrictions source records. All source URLs,
-attributions, license notes, clues, dimensions and SHA-256 hashes are kept in
-the manifest; the existing first-install path copies bundled images into the
-device-private offline library.
+The repository now contains **50 bundled, distinct person-photo challenges**.
+The first 50-image milestone is met by playable records, not candidate URLs or
+test fixtures. Category counts are: 17 Indian actors and actresses, 10
+footballers, 14 Hollywood actors, 8 historical presidents, and 1 wrestler /
+entertainer. The machine-readable records, dimensions, SHA-256 values, source
+pages, license notes, hints, aliases and descriptions are in
+[`manifest.json`](../../assets/brand/character_pictures/manifest.json); the
+complete readable attribution list is in
+[`PICTURE_MODE_CREDITS.md`](PICTURE_MODE_CREDITS.md).
 
-The 760-entry requested target is still **incomplete**: 748 additional entries
-are needed. The first 50-image milestone is also incomplete: 38 additional
-distinct entries are needed. No footballers, Indian actors, Marvel, DC, Disney/DreamWorks,
-cartoon or anime entries are included. The ten new faces make Picture Mode more
-usable but do not satisfy the requested 50-image first milestone. The earlier
-19 Wikimedia Commons candidates remain unqualified and uncounted: Commons
-returned HTTP 429 and asked for thumbnail requests, which this batch did not
-retry. The previously imported emulator library only repeated the two original
-subjects and is not counted. Synthetic test images are not game content. Anime
-remains a proposed additional **100-entry** target (proposed total 860), pending
-owner approval; it is not approved or populated.
+The 38 additions use multiple source/creator groups: Bollywood Hungama event
+photos and other independent Indian portraits; match and portrait photography
+by Fanny Schertzer, Jan S0L0, Antoine Dellenbach, Biser Todorov, Jamie Smed,
+Saiflee100, John Mathew Smith, Carlos Delgado and Walterlan Papetti; actor
+portraits by Dick Thomas Johnson, David Shankbone, Neon Tommy and Alan Light;
+a U.S. Marine Corps photo by Sgt. Valerie C. Eppler; and official White House
+photos credited to their recorded creators. Commons file pages were checked
+for license labels and restrictions, and images with explicit personality
+rights warnings were excluded. CC BY and CC BY-SA terms, creator attribution,
+and each original file page are recorded per image. The downloaded portraits
+were visually inspected for identity and basic image-to-subject match. Actor
+photos are labeled as actor identities; the actor's roles appear only as
+optional context and are not misrepresented as the pictured fictional
+characters.
 
-### 2026-10-15 content-production attempt
+Each of the 50 bundled files was decoded and passed the repository's existing
+minimum image gate (both dimensions at least 400 pixels and one dimension at
+least 640 pixels). The repository test validates that every path is present,
+all 50 hashes are unique, and first-install seeding loads the set without a
+network. This is a first collection milestone only: 710 further entries are
+needed to reach the approved 760-person/character target. The requested Marvel,
+DC, Disney/DreamWorks, and cartoon collections remain empty; this batch adds
+no licensed fictional-franchise artwork. The proposed anime extension remains
+outside the current 760 target unless separately approved. Locally supplied
+private packs remain supported for material the owner is permitted to use.
 
-The Commons attempt delivered zero images: nineteen possible actor-photo
-records were identified, but their images were not visually inspected or added.
-Direct image downloads returned HTTP 429 even after a spaced retry; the response
-asked for Commons thumbnails. No workaround or alternate mirror was used.
-These candidates remain unqualified and uncounted. Collection development
-continued through Flickr, an independent source, and yielded the ten verified
-images listed above. Return to Commons only when its request window permits,
-using its documented thumbnails and conservative pacing.
-
-| Collection | Current target | Bundled distinct subjects | Verified playable |
+| Collection | Current target | Bundled distinct subjects | Automated playable validation |
 |---|---:|---:|---:|
-| Indian actors and actresses | 100 | 0 | 0 |
+| Indian actors and actresses | 100 | 17 | 17 |
 | Marvel characters | 100 | 0 | 0 |
 | DC characters | 100 | 0 | 0 |
-| Hollywood actors and movie characters | 100 | 9 | 9 |
+| Hollywood actors (person identities) | 100 | 14 | 14 |
 | Disney and DreamWorks characters | 200 | 0 | 0 |
 | Cartoon characters | 100 | 0 | 0 |
-| Footballers | 10 | 0 | 0 |
-| Historical presidents | 50 | 2 | 2 |
-| Athletes and entertainers (additional) | Not set | 1 | 1 |
+| Footballers | 10 | 10 | 10 |
+| Historical presidents | 50 | 8 | 8 |
+| Wrestlers / entertainers (additional) | Not set | 1 | 1 |
 | Anime (proposed) | 100 (not approved) | 0 | 0 |
 
-The package importer continues to support owner-supplied/private collections
-and retains source, attribution, subject type, franchise, description, clue,
-dimensions and content hash metadata. Future bundled packs must have per-file
-identity and reuse-rights verification; a category label or working URL alone
-is not rights clearance. Do not bundle recognizable copyrighted franchise
-artwork into publicly downloadable builds without permission.
+The 50-image unit test also runs a distinct full-length offline Picture Mode
+match, confirming turn-away before reveal, image availability, no duplicate
+challenge IDs, Correct -> Win Countdown, Wrong -> no Win Countdown, progression
+and final result counts. This is automated controller/repository verification;
+it does not substitute for fresh visual gameplay evidence on either platform.
 
-Android runtime evidence (2400x1080 landscape emulator captures) from the
-previous private-import batch is stored at
-`docs/evidence/picture_collections_avatars_2026-10-14/`. It shows the imported
-two-entry library, the turn-away phase, Lincoln displayed to clue-givers,
-Washington displayed for the next player, and advancement after host Correct.
-### 2026-10-15 Android gameplay verification
+### Platform evidence — 2026-10-17
 
-The complete Flutter analysis passed and the full Flutter test suite passed.
-The test output reported all tests passed (104 tests). A fresh debug APK built
-successfully, was installed on `emulator-5554`, and the foreground
-`com.example.roundveil/.MainActivity` process remained alive. The emulator is
-x86_64 with ARM64 translation; no native ARM64 device was tested. Android
-captures in `docs/evidence/picture_collections_2026-10-15/` show the live
-Guessing Games session setup, player-turn-away prompt, a real bundled Karen
-Gillan photograph shown to clue-givers, and the next player's turn after
-timeout. The verified image was a bundled offline file, not a network-loaded
-photo. The test suite also exercises bundle seeding, all 12 unique image
-records, no-repeat assignment while the eligible pool lasts, turn-away/reveal,
-host judgement, countdown and progression.
+Android: debug APK was installed on the existing `Medium_Phone_API_37.0`
+emulator (`emulator-5554`, x86_64) and ROUNDVEIL was launched in landscape. A
+manual two-player, two-round Character Picture Mode match completed all four
+turns. The player-turn-away gate appeared before each reveal; two distinct
+offline photos rendered for clue-givers; host judgement accepted one Correct
+and one Wrong result; Correct showed the Win Countdown, Wrong did not; play
+advanced into round 2 and finished on the standings screen. The two other turns
+timed out while the test was being operated, and are counted as timeouts in the
+actual results rather than being reported as judgements. Screenshots:
+[`setup`](../evidence/picture_collections_2026-10-17/android_setup_verified.png),
+[`turn-away`](../evidence/picture_collections_2026-10-17/android_picture_turnaway.png),
+[`photo reveal`](../evidence/picture_collections_2026-10-17/android_picture_reveal_2.png),
+[`correct countdown`](../evidence/picture_collections_2026-10-17/android_win_countdown.png),
+[`round progression`](../evidence/picture_collections_2026-10-17/android_round2_progression.png),
+and [`final standings`](../evidence/picture_collections_2026-10-17/android_picture_results.png).
 
-Windows debug compilation succeeded and the launched executable process
-remained alive during the check. A visible desktop screenshot/gameplay check
-was not completed: the computer-use capture session was stopped with the
-physical Escape key. This is process-level launch evidence only, not visual
-verification of the Windows Picture Mode screen.
+Windows: `flutter build windows --debug` succeeded and the resulting
+`build/windows/x64/runner/Debug/roundveil.exe` was launched as a visible
+`ROUNDVEIL` window. A Quick Game Character Challenge was configured with only
+Character Picture Mode, then entered at least two live turns. Windows displayed
+real local photos along with Correct/Wrong judgement controls; the screenshot is
+[`windows_picture_mode.jpg`](../evidence/picture_collections_2026-10-17/windows_picture_mode.jpg).
+This is actual Windows Picture Mode visual/runtime verification, not merely a
+build check. A complete Windows match through final standings was not run in
+this verification pass.
+
+Offline basis: the 50 source files are bundled and validated locally; the
+repository test verifies first-install seeding from the asset bundle without a
+network request. The emulator session itself was not run with network radios
+disabled, so it is not described as an airplane-mode test.
