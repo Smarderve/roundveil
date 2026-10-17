@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:roundveil/data/repositories/character_picture_repository.dart';
@@ -89,6 +90,7 @@ class _CharacterPictureLibraryPageState
             : 'Fictional character',
         difficulty: _difficulty,
         collection: 'private',
+        confirmRestore: (name) => _confirmRestoreDeleted(<String>[name]),
       );
       if (!mounted) return;
       setState(() {
@@ -165,7 +167,23 @@ class _CharacterPictureLibraryPageState
       );
       if (selection.isEmpty) return;
       final bytes = await selection.single.readAsBytes();
-      final report = await _repository.importPackageBytes(bytes);
+      var report = await _repository.importPackageBytes(bytes);
+      if (report.removed > 0 &&
+          await _confirmRestoreDeleted(
+            List<String>.filled(report.removed, 'previously removed item'),
+          )) {
+        final restored = await _repository.importPackageBytes(
+          bytes,
+          restoreRemoved: true,
+        );
+        report = PicturePackageImportReport(
+          imported: report.imported + restored.imported,
+          duplicates: report.duplicates + restored.duplicates,
+          removed: restored.removed,
+          restored: restored.restored,
+          errors: <String>[...report.errors, ...restored.errors],
+        );
+      }
       if (!mounted) return;
       setState(() {
         _items = _repository.loadAll();
@@ -176,7 +194,7 @@ class _CharacterPictureLibraryPageState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Imported ${report.imported}; duplicate images skipped: ${report.duplicates}.$detail',
+            'Imported ${report.imported}; restored ${report.restored}; still removed ${report.removed}; duplicate images skipped: ${report.duplicates}.$detail',
           ),
           duration: const Duration(seconds: 6),
         ),
@@ -468,13 +486,26 @@ class _CharacterPictureLibraryPageState
           ),
         );
       }
-      final report = await _repository.importPrivateImageBatch(batch);
+      final removedNames = <String>[];
+      for (final item in batch) {
+        if (await _repository.isImageRemoved(
+          sha256.convert(item.bytes).toString(),
+        )) {
+          removedNames.add(item.name);
+        }
+      }
+      final restoreRemoved = removedNames.isNotEmpty &&
+          await _confirmRestoreDeleted(removedNames);
+      final report = await _repository.importPrivateImageBatch(
+        batch,
+        restoreRemoved: restoreRemoved,
+      );
       if (!mounted) return;
       setState(() => _items = _repository.loadAll());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Installed ${report.imported}; duplicates skipped: ${report.duplicates}; invalid images: ${report.errors.length}.',
+            'Installed ${report.imported}; restored ${report.restored}; still removed ${report.removed}; duplicates skipped: ${report.duplicates}; invalid images: ${report.errors.length}.',
           ),
           duration: const Duration(seconds: 8),
         ),
@@ -529,6 +560,7 @@ class _CharacterPictureLibraryPageState
         difficulty: catalogEntry?.difficulty ?? _difficulty,
         attribution: _attribution.text,
         permissionConfirmed: true,
+        confirmRestore: (name) => _confirmRestoreDeleted(<String>[name]),
       );
       if (item == null) {
         throw const FormatException(
@@ -554,6 +586,89 @@ class _CharacterPictureLibraryPageState
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(error.toString().replaceFirst('FormatException: ', '')),
+      ),
+    );
+  }
+
+  Future<bool> _confirmRestoreDeleted(List<String> names) async {
+    if (!mounted) return false;
+    return await showDialog<bool>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('RESTORE PREVIOUSLY REMOVED PICTURES?'),
+            content: Text(
+              'This selected import contains ${names.length} image(s) that you previously removed. Restore only those exact images now? Other deleted items will remain excluded.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('KEEP REMOVED'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('RESTORE SELECTED'),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
+  Future<void> _showRestoreDeleted() async {
+    final excluded = (await _repository.loadExcludedBundled()).toList();
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('RESTORE DELETED PICTURES'),
+          content: SizedBox(
+            width: (MediaQuery.sizeOf(context).width - 80).clamp(300.0, 620.0),
+            height: (MediaQuery.sizeOf(context).height - 220).clamp(
+              180.0,
+              420.0,
+            ),
+            child: Column(
+              children: <Widget>[
+                const Text(
+                  'Bundled pictures can be restored here. Private pictures are erased from the app-managed folder when deleted; import their original image or ZIP and confirm Restore when asked. Hidden catalog-only entries can be restored in the character catalog.',
+                ),
+                const SizedBox(height: 8),
+                Expanded(
+                  child: excluded.isEmpty
+                      ? const Center(
+                          child: Text('No excluded bundled pictures.'),
+                        )
+                      : ListView.builder(
+                          itemCount: excluded.length,
+                          itemBuilder: (context, index) {
+                            final item = excluded[index];
+                            return ListTile(
+                              title: Text(item.name),
+                              subtitle: Text(item.category),
+                              trailing: TextButton(
+                                onPressed: () async {
+                                  await _repository.restoreBundled(item.id);
+                                  if (!context.mounted) return;
+                                  setDialogState(() => excluded.removeAt(index));
+                                  setState(() => _items = _repository.loadAll());
+                                },
+                                child: const Text('RESTORE'),
+                              ),
+                            );
+                          },
+                        ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('CLOSE'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -827,6 +942,11 @@ class _CharacterPictureLibraryPageState
                                 onSelected: (value) =>
                                     setState(() => _showHidden = value),
                               ),
+                              OutlinedButton.icon(
+                                onPressed: _showRestoreDeleted,
+                                icon: const Icon(Icons.restore),
+                                label: const Text('RESTORE DELETED'),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -1095,15 +1215,29 @@ class _CharacterPictureLibraryPageState
                             .where((item) => item.hidden)
                             .length;
                         final visibleCount = allItems.length - hiddenCount;
+                        final installedCatalogKeys = <String>{
+                          for (final item in allItems)
+                            '${item.category}|${normalizeCharacterPictureName(item.name)}',
+                        };
+                        final catalogOnlyCount = characterPictureCatalog
+                            .where(
+                              (entry) => !installedCatalogKeys.contains(
+                                '${entry.category}|${normalizeCharacterPictureName(entry.name)}',
+                              ),
+                            )
+                            .length;
                         return Column(
                           mainAxisSize: MainAxisSize.min,
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: <Widget>[
                             Padding(
                               padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
-                              child: Text(
-                                '${allItems.length} characters · $visibleCount visible to games · $hiddenCount hidden',
-                                style: const TextStyle(color: Colors.white70),
+                              child: FutureBuilder<int>(
+                                future: _repository.loadRemovedCount(),
+                                builder: (context, removedSnapshot) => Text(
+                                  'Installed ${allItems.length} · playable $visibleCount · hidden $hiddenCount · deleted/excluded ${removedSnapshot.data ?? 0} · catalog-only $catalogOnlyCount',
+                                  style: const TextStyle(color: Colors.white70),
+                                ),
                               ),
                             ),
                             GridView.builder(

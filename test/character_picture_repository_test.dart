@@ -315,6 +315,46 @@ void main() {
     expect(await repository.loadAll(), isEmpty);
   });
 
+  test('manual package reimport can restore only its selected deletion', () async {
+    final temporary = await Directory.systemTemp.createTemp('rv-restore-');
+    addTearDown(() => temporary.delete(recursive: true));
+    final repository = CharacterPictureRepository(
+      directoryProvider: () async => temporary,
+      includeBundledImages: false,
+    );
+    final image = await _testPng();
+    final package = Archive()
+      ..add(ArchiveFile.bytes('hero.png', image))
+      ..add(
+        ArchiveFile.string(
+          'manifest.json',
+          '{"schemaVersion":1,"items":[{"id":"restore-hero","name":"Hero","category":"Anime Characters","imageFilename":"hero.png","hint":"A hero","source":{}}]}',
+        ),
+      );
+    final bytes = ZipEncoder().encodeBytes(package);
+
+    expect((await repository.importPackageBytes(bytes)).imported, 1);
+    await repository.remove('restore-hero');
+    expect(await repository.loadRemovedCount(), 1);
+
+    final declined = await repository.importPackageBytes(bytes);
+    expect(declined.imported, 0);
+    expect(declined.removed, 1);
+    expect(declined.duplicates, 0);
+    expect(await repository.loadAll(), isEmpty);
+    expect(await repository.loadRemovedCount(), 1);
+
+    final restored = await repository.importPackageBytes(
+      bytes,
+      restoreRemoved: true,
+    );
+    expect(restored.imported, 1);
+    expect(restored.restored, 1);
+    expect(restored.removed, 0);
+    expect((await repository.loadAll()).single.name, 'Hero');
+    expect(await repository.loadRemovedCount(), 0);
+  });
+
   test('fresh installations seed verified bundled portraits offline', () async {
     final temporary = await Directory.systemTemp.createTemp('rv-builtin-');
     addTearDown(() => temporary.delete(recursive: true));

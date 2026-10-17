@@ -142,11 +142,17 @@ class PicturePackageImportReport {
   const PicturePackageImportReport({
     required this.imported,
     required this.duplicates,
+    this.removed = 0,
+    this.restored = 0,
     required this.errors,
   });
 
   final int imported;
   final int duplicates;
+  /// Entries matching a persistent removal that were deliberately not added.
+  final int removed;
+  /// Previously removed entries restored from this explicitly selected batch.
+  final int restored;
   final List<String> errors;
 }
 
@@ -288,12 +294,104 @@ class CharacterPictureRepository {
     return (await _readIndexState()).removedImageHashes.contains(digest);
   }
 
+  Future<int> loadRemovedCount() async {
+    final state = await _readIndexState();
+    // A private deletion is represented by both its stable ID and its hash;
+    // bundled exclusions have an ID only. Count those paired tombstones once,
+    // while retaining legacy hashes that have no owner mapping.
+    final removedIds = <String>{
+      ...state.removedIds,
+      ...state.excludedBundledIds,
+    };
+    final orphanedHashes = state.removedImageHashes
+        .where((digest) => !state.removedImageOwners.containsKey(digest));
+    return removedIds.length + orphanedHashes.length;
+  }
+
+  Future<List<({String id, String name, String category})>>
+  loadExcludedBundled() async {
+    try {
+      final decoded = jsonDecode(
+        await rootBundle.loadString(
+          'assets/brand/character_pictures/manifest.json',
+        ),
+      ) as Map<String, Object?>;
+      final excluded = (await _readIndexState()).excludedBundledIds;
+      return (decoded['items']! as List<Object?>)
+          .whereType<Map<String, Object?>>()
+          .where((item) => excluded.contains(item['id']))
+          .where(
+            (item) =>
+                item['id'] is String &&
+                item['name'] is String &&
+                item['category'] is String,
+          )
+          .map(
+            (item) => (
+              id: item['id']! as String,
+              name: item['name']! as String,
+              category: item['category']! as String,
+            ),
+          )
+          .toList(growable: false);
+    } on Object {
+      return const [];
+    }
+  }
+
+  Future<void> restoreBundled(String id) async {
+    final file = await _indexFile;
+    final state = await _readIndexState();
+    if (!state.excludedBundledIds.contains(id) &&
+        !state.removedIds.contains(id)) {
+      return;
+    }
+    final decoded = jsonDecode(
+      await rootBundle.loadString(
+        'assets/brand/character_pictures/manifest.json',
+      ),
+    ) as Map<String, Object?>;
+    for (final raw in decoded['items']! as List<Object?>) {
+      if (raw is! Map<String, Object?> || raw['id'] != id) continue;
+      final assetPath = raw['assetPath'];
+      if (assetPath is String) {
+        final asset = await rootBundle.load(assetPath);
+        final bytes = asset.buffer.asUint8List(
+          asset.offsetInBytes,
+          asset.lengthInBytes,
+        );
+        state.removedImageHashes.remove(sha256.convert(bytes).toString());
+      }
+      break;
+    }
+    state.excludedBundledIds.remove(id);
+    state.removedIds.remove(id);
+    state.removedImageOwners.removeWhere((_, ownerId) => ownerId == id);
+    final items = await loadAll();
+    // Persist the restored tombstone state first, then let the normal seeding
+    // path reinstall the approved bundled asset on the next load.
+    await file.writeAsString(
+      jsonEncode(<String, Object?>{
+        'schemaVersion': 2,
+        'items': items.map((item) => item.toJson()).toList(),
+        'excludedBundledIds': state.excludedBundledIds.toList()..sort(),
+        'hiddenIds': state.hiddenIds.toList()..sort(),
+        'removedIds': state.removedIds.toList()..sort(),
+        'removedImageHashes': state.removedImageHashes.toList()..sort(),
+        'removedImageOwners': state.removedImageOwners,
+      }),
+      flush: true,
+    );
+    await loadAll();
+  }
+
   Future<
     ({
       Set<String> excludedBundledIds,
       Set<String> hiddenIds,
       Set<String> removedIds,
       Set<String> removedImageHashes,
+      Map<String, String> removedImageOwners,
     })
   >
   _readIndexState() async {
@@ -304,6 +402,7 @@ class CharacterPictureRepository {
         hiddenIds: <String>{},
         removedIds: <String>{},
         removedImageHashes: <String>{},
+        removedImageOwners: <String, String>{},
       );
     }
     final decoded =
@@ -313,6 +412,7 @@ class CharacterPictureRepository {
       hiddenIds: _readStringSet(decoded['hiddenIds']),
       removedIds: _readStringSet(decoded['removedIds']),
       removedImageHashes: _readStringSet(decoded['removedImageHashes']),
+      removedImageOwners: _readStringMap(decoded['removedImageOwners']),
     );
   }
 
@@ -320,6 +420,19 @@ class CharacterPictureRepository {
       (value as List<Object?>? ?? const <Object?>[])
           .whereType<String>()
           .toSet();
+
+  Map<String, String> _readStringMap(Object? value) =>
+      Map<String, String>.fromEntries(
+        (value as Map<Object?, Object?>? ?? const <Object?, Object?>{})
+            .entries
+            .where((entry) => entry.key is String && entry.value is String)
+            .map(
+              (entry) => MapEntry(
+                entry.key! as String,
+                entry.value! as String,
+              ),
+            ),
+      );
 
   Future<List<CharacterPicture>> loadBundled() async => (await loadAll())
       .where((item) => item.collection == 'bundled')
@@ -461,6 +574,7 @@ class CharacterPictureRepository {
     String description = '',
     String difficulty = 'Mixed',
     String collection = 'private',
+    Future<bool> Function(String name)? confirmRestore,
   }) async {
     final name = subjectName.trim();
     if (name.isEmpty) throw ArgumentError.value(name, 'subjectName');
@@ -477,6 +591,12 @@ class CharacterPictureRepository {
         continue;
       }
       final bytes = await picked.readAsBytes();
+      final digest = sha256.convert(bytes).toString();
+      final removed = await isImageRemoved(digest);
+      if (removed &&
+          (confirmRestore == null || !await confirmRestore(name))) {
+        continue;
+      }
       final item = await addImageBytes(
         name: files.length == 1 ? name : '$name ${imported + 1}',
         hint: hint,
@@ -493,6 +613,7 @@ class CharacterPictureRepository {
         category: category,
         aliases: aliases,
         collection: collection,
+        restoreRemoved: removed,
       );
       if (item != null) imported++;
     }
@@ -520,6 +641,7 @@ class CharacterPictureRepository {
     String category = 'Uncategorized',
     List<String> aliases = const <String>[],
     String collection = 'private',
+    bool restoreRemoved = false,
   }) async {
     final safeName = name.trim();
     final ext = extension.toLowerCase() == 'jpeg'
@@ -547,8 +669,12 @@ class CharacterPictureRepository {
 
     final existing = (await loadAll()).toList();
     final digest = sha256.convert(bytes).toString();
-    if ((await _readIndexState()).removedImageHashes.contains(digest)) {
-      return null;
+    final deletionState = await _readIndexState();
+    if (deletionState.removedImageHashes.contains(digest)) {
+      if (!restoreRemoved) return null;
+      deletionState.removedImageHashes.remove(digest);
+      final formerId = deletionState.removedImageOwners.remove(digest);
+      if (formerId != null) deletionState.removedIds.remove(formerId);
     }
     for (final item in existing) {
       if (await _digestFor(item) == digest) return null;
@@ -582,20 +708,29 @@ class CharacterPictureRepository {
       height: height,
       sha256: digest,
     );
-    await _writeIndex(<CharacterPicture>[...existing, item]);
+    await _writeIndex(
+      <CharacterPicture>[...existing, item],
+      removedIds: deletionState.removedIds,
+      removedImageHashes: deletionState.removedImageHashes,
+      removedImageOwners: deletionState.removedImageOwners,
+    );
     return item;
   }
 
   /// Installs a reviewed batch as local private content, validating each image
   /// and preventing both byte-identical and duplicate-identity entries.
   Future<PicturePackageImportReport> importPrivateImageBatch(
-    List<PrivateCharacterImageImport> batch,
+    List<PrivateCharacterImageImport> batch, {
+    bool restoreRemoved = false,
+  }
   ) async {
     if (batch.length > 500) {
       throw const FormatException('A single import is limited to 500 images.');
     }
     var imported = 0;
     var duplicates = 0;
+    var removed = 0;
+    var restored = 0;
     final errors = <String>[];
     final acceptedIdentities = <String>{
       for (final item in await loadPrivate())
@@ -610,6 +745,13 @@ class CharacterPictureRepository {
       }
       try {
         final ext = entry.filename.split('.').last.toLowerCase();
+        final digest = sha256.convert(entry.bytes).toString();
+        final wasRemoved = await isImageRemoved(digest);
+        if (wasRemoved && !restoreRemoved) {
+          removed++;
+          acceptedIdentities.remove(identity);
+          continue;
+        }
         final added = await addImageBytes(
           name: entry.name,
           extension: ext,
@@ -629,12 +771,14 @@ class CharacterPictureRepository {
           attribution:
               'Image source supplied by owner; see original local file.',
           collection: 'private',
+          restoreRemoved: wasRemoved,
         );
         if (added == null) {
           duplicates++;
           acceptedIdentities.remove(identity);
         } else {
           imported++;
+          if (wasRemoved) restored++;
         }
       } on Object catch (error) {
         acceptedIdentities.remove(identity);
@@ -646,6 +790,8 @@ class CharacterPictureRepository {
     return PicturePackageImportReport(
       imported: imported,
       duplicates: duplicates,
+      removed: removed,
+      restored: restored,
       errors: List<String>.unmodifiable(errors),
     );
   }
@@ -663,6 +809,7 @@ class CharacterPictureRepository {
     required String difficulty,
     required String attribution,
     required bool permissionConfirmed,
+    Future<bool> Function(String name)? confirmRestore,
   }) async {
     if (!permissionConfirmed) {
       throw const FormatException(
@@ -719,6 +866,12 @@ class CharacterPictureRepository {
           'The URL did not return a valid PNG, JPEG, or WebP image.',
         );
       }
+      final digest = sha256.convert(bytes).toString();
+      final removed = await isImageRemoved(digest);
+      if (removed &&
+          (confirmRestore == null || !await confirmRestore(name))) {
+        return null;
+      }
       return await addImageBytes(
         name: name,
         extension: extension,
@@ -734,6 +887,7 @@ class CharacterPictureRepository {
         license: 'Owner confirmed source permits private offline use',
         attribution: attribution,
         collection: 'private',
+        restoreRemoved: removed,
       );
     } finally {
       client.close(force: true);
@@ -799,7 +953,9 @@ class CharacterPictureRepository {
   /// filenames must be basenames, so archive paths are never used as output
   /// paths. Invalid entries are reported while other valid entries are kept.
   Future<PicturePackageImportReport> importPackageBytes(
-    List<int> packageBytes,
+    List<int> packageBytes, {
+    bool restoreRemoved = false,
+  }
   ) async {
     if (packageBytes.isEmpty || packageBytes.length > 1024 * 1024 * 1024) {
       throw const FormatException('Picture package size is invalid.');
@@ -855,6 +1011,8 @@ class CharacterPictureRepository {
     final staged = <CharacterPicture>[];
     final errors = <String>[];
     var duplicates = 0;
+    var removed = 0;
+    var restored = 0;
 
     for (final raw in decoded['items']! as List<Object?>) {
       final itemIndex = staged.length + errors.length + duplicates + 1;
@@ -891,10 +1049,6 @@ class CharacterPictureRepository {
         if (!seenIds.add(id)) {
           throw FormatException('Duplicate content ID: $id');
         }
-        if (deletionState.removedIds.contains(id)) {
-          duplicates++;
-          continue;
-        }
         if (!seenFiles.add(imageFilename)) {
           throw FormatException('Image filename is reused: $imageFilename');
         }
@@ -908,8 +1062,12 @@ class CharacterPictureRepository {
         }
         final ext = imageFilename.split('.').last.toLowerCase();
         final digest = sha256.convert(imageBytes).toString();
-        if (deletionState.removedIds.contains(id) ||
-            deletionState.removedImageHashes.contains(digest)) {
+        final wasRemoved = deletionState.removedImageHashes.contains(digest);
+        if (wasRemoved && !restoreRemoved) {
+          removed++;
+          continue;
+        }
+        if (deletionState.removedIds.contains(id) && !wasRemoved) {
           duplicates++;
           continue;
         }
@@ -932,6 +1090,14 @@ class CharacterPictureRepository {
           throw FormatException(
             'Unsupported or low-resolution image: $imageFilename',
           );
+        }
+        if (wasRemoved) {
+          deletionState.removedImageHashes.remove(digest);
+          final formerId = deletionState.removedImageOwners.remove(digest);
+          if (formerId != null) deletionState.removedIds.remove(formerId);
+          deletionState.removedIds.remove(id);
+          deletionState.excludedBundledIds.remove(id);
+          restored++;
         }
         final metadata = source as Map<String, Object?>? ?? const {};
         staged.add(
@@ -1002,10 +1168,18 @@ class CharacterPictureRepository {
     } finally {
       _pendingPackageImages.clear();
     }
-    await _writeIndex(<CharacterPicture>[...existing, ...imported]);
+    await _writeIndex(
+      <CharacterPicture>[...existing, ...imported],
+      excludedBundledIds: deletionState.excludedBundledIds,
+      removedIds: deletionState.removedIds,
+      removedImageHashes: deletionState.removedImageHashes,
+      removedImageOwners: deletionState.removedImageOwners,
+    );
     return PicturePackageImportReport(
       imported: imported.length,
       duplicates: duplicates,
+      removed: removed,
+      restored: restored,
       errors: List<String>.unmodifiable(errors),
     );
   }
@@ -1058,11 +1232,15 @@ class CharacterPictureRepository {
     final state = await _readIndexState();
     final item = removed.single;
     state.removedIds.add(id);
+    state.removedImageOwners.removeWhere((_, ownerId) => ownerId == id);
     if (item.collection == 'bundled') {
       state.excludedBundledIds.add(id);
     } else {
       final digest = await _digestFor(item);
-      if (digest.isNotEmpty) state.removedImageHashes.add(digest);
+      if (digest.isNotEmpty) {
+        state.removedImageHashes.add(digest);
+        state.removedImageOwners[digest] = id;
+      }
     }
     final image = File(item.path);
     final libraryPath =
@@ -1077,6 +1255,7 @@ class CharacterPictureRepository {
       hiddenIds: state.hiddenIds,
       removedIds: state.removedIds,
       removedImageHashes: state.removedImageHashes,
+      removedImageOwners: state.removedImageOwners,
     );
   }
 
@@ -1086,6 +1265,7 @@ class CharacterPictureRepository {
     Set<String>? hiddenIds,
     Set<String>? removedIds,
     Set<String>? removedImageHashes,
+    Map<String, String>? removedImageOwners,
   }) async {
     final previous = await _readIndexState();
     final file = await _indexFile;
@@ -1101,6 +1281,8 @@ class CharacterPictureRepository {
         'removedImageHashes':
             (removedImageHashes ?? previous.removedImageHashes).toList()
               ..sort(),
+        'removedImageOwners':
+            removedImageOwners ?? previous.removedImageOwners,
       }),
       flush: true,
     );
