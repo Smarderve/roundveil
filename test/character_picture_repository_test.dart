@@ -6,10 +6,12 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/data/repositories/character_picture_repository.dart';
 
-Future<Uint8List> _testPng() async {
+Future<Uint8List> _testPng({
+  ui.Color color = const ui.Color(0xFF214A76),
+}) async {
   final recorder = ui.PictureRecorder();
   final canvas = ui.Canvas(recorder);
-  canvas.drawColor(const ui.Color(0xFF214A76), ui.BlendMode.src);
+  canvas.drawColor(color, ui.BlendMode.src);
   final picture = recorder.endRecording();
   final image = await picture.toImage(800, 600);
   final bytes = await image.toByteData(format: ui.ImageByteFormat.png);
@@ -68,6 +70,83 @@ void main() {
 
       await recreated.remove(loaded.single.id);
       expect(await repository.loadAll(), isEmpty);
+    },
+  );
+
+  test('private deletion persists, removes only managed media, and blocks reimport', () async {
+    final temporary = await Directory.systemTemp.createTemp(
+      'rv-picture-delete-',
+    );
+    addTearDown(() => temporary.delete(recursive: true));
+    final repository = CharacterPictureRepository(
+      directoryProvider: () async => temporary,
+      includeBundledImages: false,
+    );
+    final bytes = await _testPng();
+    final deleted = await repository.addImageBytes(
+      name: 'Test Character',
+      category: 'Anime Characters',
+      extension: 'png',
+      bytes: bytes,
+    );
+    final kept = await repository.addImageBytes(
+      name: 'Unrelated Character',
+      category: 'Cartoon Characters',
+      extension: 'png',
+      bytes: await _testPng(color: const ui.Color(0xFF751A43)),
+    );
+    expect(deleted, isNotNull);
+    expect(kept, isNotNull);
+    final managedFile = File(deleted!.path);
+    await repository.remove(deleted.id);
+    expect(await managedFile.exists(), isFalse);
+
+    final recreated = CharacterPictureRepository(
+      directoryProvider: () async => temporary,
+      includeBundledImages: false,
+    );
+    expect((await recreated.loadAll()).map((item) => item.name), [
+      'Unrelated Character',
+    ]);
+    expect(
+      await recreated.addImageBytes(
+        name: 'Test Character',
+        category: 'Anime Characters',
+        extension: 'png',
+        bytes: bytes,
+      ),
+      isNull,
+    );
+    expect((await recreated.loadPlayable()).map((item) => item.name), [
+      'Unrelated Character',
+    ]);
+  });
+
+  test(
+    'hidden character restores after restart but stays out of playable set',
+    () async {
+      final temporary = await Directory.systemTemp.createTemp(
+        'rv-picture-hidden-',
+      );
+      addTearDown(() => temporary.delete(recursive: true));
+      final repository = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+        includeBundledImages: false,
+      );
+      final item = await repository.addImageBytes(
+        name: 'Hidden Character',
+        extension: 'png',
+        bytes: await _testPng(),
+      );
+      await repository.setHidden(item!.id, hidden: true);
+      final recreated = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+        includeBundledImages: false,
+      );
+      expect((await recreated.loadAll()).single.hidden, isTrue);
+      expect(await recreated.loadPlayable(), isEmpty);
+      await recreated.setHidden(item.id, hidden: false);
+      expect(await recreated.loadPlayable(), hasLength(1));
     },
   );
 
@@ -350,4 +429,28 @@ void main() {
       isTrue,
     );
   });
+
+  test(
+    'bundled removal is an exclusion that survives reseeding and restart',
+    () async {
+      final temporary = await Directory.systemTemp.createTemp(
+        'rv-builtin-exclude-',
+      );
+      addTearDown(() => temporary.delete(recursive: true));
+      final repository = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+      );
+      final initial = await repository.loadAll();
+      final target = initial.first;
+      final managedCopy = File(target.path);
+      await repository.remove(target.id);
+      expect(await managedCopy.exists(), isFalse);
+      final afterRestart = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+      );
+      final loaded = await afterRestart.loadAll();
+      expect(loaded.length, initial.length - 1);
+      expect(loaded.any((item) => item.id == target.id), isFalse);
+    },
+  );
 }

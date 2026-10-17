@@ -28,10 +28,14 @@ class _CharacterPictureLibraryPageState
   final TextEditingController _description = TextEditingController();
   final TextEditingController _attribution = TextEditingController();
   final TextEditingController _imageUrl = TextEditingController();
+  final TextEditingController _search = TextEditingController();
   late Future<List<CharacterPicture>> _items = _repository.loadAll();
   String _category = 'Marvel Characters';
   String _difficulty = 'Mixed';
   String _collectionFilter = 'all';
+  String _categoryFilter = 'all';
+  String _difficultyFilter = 'all';
+  bool _showHidden = false;
   bool _busy = false;
 
   @override
@@ -45,6 +49,7 @@ class _CharacterPictureLibraryPageState
     _description.dispose();
     _attribution.dispose();
     _imageUrl.dispose();
+    _search.dispose();
     super.dispose();
   }
 
@@ -112,12 +117,42 @@ class _CharacterPictureLibraryPageState
   }
 
   Future<void> _remove(CharacterPicture item) async {
+    final bundled = item.collection == 'bundled';
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          bundled ? 'Remove bundled character?' : 'Delete this character?',
+        ),
+        content: Text(
+          bundled
+              ? 'This bundled character will be excluded from your collection and games on this device.'
+              : 'This removes the private-library record and its managed image from this device. Other files are not touched.',
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('CANCEL'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('DELETE'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     await _repository.remove(item.id);
-    if (mounted) {
-      setState(() {
-        _items = _repository.loadAll();
-      });
-    }
+    if (!mounted) return;
+    final updated = await _repository.loadAll();
+    setState(() => _items = Future<List<CharacterPicture>>.value(updated));
+  }
+
+  Future<void> _toggleHidden(CharacterPicture item) async {
+    await _repository.setHidden(item.id, hidden: !item.hidden);
+    if (!mounted) return;
+    final updated = await _repository.loadAll();
+    setState(() => _items = Future<List<CharacterPicture>>.value(updated));
   }
 
   Future<void> _importPackage() async {
@@ -552,6 +587,7 @@ class _CharacterPictureLibraryPageState
 
   Future<void> _showCharacterCatalog() async {
     final installed = await _repository.loadAll();
+    final hiddenCatalogKeys = await _repository.loadHiddenCatalogKeys();
     if (!mounted) return;
     final installedIdentities = <String>{
       for (final item in installed)
@@ -559,69 +595,102 @@ class _CharacterPictureLibraryPageState
     };
     await showDialog<void>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('FICTIONAL CHARACTER CATALOG · 60 IDENTITIES'),
-        content: SizedBox(
-          width: (MediaQuery.sizeOf(context).width - 80).clamp(320.0, 700.0),
-          height: (MediaQuery.sizeOf(context).height - 190).clamp(240.0, 520.0),
-          child: ListView(
-            children: <Widget>[
-              for (final category in const <String>[
-                'Marvel Characters',
-                'DC Characters',
-                'Anime Characters',
-                'Cartoon Characters',
-                'Disney Characters',
-                'DreamWorks Characters',
-              ])
-                Builder(
-                  builder: (context) {
-                    final entries = characterPictureCatalog
-                        .where((entry) => entry.category == category)
-                        .toList();
-                    final count = entries
-                        .where(
-                          (entry) => installedIdentities.contains(
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('FICTIONAL CHARACTER CATALOG · 60 IDENTITIES'),
+          content: SizedBox(
+            width: (MediaQuery.sizeOf(context).width - 80).clamp(320.0, 700.0),
+            height: (MediaQuery.sizeOf(context).height - 190).clamp(
+              240.0,
+              520.0,
+            ),
+            child: ListView(
+              children: <Widget>[
+                for (final category in const <String>[
+                  'Marvel Characters',
+                  'DC Characters',
+                  'Anime Characters',
+                  'Cartoon Characters',
+                  'Disney Characters',
+                  'DreamWorks Characters',
+                ])
+                  Builder(
+                    builder: (context) {
+                      final entries = characterPictureCatalog
+                          .where((entry) => entry.category == category)
+                          .toList();
+                      final count = entries
+                          .where(
+                            (entry) => installedIdentities.contains(
+                              '$category|${normalizeCharacterPictureName(entry.name)}',
+                            ),
+                          )
+                          .length;
+                      return ExpansionTile(
+                        title: Text(
+                          '$category · $count/${entries.length} images',
+                        ),
+                        children: entries.map((entry) {
+                          final hasImage = installedIdentities.contains(
                             '$category|${normalizeCharacterPictureName(entry.name)}',
-                          ),
-                        )
-                        .length;
-                    return ExpansionTile(
-                      title: Text(
-                        '$category · $count/${entries.length} images',
-                      ),
-                      children: entries.map((entry) {
-                        final hasImage = installedIdentities.contains(
-                          '$category|${normalizeCharacterPictureName(entry.name)}',
-                        );
-                        return ListTile(
-                          dense: true,
-                          title: Text(entry.name),
-                          subtitle: Text(
-                            '${entry.series} · ${entry.difficulty} · ${entry.hint}',
-                          ),
-                          trailing: Icon(
-                            hasImage
-                                ? Icons.check_circle
-                                : Icons.image_not_supported_outlined,
-                            color: hasImage
-                                ? const Color(0xFF42D5E8)
-                                : Colors.white38,
-                          ),
-                        );
-                      }).toList(),
-                    );
-                  },
-                ),
-            ],
+                          );
+                          final key = _repository.catalogKey(
+                            category,
+                            entry.name,
+                          );
+                          final hidden = hiddenCatalogKeys.contains(key);
+                          return ListTile(
+                            dense: true,
+                            title: Text(entry.name),
+                            subtitle: Text(
+                              '${entry.series} · ${entry.difficulty} · ${entry.hint}${hasImage ? ' · INSTALLED' : ' · CATALOG ONLY'}${hidden ? ' · HIDDEN' : ''}',
+                            ),
+                            trailing: IconButton(
+                              tooltip: hidden
+                                  ? 'Restore catalog entry'
+                                  : 'Hide catalog entry',
+                              onPressed: () async {
+                                await _repository.setCatalogHidden(
+                                  category,
+                                  entry.name,
+                                  hidden: !hidden,
+                                );
+                                setDialogState(() {
+                                  if (hidden) {
+                                    hiddenCatalogKeys.remove(key);
+                                  } else {
+                                    hiddenCatalogKeys.add(key);
+                                  }
+                                });
+                              },
+                              icon: Icon(
+                                hidden
+                                    ? Icons.visibility_off_outlined
+                                    : hasImage
+                                    ? Icons.check_circle
+                                    : Icons.image_not_supported_outlined,
+                                color: hidden
+                                    ? Colors.orangeAccent
+                                    : hasImage
+                                    ? const Color(0xFF42D5E8)
+                                    : Colors.white38,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+              ],
+            ),
           ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('CLOSE'),
+            ),
+          ],
         ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('CLOSE'),
-          ),
-        ],
       ),
     );
   }
@@ -638,309 +707,521 @@ class _CharacterPictureLibraryPageState
         constraints: const BoxConstraints(maxWidth: 980),
         child: Column(
           children: <Widget>[
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  const Text(
-                    'PRIVATE FAMILY COLLECTION · Choose a local image, enter its character details and category, then play offline. Nothing is uploaded. Keep privately imported images out of public builds unless you have redistribution permission.',
-                    style: TextStyle(color: Colors.white70),
-                  ),
-                  const SizedBox(height: 12),
-                  SegmentedButton<String>(
-                    segments: const <ButtonSegment<String>>[
-                      ButtonSegment(value: 'all', label: Text('ALL LOCAL')),
-                      ButtonSegment(value: 'bundled', label: Text('BUNDLED')),
-                      ButtonSegment(
-                        value: 'private',
-                        label: Text('PRIVATE FAMILY'),
-                      ),
-                    ],
-                    selected: <String>{_collectionFilter},
-                    onSelectionChanged: (value) =>
-                        setState(() => _collectionFilter = value.first),
-                  ),
-                  const SizedBox(height: 10),
-                  Wrap(
-                    spacing: 10,
-                    runSpacing: 8,
-                    crossAxisAlignment: WrapCrossAlignment.center,
-                    children: <Widget>[
-                      SizedBox(
-                        width: 220,
-                        child: TextField(
-                          controller: _name,
-                          decoration: const InputDecoration(
-                            labelText: 'Subject name',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 300,
-                        child: TextField(
-                          controller: _imageUrl,
-                          keyboardType: TextInputType.url,
-                          decoration: const InputDecoration(
-                            labelText: 'Authorized HTTPS image URL',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 220,
-                        child: TextField(
-                          controller: _hint,
-                          decoration: const InputDecoration(
-                            labelText: 'Optional individual hint',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 260,
-                        child: TextField(
-                          controller: _source,
-                          decoration: const InputDecoration(
-                            labelText: 'Source title or URL (optional)',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 190,
-                        child: TextField(
-                          controller: _license,
-                          decoration: const InputDecoration(
-                            labelText: 'License note (optional)',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 220,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _category,
-                          decoration: const InputDecoration(
-                            labelText: 'Character category',
-                            isDense: true,
-                          ),
-                          items: characterPictureCategories
-                              .map(
-                                (value) => DropdownMenuItem<String>(
-                                  value: value,
-                                  child: Text(value),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _category = value);
-                            }
-                          },
-                        ),
-                      ),
-                      SizedBox(
-                        width: 190,
-                        child: TextField(
-                          controller: _franchise,
-                          decoration: const InputDecoration(
-                            labelText: 'Film / series / franchise',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 220,
-                        child: TextField(
-                          controller: _aliases,
-                          decoration: const InputDecoration(
-                            labelText: 'Accepted names (comma-separated)',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 220,
-                        child: TextField(
-                          controller: _description,
-                          decoration: const InputDecoration(
-                            labelText: 'Identity/context note',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 200,
-                        child: TextField(
-                          controller: _attribution,
-                          decoration: const InputDecoration(
-                            labelText: 'Creator / attribution',
-                            isDense: true,
-                          ),
-                        ),
-                      ),
-                      SizedBox(
-                        width: 150,
-                        child: DropdownButtonFormField<String>(
-                          initialValue: _difficulty,
-                          decoration: const InputDecoration(
-                            labelText: 'Difficulty',
-                            isDense: true,
-                          ),
-                          items:
-                              const <String>[
-                                    'Easy',
-                                    'Medium',
-                                    'Hard',
-                                    'Expert',
-                                    'Mixed',
-                                  ]
-                                  .map(
-                                    (value) => DropdownMenuItem<String>(
-                                      value: value,
-                                      child: Text(value),
-                                    ),
-                                  )
-                                  .toList(),
-                          onChanged: (value) {
-                            if (value != null) {
-                              setState(() => _difficulty = value);
-                            }
-                          },
-                        ),
-                      ),
-                      FilledButton.icon(
-                        onPressed: _busy ? null : _import,
-                        icon: const Icon(Icons.add_photo_alternate_outlined),
-                        label: Text(_busy ? 'IMPORTING…' : 'IMPORT PICTURE'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _importPackage,
-                        icon: const Icon(Icons.archive_outlined),
-                        label: const Text('IMPORT COLLECTION ZIP'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _importFolder,
-                        icon: const Icon(Icons.folder_open_outlined),
-                        label: const Text('REVIEW IMAGE FOLDER'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _showCharacterCatalog,
-                        icon: const Icon(Icons.auto_stories_outlined),
-                        label: const Text('VIEW CHARACTER CATALOG'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _importImageZip,
-                        icon: const Icon(Icons.archive_outlined),
-                        label: const Text('REVIEW IMAGE ZIP'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _importFromImageUrl,
-                        icon: const Icon(Icons.download_outlined),
-                        label: const Text('SAVE URL IMAGE'),
-                      ),
-                      OutlinedButton.icon(
-                        onPressed: _busy ? null : _exportPackage,
-                        icon: const Icon(Icons.ios_share_rounded),
-                        label: const Text('EXPORT COLLECTION ZIP'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-            const Divider(height: 1, color: Color(0x335AD9FF)),
             Expanded(
-              child: FutureBuilder<List<CharacterPicture>>(
-                future: _items,
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(
-                      child: Text(
-                        'Library could not be read: ${snapshot.error}',
-                      ),
-                    );
-                  }
-                  if (!snapshot.hasData) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  final allItems = snapshot.data!;
-                  final items = allItems
-                      .where(
-                        (item) =>
-                            _collectionFilter == 'all' ||
-                            item.collection == _collectionFilter,
-                      )
-                      .toList(growable: false);
-                  if (items.isEmpty) {
-                    return const Center(
-                      child: Text(
-                        'No pictures in this collection yet. Import a local image with its name, category and useful clue. Images stay on this device.',
-                        textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                    );
-                  }
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(18),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                          maxCrossAxisExtent: 190,
-                          mainAxisExtent: 220,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                    itemCount: items.length,
-                    itemBuilder: (context, index) {
-                      final item = items[index];
-                      return DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0B1B2E),
-                          border: Border.all(color: const Color(0x4460D9FF)),
-                        ),
-                        child: Column(
-                          children: <Widget>[
-                            Expanded(
-                              child: Image.file(
-                                File(item.path),
-                                fit: BoxFit.contain,
-                                errorBuilder: (_, _, _) => const Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.white54,
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: <Widget>[
+                          const Text(
+                            'PRIVATE FAMILY COLLECTION · Choose a local image, enter its character details and category, then play offline. Nothing is uploaded. Keep privately imported images out of public builds unless you have redistribution permission.',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                          const SizedBox(height: 12),
+                          SegmentedButton<String>(
+                            segments: const <ButtonSegment<String>>[
+                              ButtonSegment(
+                                value: 'all',
+                                label: Text('ALL LOCAL'),
+                              ),
+                              ButtonSegment(
+                                value: 'bundled',
+                                label: Text('BUNDLED'),
+                              ),
+                              ButtonSegment(
+                                value: 'private',
+                                label: Text('PRIVATE FAMILY'),
+                              ),
+                            ],
+                            selected: <String>{_collectionFilter},
+                            onSelectionChanged: (value) =>
+                                setState(() => _collectionFilter = value.first),
+                          ),
+                          const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 8,
+                            children: <Widget>[
+                              SizedBox(
+                                width: 240,
+                                child: TextField(
+                                  controller: _search,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Search by character',
+                                    isDense: true,
+                                    prefixIcon: Icon(Icons.search),
+                                  ),
+                                  onChanged: (_) => setState(() {}),
                                 ),
                               ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(8, 4, 4, 8),
-                              child: Row(
+                              SizedBox(
+                                width: 220,
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: _categoryFilter,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Filter category',
+                                    isDense: true,
+                                  ),
+                                  items: <DropdownMenuItem<String>>[
+                                    const DropdownMenuItem(
+                                      value: 'all',
+                                      child: Text('All categories'),
+                                    ),
+                                    ...characterPictureCategories.map(
+                                      (value) => DropdownMenuItem(
+                                        value: value,
+                                        child: Text(
+                                          value,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                  onChanged: (value) => setState(
+                                    () => _categoryFilter = value ?? 'all',
+                                  ),
+                                ),
+                              ),
+                              SizedBox(
+                                width: 150,
+                                child: DropdownButtonFormField<String>(
+                                  initialValue: _difficultyFilter,
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Difficulty',
+                                    isDense: true,
+                                  ),
+                                  items:
+                                      const <String>[
+                                            'all',
+                                            'Easy',
+                                            'Medium',
+                                            'Hard',
+                                            'Expert',
+                                            'Mixed',
+                                          ]
+                                          .map(
+                                            (value) => DropdownMenuItem(
+                                              value: value,
+                                              child: Text(
+                                                value == 'all'
+                                                    ? 'All difficulty'
+                                                    : value,
+                                              ),
+                                            ),
+                                          )
+                                          .toList(),
+                                  onChanged: (value) => setState(
+                                    () => _difficultyFilter = value ?? 'all',
+                                  ),
+                                ),
+                              ),
+                              FilterChip(
+                                label: const Text('Show hidden'),
+                                selected: _showHidden,
+                                onSelected: (value) =>
+                                    setState(() => _showHidden = value),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          ExpansionTile(
+                            tilePadding: EdgeInsets.zero,
+                            title: const Text('ADD OR IMPORT CHARACTERS'),
+                            children: <Widget>[
+                              Wrap(
+                                spacing: 10,
+                                runSpacing: 8,
+                                crossAxisAlignment: WrapCrossAlignment.center,
                                 children: <Widget>[
-                                  Expanded(
-                                    child: Text(
-                                      item.name,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w700,
+                                  SizedBox(
+                                    width: 220,
+                                    child: TextField(
+                                      controller: _name,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Subject name',
+                                        isDense: true,
                                       ),
                                     ),
                                   ),
-                                  IconButton(
-                                    tooltip: 'Remove ${item.name}',
-                                    onPressed: () => _remove(item),
-                                    icon: const Icon(Icons.delete_outline),
+                                  SizedBox(
+                                    width: 300,
+                                    child: TextField(
+                                      controller: _imageUrl,
+                                      keyboardType: TextInputType.url,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Authorized HTTPS image URL',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 220,
+                                    child: TextField(
+                                      controller: _hint,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Optional individual hint',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 260,
+                                    child: TextField(
+                                      controller: _source,
+                                      decoration: const InputDecoration(
+                                        labelText:
+                                            'Source title or URL (optional)',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 190,
+                                    child: TextField(
+                                      controller: _license,
+                                      decoration: const InputDecoration(
+                                        labelText: 'License note (optional)',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 220,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _category,
+                                      isExpanded: true,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Character category',
+                                        isDense: true,
+                                      ),
+                                      items: characterPictureCategories
+                                          .map(
+                                            (value) => DropdownMenuItem<String>(
+                                              value: value,
+                                              child: Text(value),
+                                            ),
+                                          )
+                                          .toList(),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() => _category = value);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 190,
+                                    child: TextField(
+                                      controller: _franchise,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Film / series / franchise',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 220,
+                                    child: TextField(
+                                      controller: _aliases,
+                                      decoration: const InputDecoration(
+                                        labelText:
+                                            'Accepted names (comma-separated)',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 220,
+                                    child: TextField(
+                                      controller: _description,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Identity/context note',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 200,
+                                    child: TextField(
+                                      controller: _attribution,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Creator / attribution',
+                                        isDense: true,
+                                      ),
+                                    ),
+                                  ),
+                                  SizedBox(
+                                    width: 150,
+                                    child: DropdownButtonFormField<String>(
+                                      initialValue: _difficulty,
+                                      isExpanded: true,
+                                      decoration: const InputDecoration(
+                                        labelText: 'Difficulty',
+                                        isDense: true,
+                                      ),
+                                      items:
+                                          const <String>[
+                                                'Easy',
+                                                'Medium',
+                                                'Hard',
+                                                'Expert',
+                                                'Mixed',
+                                              ]
+                                              .map(
+                                                (value) =>
+                                                    DropdownMenuItem<String>(
+                                                      value: value,
+                                                      child: Text(value),
+                                                    ),
+                                              )
+                                              .toList(),
+                                      onChanged: (value) {
+                                        if (value != null) {
+                                          setState(() => _difficulty = value);
+                                        }
+                                      },
+                                    ),
+                                  ),
+                                  FilledButton.icon(
+                                    onPressed: _busy ? null : _import,
+                                    icon: const Icon(
+                                      Icons.add_photo_alternate_outlined,
+                                    ),
+                                    label: Text(
+                                      _busy ? 'IMPORTING…' : 'IMPORT PICTURE',
+                                    ),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy ? null : _importPackage,
+                                    icon: const Icon(Icons.archive_outlined),
+                                    label: const Text('IMPORT COLLECTION ZIP'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy ? null : _importFolder,
+                                    icon: const Icon(
+                                      Icons.folder_open_outlined,
+                                    ),
+                                    label: const Text('REVIEW IMAGE FOLDER'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy
+                                        ? null
+                                        : _showCharacterCatalog,
+                                    icon: const Icon(
+                                      Icons.auto_stories_outlined,
+                                    ),
+                                    label: const Text('VIEW CHARACTER CATALOG'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy ? null : _importImageZip,
+                                    icon: const Icon(Icons.archive_outlined),
+                                    label: const Text('REVIEW IMAGE ZIP'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy
+                                        ? null
+                                        : _importFromImageUrl,
+                                    icon: const Icon(Icons.download_outlined),
+                                    label: const Text('SAVE URL IMAGE'),
+                                  ),
+                                  OutlinedButton.icon(
+                                    onPressed: _busy ? null : _exportPackage,
+                                    icon: const Icon(Icons.ios_share_rounded),
+                                    label: const Text('EXPORT COLLECTION ZIP'),
                                   ),
                                 ],
                               ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1, color: Color(0x335AD9FF)),
+                    FutureBuilder<List<CharacterPicture>>(
+                      future: _items,
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Center(
+                            child: Text(
+                              'Library could not be read: ${snapshot.error}',
+                            ),
+                          );
+                        }
+                        if (!snapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+                        final allItems = snapshot.data!;
+                        final items = allItems
+                            .where(
+                              (item) =>
+                                  _collectionFilter == 'all' ||
+                                  item.collection == _collectionFilter,
+                            )
+                            .where((item) => _showHidden || !item.hidden)
+                            .where(
+                              (item) =>
+                                  _categoryFilter == 'all' ||
+                                  item.category == _categoryFilter,
+                            )
+                            .where(
+                              (item) =>
+                                  _difficultyFilter == 'all' ||
+                                  item.difficulty == _difficultyFilter,
+                            )
+                            .where(
+                              (item) => item.name.toLowerCase().contains(
+                                _search.text.trim().toLowerCase(),
+                              ),
+                            )
+                            .toList(growable: false);
+                        if (items.isEmpty) {
+                          return const Center(
+                            child: Text(
+                              'No pictures in this collection yet. Import a local image with its name, category and useful clue. Images stay on this device.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Colors.white70),
+                            ),
+                          );
+                        }
+                        final hiddenCount = allItems
+                            .where((item) => item.hidden)
+                            .length;
+                        final visibleCount = allItems.length - hiddenCount;
+                        return Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: <Widget>[
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(18, 10, 18, 0),
+                              child: Text(
+                                '${allItems.length} characters · $visibleCount visible to games · $hiddenCount hidden',
+                                style: const TextStyle(color: Colors.white70),
+                              ),
+                            ),
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              padding: const EdgeInsets.all(18),
+                              gridDelegate:
+                                  const SliverGridDelegateWithMaxCrossAxisExtent(
+                                    maxCrossAxisExtent: 190,
+                                    mainAxisExtent: 220,
+                                    crossAxisSpacing: 12,
+                                    mainAxisSpacing: 12,
+                                  ),
+                              itemCount: items.length,
+                              itemBuilder: (context, index) {
+                                final item = items[index];
+                                return DecoratedBox(
+                                  key: ValueKey<String>(item.id),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF0B1B2E),
+                                    border: Border.all(
+                                      color: const Color(0x4460D9FF),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: <Widget>[
+                                      Expanded(
+                                        child: Image.file(
+                                          File(item.path),
+                                          fit: BoxFit.contain,
+                                          errorBuilder: (_, _, _) => const Icon(
+                                            Icons.broken_image_outlined,
+                                            color: Colors.white54,
+                                          ),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                        ),
+                                        child: Row(
+                                          children: <Widget>[
+                                            Expanded(
+                                              child: Text(
+                                                '${item.collection == 'bundled' ? 'BUNDLED' : 'INSTALLED · PRIVATE'}${item.hidden ? ' · HIDDEN' : ''}',
+                                                style: const TextStyle(
+                                                  color: Colors.white60,
+                                                  fontSize: 10,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              item.difficulty,
+                                              style: const TextStyle(
+                                                color: Colors.white60,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding: const EdgeInsets.fromLTRB(
+                                          8,
+                                          4,
+                                          4,
+                                          8,
+                                        ),
+                                        child: Row(
+                                          children: <Widget>[
+                                            Expanded(
+                                              child: Text(
+                                                item.name,
+                                                maxLines: 1,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontWeight: FontWeight.w700,
+                                                ),
+                                              ),
+                                            ),
+                                            IconButton(
+                                              tooltip: item.hidden
+                                                  ? 'Restore ${item.name} to games'
+                                                  : 'Hide ${item.name} from games',
+                                              onPressed: () =>
+                                                  _toggleHidden(item),
+                                              icon: Icon(
+                                                item.hidden
+                                                    ? Icons
+                                                          .visibility_off_outlined
+                                                    : Icons.visibility_outlined,
+                                              ),
+                                            ),
+                                            IconButton(
+                                              tooltip:
+                                                  item.collection == 'bundled'
+                                                  ? 'Exclude ${item.name}'
+                                                  : 'Delete ${item.name}',
+                                              onPressed: () => _remove(item),
+                                              icon: const Icon(
+                                                Icons.delete_outline,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
                             ),
                           ],
-                        ),
-                      );
-                    },
-                  );
-                },
+                        );
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],

@@ -67,7 +67,7 @@ class _CinematicSessionBuilderPageState
 
   Future<void> _loadPictureLibrary() async {
     try {
-      final pictures = await CharacterPictureRepository().loadAll();
+      final pictures = await CharacterPictureRepository().loadPlayable();
       if (mounted) {
         setState(() {
           _pictureChallenges = _pictureChallengesFrom(pictures);

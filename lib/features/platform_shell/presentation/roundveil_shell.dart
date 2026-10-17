@@ -329,7 +329,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
 
     var characterPicturesAvailable = false;
     if (gameId == 'guessing_games') {
-      final pictures = await CharacterPictureRepository().loadAll();
+      final pictures = await CharacterPictureRepository().loadPlayable();
       characterPicturesAvailable = pictures.length >= players.length;
       if (!mounted) return;
     }

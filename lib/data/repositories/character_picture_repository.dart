@@ -44,6 +44,7 @@ class CharacterPicture {
     this.width = 0,
     this.height = 0,
     this.sha256 = '',
+    this.hidden = false,
   });
 
   final String id;
@@ -64,6 +65,7 @@ class CharacterPicture {
   final int width;
   final int height;
   final String sha256;
+  final bool hidden;
 
   Map<String, Object?> toJson() => <String, Object?>{
     'id': id,
@@ -84,6 +86,7 @@ class CharacterPicture {
     'width': width,
     'height': height,
     'sha256': sha256,
+    'hidden': hidden,
   };
 
   factory CharacterPicture.fromJson(Map<String, Object?> json) =>
@@ -108,28 +111,31 @@ class CharacterPicture {
         width: json['width'] as int? ?? 0,
         height: json['height'] as int? ?? 0,
         sha256: json['sha256'] as String? ?? '',
+        hidden: json['hidden'] as bool? ?? false,
       );
 
-  CharacterPicture copyWith({String? collection}) => CharacterPicture(
-    id: id,
-    name: name,
-    path: path,
-    category: category,
-    aliases: aliases,
-    hint: hint,
-    sourceTitle: sourceTitle,
-    sourceUrl: sourceUrl,
-    license: license,
-    attribution: attribution,
-    subjectType: subjectType,
-    franchise: franchise,
-    description: description,
-    difficulty: difficulty,
-    collection: collection ?? this.collection,
-    width: width,
-    height: height,
-    sha256: sha256,
-  );
+  CharacterPicture copyWith({String? collection, bool? hidden}) =>
+      CharacterPicture(
+        id: id,
+        name: name,
+        path: path,
+        category: category,
+        aliases: aliases,
+        hint: hint,
+        sourceTitle: sourceTitle,
+        sourceUrl: sourceUrl,
+        license: license,
+        attribution: attribution,
+        subjectType: subjectType,
+        franchise: franchise,
+        description: description,
+        difficulty: difficulty,
+        collection: collection ?? this.collection,
+        width: width,
+        height: height,
+        sha256: sha256,
+        hidden: hidden ?? this.hidden,
+      );
 }
 
 class PicturePackageImportReport {
@@ -199,11 +205,19 @@ class CharacterPictureRepository {
   Future<List<CharacterPicture>> loadAll() async {
     final file = await _indexFile;
     var items = <CharacterPicture>[];
+    var excludedBundledIds = <String>{};
+    var hiddenIds = <String>{};
+    var removedIds = <String>{};
+    var removedImageHashes = <String>{};
     if (await file.exists()) {
       final decoded = jsonDecode(await file.readAsString());
       if (decoded is! Map<String, Object?> || decoded['items'] is! List) {
         throw const FormatException('Character picture index is invalid.');
       }
+      excludedBundledIds = _readStringSet(decoded['excludedBundledIds']);
+      hiddenIds = _readStringSet(decoded['hiddenIds']);
+      removedIds = _readStringSet(decoded['removedIds']);
+      removedImageHashes = _readStringSet(decoded['removedImageHashes']);
       items = (decoded['items']! as List<Object?>)
           .map(
             (item) => CharacterPicture.fromJson(item! as Map<String, Object?>),
@@ -211,9 +225,101 @@ class CharacterPictureRepository {
           .where((item) => File(item.path).existsSync())
           .toList();
     }
-    if (includeBundledImages) items = await _installBundledImages(items);
+    if (includeBundledImages) {
+      items = await _installBundledImages(
+        items,
+        excludedIds: excludedBundledIds,
+        removedIds: removedIds,
+        removedImageHashes: removedImageHashes,
+      );
+    }
+    items = items
+        .map((item) => item.copyWith(hidden: hiddenIds.contains(item.id)))
+        .toList(growable: false);
     return List<CharacterPicture>.unmodifiable(items);
   }
+
+  Future<List<CharacterPicture>> loadPlayable() async =>
+      (await loadAll()).where((item) => !item.hidden).toList(growable: false);
+
+  Future<void> setHidden(String id, {required bool hidden}) async {
+    final items = (await loadAll()).toList();
+    if (!items.any((item) => item.id == id)) return;
+    final state = await _readIndexState();
+    final hiddenIds = state.hiddenIds;
+    if (hidden) {
+      hiddenIds.add(id);
+    } else {
+      hiddenIds.remove(id);
+    }
+    await _writeIndex(
+      items
+          .map((item) => item.copyWith(hidden: hiddenIds.contains(item.id)))
+          .toList(),
+      hiddenIds: hiddenIds,
+    );
+  }
+
+  String catalogKey(String category, String name) =>
+      'catalog:${category.toLowerCase()}|${name.toLowerCase()}';
+
+  Future<Set<String>> loadHiddenCatalogKeys() async => (await _readIndexState())
+      .hiddenIds
+      .where((id) => id.startsWith('catalog:'))
+      .toSet();
+
+  Future<void> setCatalogHidden(
+    String category,
+    String name, {
+    required bool hidden,
+  }) async {
+    final state = await _readIndexState();
+    final key = catalogKey(category, name);
+    if (hidden) {
+      state.hiddenIds.add(key);
+    } else {
+      state.hiddenIds.remove(key);
+    }
+    await _writeIndex(await loadAll(), hiddenIds: state.hiddenIds);
+  }
+
+  Future<bool> isImageRemoved(String digest) async {
+    if (digest.isEmpty) return false;
+    return (await _readIndexState()).removedImageHashes.contains(digest);
+  }
+
+  Future<
+    ({
+      Set<String> excludedBundledIds,
+      Set<String> hiddenIds,
+      Set<String> removedIds,
+      Set<String> removedImageHashes,
+    })
+  >
+  _readIndexState() async {
+    final file = await _indexFile;
+    if (!await file.exists()) {
+      return (
+        excludedBundledIds: <String>{},
+        hiddenIds: <String>{},
+        removedIds: <String>{},
+        removedImageHashes: <String>{},
+      );
+    }
+    final decoded =
+        jsonDecode(await file.readAsString()) as Map<String, Object?>;
+    return (
+      excludedBundledIds: _readStringSet(decoded['excludedBundledIds']),
+      hiddenIds: _readStringSet(decoded['hiddenIds']),
+      removedIds: _readStringSet(decoded['removedIds']),
+      removedImageHashes: _readStringSet(decoded['removedImageHashes']),
+    );
+  }
+
+  Set<String> _readStringSet(Object? value) =>
+      (value as List<Object?>? ?? const <Object?>[])
+          .whereType<String>()
+          .toSet();
 
   Future<List<CharacterPicture>> loadBundled() async => (await loadAll())
       .where((item) => item.collection == 'bundled')
@@ -224,8 +330,11 @@ class CharacterPictureRepository {
       .toList(growable: false);
 
   Future<List<CharacterPicture>> _installBundledImages(
-    List<CharacterPicture> current,
-  ) async {
+    List<CharacterPicture> current, {
+    required Set<String> excludedIds,
+    required Set<String> removedIds,
+    required Set<String> removedImageHashes,
+  }) async {
     const manifestAsset = 'assets/brand/character_pictures/manifest.json';
     final String manifestText;
     try {
@@ -262,6 +371,7 @@ class CharacterPictureRepository {
           !assetPath.startsWith('assets/brand/character_pictures/')) {
         continue;
       }
+      if (excludedIds.contains(id) || removedIds.contains(id)) continue;
       if (knownIds.contains(id)) {
         final existingIndex = result.indexWhere((item) => item.id == id);
         if (existingIndex >= 0 &&
@@ -282,6 +392,7 @@ class CharacterPictureRepository {
       final dimensions = await _validatedDimensions(extension, bytes);
       if (dimensions == null) continue;
       final digest = sha256.convert(bytes).toString();
+      if (removedImageHashes.contains(digest)) continue;
       final expectedDigest = raw['sha256'] as String?;
       if (expectedDigest != null &&
           expectedDigest.isNotEmpty &&
@@ -325,7 +436,14 @@ class CharacterPictureRepository {
       knownIds.add(id);
       changed = true;
     }
-    if (changed || collectionCorrected) await _writeIndex(result);
+    if (changed || collectionCorrected) {
+      await _writeIndex(
+        result,
+        excludedBundledIds: excludedIds,
+        removedIds: removedIds,
+        removedImageHashes: removedImageHashes,
+      );
+    }
     return result;
   }
 
@@ -429,6 +547,9 @@ class CharacterPictureRepository {
 
     final existing = (await loadAll()).toList();
     final digest = sha256.convert(bytes).toString();
+    if ((await _readIndexState()).removedImageHashes.contains(digest)) {
+      return null;
+    }
     for (final item in existing) {
       if (await _digestFor(item) == digest) return null;
     }
@@ -721,6 +842,7 @@ class CharacterPictureRepository {
     }
 
     final existing = (await loadAll()).toList();
+    final deletionState = await _readIndexState();
     final existingById = <String, CharacterPicture>{
       for (final item in existing) item.id: item,
     };
@@ -769,6 +891,10 @@ class CharacterPictureRepository {
         if (!seenIds.add(id)) {
           throw FormatException('Duplicate content ID: $id');
         }
+        if (deletionState.removedIds.contains(id)) {
+          duplicates++;
+          continue;
+        }
         if (!seenFiles.add(imageFilename)) {
           throw FormatException('Image filename is reused: $imageFilename');
         }
@@ -782,6 +908,11 @@ class CharacterPictureRepository {
         }
         final ext = imageFilename.split('.').last.toLowerCase();
         final digest = sha256.convert(imageBytes).toString();
+        if (deletionState.removedIds.contains(id) ||
+            deletionState.removedImageHashes.contains(digest)) {
+          duplicates++;
+          continue;
+        }
         final sameId = existingById[id];
         if (sameId != null && await _digestFor(sameId) != digest) {
           throw FormatException(
@@ -922,20 +1053,54 @@ class CharacterPictureRepository {
   Future<void> remove(String id) async {
     final items = (await loadAll()).toList();
     final retained = items.where((item) => item.id != id).toList();
-    final removed = items.where((item) => item.id == id);
-    for (final item in removed) {
-      final file = File(item.path);
-      if (await file.exists()) await file.delete();
+    final removed = items.where((item) => item.id == id).toList();
+    if (removed.isEmpty) return;
+    final state = await _readIndexState();
+    final item = removed.single;
+    state.removedIds.add(id);
+    if (item.collection == 'bundled') {
+      state.excludedBundledIds.add(id);
+    } else {
+      final digest = await _digestFor(item);
+      if (digest.isNotEmpty) state.removedImageHashes.add(digest);
     }
-    await _writeIndex(retained);
+    final image = File(item.path);
+    final libraryPath =
+        '${(await _libraryDirectory).absolute.path}${Platform.pathSeparator}';
+    if (await image.exists() && image.absolute.path.startsWith(libraryPath)) {
+      await image.delete();
+    }
+    state.hiddenIds.remove(id);
+    await _writeIndex(
+      retained,
+      excludedBundledIds: state.excludedBundledIds,
+      hiddenIds: state.hiddenIds,
+      removedIds: state.removedIds,
+      removedImageHashes: state.removedImageHashes,
+    );
   }
 
-  Future<void> _writeIndex(List<CharacterPicture> items) async {
+  Future<void> _writeIndex(
+    List<CharacterPicture> items, {
+    Set<String>? excludedBundledIds,
+    Set<String>? hiddenIds,
+    Set<String>? removedIds,
+    Set<String>? removedImageHashes,
+  }) async {
+    final previous = await _readIndexState();
     final file = await _indexFile;
     await file.writeAsString(
       jsonEncode(<String, Object?>{
         'schemaVersion': 2,
         'items': items.map((item) => item.toJson()).toList(),
+        'excludedBundledIds':
+            (excludedBundledIds ?? previous.excludedBundledIds).toList()
+              ..sort(),
+        'hiddenIds': (hiddenIds ?? previous.hiddenIds).toList()..sort(),
+        'removedIds': (removedIds ?? previous.removedIds).toList()..sort(),
+        'removedImageHashes':
+            (removedImageHashes ?? previous.removedImageHashes).toList()
+              ..sort(),
       }),
       flush: true,
     );

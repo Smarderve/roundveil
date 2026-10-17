@@ -67,7 +67,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       final needsPictures = widget.configuration.effectiveRoundFormatIds
           .contains('character_picture');
       final pictures = needsPictures
-          ? await _pictureRepository.loadAll()
+          ? await _pictureRepository.loadPlayable()
           : const <CharacterPicture>[];
       if (!mounted) return;
       final match = ActiveMatchController(
