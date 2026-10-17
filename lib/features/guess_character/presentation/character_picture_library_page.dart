@@ -1,9 +1,11 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:roundveil/data/repositories/character_picture_repository.dart';
+import 'package:roundveil/data/repositories/character_picture_catalog.dart';
 
 /// Local-only content management for the user-owned Picture Mode collection.
 class CharacterPictureLibraryPage extends StatefulWidget {
@@ -25,6 +27,7 @@ class _CharacterPictureLibraryPageState
   final TextEditingController _aliases = TextEditingController();
   final TextEditingController _description = TextEditingController();
   final TextEditingController _attribution = TextEditingController();
+  final TextEditingController _imageUrl = TextEditingController();
   late Future<List<CharacterPicture>> _items = _repository.loadAll();
   String _category = 'Marvel Characters';
   String _difficulty = 'Mixed';
@@ -41,6 +44,7 @@ class _CharacterPictureLibraryPageState
     _aliases.dispose();
     _description.dispose();
     _attribution.dispose();
+    _imageUrl.dispose();
     super.dispose();
   }
 
@@ -153,6 +157,372 @@ class _CharacterPictureLibraryPageState
     }
   }
 
+  Future<void> _importFolder() async {
+    try {
+      final path = await FilePicker.getDirectoryPath(
+        dialogTitle: 'Choose a folder of character images',
+      );
+      if (path == null) return;
+      final files = await Directory(path)
+          .list(recursive: true, followLinks: false)
+          .where((entry) => entry is File && _isImageFilename(entry.path))
+          .cast<File>()
+          .take(501)
+          .toList();
+      if (files.isEmpty) {
+        throw const FormatException('No supported images were found.');
+      }
+      if (files.length > 500) {
+        throw const FormatException(
+          'Choose a folder with 500 images or fewer.',
+        );
+      }
+      var totalBytes = 0;
+      final images = <_BulkPictureImage>[];
+      for (final file in files) {
+        final bytes = await file.readAsBytes();
+        totalBytes += bytes.length;
+        if (totalBytes > 500 * 1024 * 1024) {
+          throw const FormatException(
+            'The selected folder exceeds the 500 MB import limit.',
+          );
+        }
+        images.add(
+          _BulkPictureImage(
+            filename: file.path
+                .substring(path.length)
+                .replaceAll('\\', '/')
+                .replaceFirst(RegExp(r'^/'), ''),
+            bytes: bytes,
+          ),
+        );
+      }
+      await _reviewAndInstall(images);
+    } on Object catch (error) {
+      if (mounted) _showImportError(error);
+    }
+  }
+
+  Future<void> _importImageZip() async {
+    try {
+      final selection = await FilePicker.pickFiles(
+        dialogTitle: 'Choose a ZIP of character images',
+        type: FileType.custom,
+        allowedExtensions: const <String>['zip'],
+      );
+      if (selection.isEmpty) return;
+      final bytes = await selection.single.readAsBytes();
+      if (bytes.length > 500 * 1024 * 1024) {
+        throw const FormatException('The ZIP must be smaller than 500 MB.');
+      }
+      final archive = ZipDecoder().decodeBytes(bytes);
+      final images = <_BulkPictureImage>[];
+      var expandedBytes = 0;
+      for (final entry in archive.files) {
+        if (!entry.isFile ||
+            entry.isSymbolicLink ||
+            !_isImageFilename(entry.name)) {
+          continue;
+        }
+        if (entry.name.startsWith('/') ||
+            entry.name
+                .replaceAll('\\', '/')
+                .split('/')
+                .any((part) => part == '..')) {
+          throw const FormatException('The ZIP contains an unsafe path.');
+        }
+        expandedBytes += entry.size;
+        if (expandedBytes > 500 * 1024 * 1024 || images.length >= 500) {
+          throw const FormatException(
+            'The ZIP exceeds the 500-image / 500 MB import limit.',
+          );
+        }
+        final imageBytes = entry.readBytes();
+        if (imageBytes != null) {
+          images.add(
+            _BulkPictureImage(filename: entry.name, bytes: imageBytes),
+          );
+        }
+      }
+      if (images.isEmpty) {
+        throw const FormatException('The ZIP contains no supported images.');
+      }
+      await _reviewAndInstall(images);
+    } on Object catch (error) {
+      if (mounted) _showImportError(error);
+    }
+  }
+
+  static bool _isImageFilename(String path) => const <String>{
+    'png',
+    'jpg',
+    'jpeg',
+    'webp',
+  }.contains(path.split('.').last.toLowerCase());
+
+  String? _categoryHintFromPath(String path) {
+    final segments = path.replaceAll('\\', '/').split('/');
+    const hints = <String, String>{
+      'marvel': 'Marvel Characters',
+      'dc': 'DC Characters',
+      'anime': 'Anime Characters',
+      'cartoon': 'Cartoon Characters',
+      'disney': 'Disney Characters',
+      'dreamworks': 'DreamWorks Characters',
+    };
+    final found = <String>{};
+    for (final segment in segments.take(segments.length - 1)) {
+      final normalized = normalizeCharacterPictureName(segment);
+      for (final entry in hints.entries) {
+        if (normalized == entry.key || normalized == '${entry.key}characters') {
+          found.add(entry.value);
+        }
+      }
+    }
+    return found.length == 1 ? found.single : null;
+  }
+
+  Future<void> _reviewAndInstall(List<_BulkPictureImage> images) async {
+    final review = images
+        .map((image) {
+          final categoryHint = _categoryHintFromPath(image.filename);
+          return _BulkPictureReviewItem(
+            image,
+            matchCharacterPictureCatalogFilename(
+              image.filename.split('/').last,
+              categoryHint: categoryHint,
+            ),
+          );
+        })
+        .toList(growable: false);
+    var permissionConfirmed = false;
+    final selected = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text('REVIEW ${review.length} LOCAL IMAGES'),
+          content: SizedBox(
+            width: (MediaQuery.sizeOf(context).width - 80).clamp(320.0, 760.0),
+            height: (MediaQuery.sizeOf(context).height - 190).clamp(
+              240.0,
+              520.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: <Widget>[
+                const Text(
+                  'Exact filenames are matched to the prepared character catalog. Correct uncertain matches or leave them skipped. No image is installed until you confirm.',
+                ),
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: review.length,
+                    itemBuilder: (context, index) {
+                      final item = review[index];
+                      return ListTile(
+                        leading: SizedBox(
+                          width: 58,
+                          height: 58,
+                          child: Image.memory(
+                            item.image.bytes,
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, _, _) =>
+                                const Icon(Icons.broken_image_outlined),
+                          ),
+                        ),
+                        title: Text(
+                          item.image.filename,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        subtitle: DropdownButton<String?>(
+                          isExpanded: true,
+                          value: item.entry?.id,
+                          hint: const Text(
+                            'Unmatched · skip or choose identity',
+                          ),
+                          items: <DropdownMenuItem<String?>>[
+                            const DropdownMenuItem<String?>(
+                              value: null,
+                              child: Text('SKIP THIS IMAGE'),
+                            ),
+                            ...characterPictureCatalog.map(
+                              (entry) => DropdownMenuItem<String?>(
+                                value: entry.id,
+                                child: Text(
+                                  '${entry.name} · ${entry.category}',
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ),
+                          ],
+                          onChanged: (value) => setDialogState(() {
+                            item.entry = value == null
+                                ? null
+                                : characterPictureCatalog.firstWhere(
+                                    (entry) => entry.id == value,
+                                  );
+                          }),
+                        ),
+                        trailing: item.entry == null
+                            ? const Icon(
+                                Icons.remove_circle_outline,
+                                color: Colors.white38,
+                              )
+                            : const Icon(
+                                Icons.check_circle_outline,
+                                color: Color(0xFF42D5E8),
+                              ),
+                      );
+                    },
+                  ),
+                ),
+                CheckboxListTile(
+                  contentPadding: EdgeInsets.zero,
+                  value: permissionConfirmed,
+                  onChanged: (value) => setDialogState(
+                    () => permissionConfirmed = value ?? false,
+                  ),
+                  title: const Text(
+                    'I am authorized to keep and use these images in my private offline family collection.',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext, false),
+              child: const Text('CANCEL'),
+            ),
+            FilledButton(
+              onPressed:
+                  permissionConfirmed &&
+                      review.any((item) => item.entry != null)
+                  ? () => Navigator.pop(dialogContext, true)
+                  : null,
+              child: Text(
+                'INSTALL ${review.where((item) => item.entry != null).length} IMAGES',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (selected != true || !mounted) return;
+    setState(() => _busy = true);
+    try {
+      final batch = <PrivateCharacterImageImport>[];
+      for (final item in review) {
+        final entry = item.entry;
+        if (entry == null) continue;
+        batch.add(
+          PrivateCharacterImageImport(
+            filename: item.image.filename,
+            bytes: item.image.bytes,
+            name: entry.name,
+            category: entry.category,
+            franchise: entry.franchise,
+            series: entry.series,
+            aliases: entry.aliases,
+            hint: entry.hint,
+            difficulty: entry.difficulty,
+            description:
+                'Series: ${entry.series}. Metadata reference: ${entry.reference}',
+          ),
+        );
+      }
+      final report = await _repository.importPrivateImageBatch(batch);
+      if (!mounted) return;
+      setState(() => _items = _repository.loadAll());
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Installed ${report.imported}; duplicates skipped: ${report.duplicates}; invalid images: ${report.errors.length}.',
+          ),
+          duration: const Duration(seconds: 8),
+        ),
+      );
+    } on Object catch (error) {
+      if (mounted) _showImportError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _importFromImageUrl() async {
+    final uri = Uri.tryParse(_imageUrl.text.trim());
+    if (uri == null || uri.scheme != 'https' || uri.host.isEmpty) {
+      _showImportError(
+        const FormatException('Enter a public HTTPS image URL.'),
+      );
+      return;
+    }
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => _PrivateUrlPermissionDialog(uri: uri),
+    );
+    if (confirmed != true || !mounted) return;
+    final catalogEntry = characterPictureCatalog
+        .where(
+          (entry) =>
+              normalizeCharacterPictureName(entry.name) ==
+                  normalizeCharacterPictureName(_name.text) ||
+              entry.aliases.any(
+                (alias) =>
+                    normalizeCharacterPictureName(alias) ==
+                    normalizeCharacterPictureName(_name.text),
+              ),
+        )
+        .firstOrNull;
+    setState(() => _busy = true);
+    try {
+      final item = await _repository.importPrivateImageUrl(
+        uri: uri,
+        name: catalogEntry?.name ?? _name.text.trim(),
+        category: catalogEntry?.category ?? _category,
+        franchise: catalogEntry?.franchise ?? _franchise.text,
+        hint: catalogEntry?.hint ?? _hint.text,
+        aliases:
+            catalogEntry?.aliases ??
+            _aliases.text
+                .split(',')
+                .map((value) => value.trim())
+                .where((value) => value.isNotEmpty)
+                .toList(),
+        difficulty: catalogEntry?.difficulty ?? _difficulty,
+        attribution: _attribution.text,
+        permissionConfirmed: true,
+      );
+      if (item == null) {
+        throw const FormatException(
+          'This image is already in the local collection.',
+        );
+      }
+      if (!mounted) return;
+      setState(() {
+        _items = _repository.loadAll();
+        _imageUrl.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Image saved for offline private play.')),
+      );
+    } on Object catch (error) {
+      if (mounted) _showImportError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  void _showImportError(Object error) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(error.toString().replaceFirst('FormatException: ', '')),
+      ),
+    );
+  }
+
   Future<void> _exportPackage() async {
     setState(() => _busy = true);
     try {
@@ -178,6 +548,82 @@ class _CharacterPictureLibraryPageState
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  Future<void> _showCharacterCatalog() async {
+    final installed = await _repository.loadAll();
+    if (!mounted) return;
+    final installedIdentities = <String>{
+      for (final item in installed)
+        '${item.category}|${normalizeCharacterPictureName(item.name)}',
+    };
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('FICTIONAL CHARACTER CATALOG · 60 IDENTITIES'),
+        content: SizedBox(
+          width: (MediaQuery.sizeOf(context).width - 80).clamp(320.0, 700.0),
+          height: (MediaQuery.sizeOf(context).height - 190).clamp(240.0, 520.0),
+          child: ListView(
+            children: <Widget>[
+              for (final category in const <String>[
+                'Marvel Characters',
+                'DC Characters',
+                'Anime Characters',
+                'Cartoon Characters',
+                'Disney Characters',
+                'DreamWorks Characters',
+              ])
+                Builder(
+                  builder: (context) {
+                    final entries = characterPictureCatalog
+                        .where((entry) => entry.category == category)
+                        .toList();
+                    final count = entries
+                        .where(
+                          (entry) => installedIdentities.contains(
+                            '$category|${normalizeCharacterPictureName(entry.name)}',
+                          ),
+                        )
+                        .length;
+                    return ExpansionTile(
+                      title: Text(
+                        '$category · $count/${entries.length} images',
+                      ),
+                      children: entries.map((entry) {
+                        final hasImage = installedIdentities.contains(
+                          '$category|${normalizeCharacterPictureName(entry.name)}',
+                        );
+                        return ListTile(
+                          dense: true,
+                          title: Text(entry.name),
+                          subtitle: Text(
+                            '${entry.series} · ${entry.difficulty} · ${entry.hint}',
+                          ),
+                          trailing: Icon(
+                            hasImage
+                                ? Icons.check_circle
+                                : Icons.image_not_supported_outlined,
+                            color: hasImage
+                                ? const Color(0xFF42D5E8)
+                                : Colors.white38,
+                          ),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('CLOSE'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -227,6 +673,17 @@ class _CharacterPictureLibraryPageState
                           controller: _name,
                           decoration: const InputDecoration(
                             labelText: 'Subject name',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 300,
+                        child: TextField(
+                          controller: _imageUrl,
+                          keyboardType: TextInputType.url,
+                          decoration: const InputDecoration(
+                            labelText: 'Authorized HTTPS image URL',
                             isDense: true,
                           ),
                         ),
@@ -365,6 +822,26 @@ class _CharacterPictureLibraryPageState
                         label: const Text('IMPORT COLLECTION ZIP'),
                       ),
                       OutlinedButton.icon(
+                        onPressed: _busy ? null : _importFolder,
+                        icon: const Icon(Icons.folder_open_outlined),
+                        label: const Text('REVIEW IMAGE FOLDER'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _showCharacterCatalog,
+                        icon: const Icon(Icons.auto_stories_outlined),
+                        label: const Text('VIEW CHARACTER CATALOG'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _importImageZip,
+                        icon: const Icon(Icons.archive_outlined),
+                        label: const Text('REVIEW IMAGE ZIP'),
+                      ),
+                      OutlinedButton.icon(
+                        onPressed: _busy ? null : _importFromImageUrl,
+                        icon: const Icon(Icons.download_outlined),
+                        label: const Text('SAVE URL IMAGE'),
+                      ),
+                      OutlinedButton.icon(
                         onPressed: _busy ? null : _exportPackage,
                         icon: const Icon(Icons.ios_share_rounded),
                         label: const Text('EXPORT COLLECTION ZIP'),
@@ -470,5 +947,68 @@ class _CharacterPictureLibraryPageState
         ),
       ),
     ),
+  );
+}
+
+class _BulkPictureImage {
+  const _BulkPictureImage({required this.filename, required this.bytes});
+
+  final String filename;
+  final Uint8List bytes;
+}
+
+class _BulkPictureReviewItem {
+  _BulkPictureReviewItem(this.image, this.entry);
+
+  final _BulkPictureImage image;
+  CharacterPictureCatalogEntry? entry;
+}
+
+class _PrivateUrlPermissionDialog extends StatefulWidget {
+  const _PrivateUrlPermissionDialog({required this.uri});
+
+  final Uri uri;
+
+  @override
+  State<_PrivateUrlPermissionDialog> createState() =>
+      _PrivateUrlPermissionDialogState();
+}
+
+class _PrivateUrlPermissionDialogState
+    extends State<_PrivateUrlPermissionDialog> {
+  bool confirmed = false;
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('SAVE A PRIVATE IMAGE'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Text(widget.uri.host),
+        const SizedBox(height: 12),
+        const Text(
+          'ROUNDVEIL only fetches this URL once. It does not determine whether the source permits downloading or offline use.',
+        ),
+        CheckboxListTile(
+          contentPadding: EdgeInsets.zero,
+          value: confirmed,
+          onChanged: (value) => setState(() => confirmed = value ?? false),
+          title: const Text(
+            'I checked the source terms and am authorized to save and use this image privately offline.',
+          ),
+        ),
+      ],
+    ),
+    actions: <Widget>[
+      TextButton(
+        onPressed: () => Navigator.pop(context, false),
+        child: const Text('CANCEL'),
+      ),
+      FilledButton(
+        onPressed: confirmed ? () => Navigator.pop(context, true) : null,
+        child: const Text('DOWNLOAD IMAGE'),
+      ),
+    ],
   );
 }

@@ -4,10 +4,12 @@
 > **Product:** Guess the Character — local/private Picture Mode
 
 Picture collections are maintained on the user's device. ROUNDVEIL does not
-download, synchronize, or upload these files. A collection package is a ZIP
-containing one `manifest.json` and the referenced image files. Images may be
-inside subfolders; manifest image names are basenames, so package paths are
-never written directly into app storage.
+synchronize or upload these files. A user may choose a local folder or ZIP of
+images for a reviewed import; a separate one-image HTTPS option is available
+only after the owner confirms source terms allow private offline use. A portable
+collection ZIP may also contain one `manifest.json` and referenced image files.
+Images may be inside subfolders; archive paths are never written directly into
+app storage.
 
 ```json
 {
@@ -48,14 +50,24 @@ whether Win Countdown starts.
 The bundled and private-family collection boundary, source API usage limits,
 category filtering behavior and current fictional-character inventory are
 recorded in [`PICTURE_MODE_CONTENT_SOURCES.md`](PICTURE_MODE_CONTENT_SOURCES.md).
-The Picture Library supports category-tagged local imports without requiring a
-hand-authored JSON manifest. Imported private images remain outside public app
-assets. No fictional artwork is counted until real images are installed and
-visually verified.
+The Picture Library supports reviewed local-folder and ZIP imports, exact
+filename/alias matching against the 60-entry fictional metadata catalog,
+preview/correction before install, and explicitly permission-confirmed HTTPS
+image imports without requiring a hand-authored JSON manifest. Imported private
+images remain outside public app assets. Catalog names alone are not playable;
+no fictional artwork is counted until real images are installed and verified.
+
+Local batch imports accept at most 500 images and 500 MB expanded size, validate
+PNG/JPEG/WebP decoding and minimum dimensions, skip identical bytes and duplicate
+category/identity pairs, and report invalid items. An ambiguous filename is not
+automatically assigned; the host must correct it in preview or skip it.
 
 ## Verified inventory — 2026-10-17
 
-The repository now contains **50 bundled, distinct person-photo challenges**.
+The repository contains **50 bundled, distinct person-photo challenges**. The
+fictional metadata catalog contains 60 entries, 10 per requested fictional
+category; currently none has a verified image, so fictional playable counts are
+0 in all six categories.
 The first 50-image milestone is met by playable records, not candidate URLs or
 test fixtures. Category counts are: 17 Indian actors and actresses, 10
 footballers, 14 Hollywood actors, 8 historical presidents, and 1 wrestler /

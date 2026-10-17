@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:archive/archive.dart';
@@ -141,6 +142,32 @@ class PicturePackageImportReport {
   final int imported;
   final int duplicates;
   final List<String> errors;
+}
+
+class PrivateCharacterImageImport {
+  const PrivateCharacterImageImport({
+    required this.filename,
+    required this.bytes,
+    required this.name,
+    required this.category,
+    required this.franchise,
+    required this.series,
+    required this.aliases,
+    required this.hint,
+    required this.difficulty,
+    this.description = '',
+  });
+
+  final String filename;
+  final List<int> bytes;
+  final String name;
+  final String category;
+  final String franchise;
+  final String series;
+  final List<String> aliases;
+  final String hint;
+  final String difficulty;
+  final String description;
 }
 
 /// Private, offline image library for Character Picture Mode.
@@ -436,6 +463,214 @@ class CharacterPictureRepository {
     );
     await _writeIndex(<CharacterPicture>[...existing, item]);
     return item;
+  }
+
+  /// Installs a reviewed batch as local private content, validating each image
+  /// and preventing both byte-identical and duplicate-identity entries.
+  Future<PicturePackageImportReport> importPrivateImageBatch(
+    List<PrivateCharacterImageImport> batch,
+  ) async {
+    if (batch.length > 500) {
+      throw const FormatException('A single import is limited to 500 images.');
+    }
+    var imported = 0;
+    var duplicates = 0;
+    final errors = <String>[];
+    final acceptedIdentities = <String>{
+      for (final item in await loadPrivate())
+        '${item.category.toLowerCase()}|${item.name.toLowerCase()}',
+    };
+    for (final entry in batch) {
+      final identity =
+          '${entry.category.toLowerCase()}|${entry.name.toLowerCase()}';
+      if (!acceptedIdentities.add(identity)) {
+        duplicates++;
+        continue;
+      }
+      try {
+        final ext = entry.filename.split('.').last.toLowerCase();
+        final added = await addImageBytes(
+          name: entry.name,
+          extension: ext,
+          bytes: entry.bytes,
+          category: entry.category,
+          aliases: entry.aliases,
+          hint: entry.hint,
+          franchise: entry.franchise,
+          description: entry.description.isEmpty
+              ? 'Series: ${entry.series}'
+              : '${entry.description}\nSeries: ${entry.series}',
+          subjectType: 'Fictional character',
+          difficulty: entry.difficulty,
+          sourceTitle: 'Owner-supplied private local image',
+          sourceUrl: '',
+          license: 'Owner confirmed private-use permission at import',
+          attribution:
+              'Image source supplied by owner; see original local file.',
+          collection: 'private',
+        );
+        if (added == null) {
+          duplicates++;
+          acceptedIdentities.remove(identity);
+        } else {
+          imported++;
+        }
+      } on Object catch (error) {
+        acceptedIdentities.remove(identity);
+        errors.add(
+          '${entry.filename}: ${error.toString().replaceFirst('FormatException: ', '')}',
+        );
+      }
+    }
+    return PicturePackageImportReport(
+      imported: imported,
+      duplicates: duplicates,
+      errors: List<String>.unmodifiable(errors),
+    );
+  }
+
+  /// Downloads a single owner-authorized image URL for private offline use.
+  /// Only HTTPS URLs resolving to public IP addresses are fetched; redirects
+  /// are rejected so a remote host cannot redirect the request to local hosts.
+  Future<CharacterPicture?> importPrivateImageUrl({
+    required Uri uri,
+    required String name,
+    required String category,
+    required String franchise,
+    required String hint,
+    required List<String> aliases,
+    required String difficulty,
+    required String attribution,
+    required bool permissionConfirmed,
+  }) async {
+    if (!permissionConfirmed) {
+      throw const FormatException(
+        'Confirm that the source terms permit a private offline copy.',
+      );
+    }
+    if (uri.scheme != 'https' ||
+        uri.host.isEmpty ||
+        uri.userInfo.isNotEmpty ||
+        uri.hasPort && uri.port != 443) {
+      throw const FormatException('Use a public HTTPS image URL.');
+    }
+    final addresses = await InternetAddress.lookup(uri.host)
+        .timeout(const Duration(seconds: 10));
+    if (addresses.isEmpty ||
+        addresses.any((address) => !_isPublicAddress(address))) {
+      throw const FormatException(
+        'The image host must resolve only to public IP addresses.',
+      );
+    }
+    final client = HttpClient()
+      ..connectionTimeout = const Duration(seconds: 12);
+    try {
+      final request = await client
+          .getUrl(uri)
+          .timeout(const Duration(seconds: 15));
+      request.followRedirects = false;
+      request.headers.set(
+        HttpHeaders.acceptHeader,
+        'image/png,image/jpeg,image/webp',
+      );
+      final response = await request.close().timeout(
+        const Duration(seconds: 20),
+      );
+      if (response.statusCode != HttpStatus.ok ||
+          response.contentLength > 25 * 1024 * 1024) {
+        throw const FormatException(
+          'The source must return one image under 25 MB without redirects.',
+        );
+      }
+      final payload = BytesBuilder(copy: false);
+      var total = 0;
+      await for (final chunk in response.timeout(const Duration(seconds: 20))) {
+        total += chunk.length;
+        if (total > 25 * 1024 * 1024) {
+          throw const FormatException('The image exceeds the 25 MB limit.');
+        }
+        payload.add(chunk);
+      }
+      final bytes = payload.takeBytes();
+      final extension = _imageExtensionFromBytes(bytes);
+      if (extension == null) {
+        throw const FormatException(
+          'The URL did not return a valid PNG, JPEG, or WebP image.',
+        );
+      }
+      return await addImageBytes(
+        name: name,
+        extension: extension,
+        bytes: bytes,
+        category: category,
+        franchise: franchise,
+        aliases: aliases,
+        hint: hint,
+        difficulty: difficulty,
+        subjectType: 'Fictional character',
+        sourceTitle: 'Owner-supplied private image URL',
+        sourceUrl: uri.toString(),
+        license: 'Owner confirmed source permits private offline use',
+        attribution: attribution,
+        collection: 'private',
+      );
+    } finally {
+      client.close(force: true);
+    }
+  }
+
+  static bool _isPublicAddress(InternetAddress address) {
+    final bytes = address.rawAddress;
+    if (address.type == InternetAddressType.IPv4) {
+      return _isPublicIpv4(bytes);
+    }
+    if (bytes.every((byte) => byte == 0) ||
+        (bytes.take(15).every((byte) => byte == 0) && bytes[15] == 1) ||
+        bytes.first == 0xff ||
+        (bytes.first & 0xfe) == 0xfc ||
+        (bytes.first == 0xfe && (bytes[1] & 0xc0) == 0x80)) {
+      return false;
+    }
+    if (bytes.take(10).every((byte) => byte == 0) &&
+        bytes[10] == 0xff &&
+        bytes[11] == 0xff) {
+      return _isPublicIpv4(bytes.sublist(12));
+    }
+    return true;
+  }
+
+  static bool _isPublicIpv4(List<int> bytes) {
+    final a = bytes[0], b = bytes[1];
+    return a != 0 &&
+        a != 10 &&
+        a != 127 &&
+        !(a == 169 && b == 254) &&
+        !(a == 172 && b >= 16 && b <= 31) &&
+        !(a == 192 && b == 168) &&
+        !(a == 100 && b >= 64 && b <= 127) &&
+        a < 224;
+  }
+
+  static String? _imageExtensionFromBytes(List<int> bytes) {
+    if (bytes.length >= 8 &&
+        bytes[0] == 0x89 &&
+        bytes[1] == 0x50 &&
+        bytes[2] == 0x4e &&
+        bytes[3] == 0x47) {
+      return 'png';
+    }
+    if (bytes.length >= 3 &&
+        bytes[0] == 0xff &&
+        bytes[1] == 0xd8 &&
+        bytes[2] == 0xff) {
+      return 'jpg';
+    }
+    if (bytes.length >= 12 &&
+        String.fromCharCodes(bytes.sublist(0, 4)) == 'RIFF' &&
+        String.fromCharCodes(bytes.sublist(8, 12)) == 'WEBP') {
+      return 'webp';
+    }
+    return null;
   }
 
   /// Imports a private offline ZIP package. The archive contains one

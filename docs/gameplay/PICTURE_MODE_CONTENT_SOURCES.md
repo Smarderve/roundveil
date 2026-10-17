@@ -9,20 +9,24 @@ ROUNDVEIL keeps two separate picture collections:
   storage. It is excluded from app assets and from public app builds. Imports
   remain local and are never uploaded.
 
-The Picture Library lets the owner choose an image, enter the pictured identity,
-category, series/franchise, accepted aliases, useful clue, difficulty, source,
-license and attribution, then add it to the private collection. A JSON manifest
-is not needed for individual imports. ZIP packages remain supported for moving
-already prepared family collections between devices. Private images must stay
-outside GitHub releases unless a redistribution grant is established.
+The Picture Library supports individual image selection, folder import, ZIP of
+images, and an optional permission-confirmed HTTPS image URL. Bulk imports show
+image previews and exact filename/alias matches before installation; the owner
+can correct a mapping or skip an image. Import requires one confirmation that
+the user has authority to keep the files privately, validates image decoding and
+dimensions, then copies accepted images into app-private storage. A JSON manifest
+is not needed. Private images must stay outside GitHub releases unless a
+redistribution grant is established.
 
 Gameplay configuration can select `All Categories` or a specific category:
 Marvel Characters, DC Characters, Anime Characters, Cartoon Characters, Disney
 Characters, DreamWorks Characters, other fictional characters, or the supported
-real-person categories. The runtime only draws records in the selected category;
-an insufficient category pool blocks the match with a count and remediation
-message. Each image challenge carries its identity, aliases, category, franchise,
-clue, difficulty, source/license notes and local image path. The answer is never
+real-person categories. A curated 60-identity metadata catalog has 10 entries
+per requested fictional category. Catalog-only identities are not playable: the
+runtime only draws installed, validated images in the selected category; an
+insufficient pool blocks the match with a count and remediation message. Each
+image challenge carries its identity, aliases, category, franchise, clue,
+difficulty, source/license notes and local image path. The answer is never
 rendered in Picture Mode before host judgement.
 
 ## Source API boundaries
@@ -61,18 +65,31 @@ Official policy references checked on 2026-10-17:
 - [DC Terms of Use](https://www.dc.com/terms)
 - [Marvel content terms](https://www.marvel.com/corporate/marvel_unlimited_terms)
 
+Official metadata/reference pages used for catalog identity and series fields:
+
+- [Marvel character directory](https://www.marvel.com/characters)
+- [DC character directory](https://www.dc.com/characters)
+- [Disney character directory](https://characters.disney.com/)
+- [Naruto official site](https://naruto-official.com/)
+- [One Piece official site](https://one-piece.com/)
+- [DreamWorks Animation](https://www.dreamworks.com/)
+
+These pages are identity references only. ROUNDVEIL does not copy their artwork
+into the private image collection, and the links are not image-download grants.
+
 ## Inventory and next content batch
 
 The bundled collection currently has 50 reviewed, tested images, all of real
-people. Fictional-character counts remain **zero** for Marvel, DC, anime,
-cartoons, Disney and DreamWorks. This implementation adds functional category
-filtering and a no-JSON private image import flow, but does not claim that
-fictional artwork was sourced or that any of those categories is populated.
-No external API credential or rights-holder authorization was present in this
-task, and no character images were copied from websites into the public bundle.
+people. The metadata catalog has 60 fictional identities, but fictional-image
+counts remain **zero** for Marvel, DC, anime, cartoons, Disney and DreamWorks;
+none of those categories is playable yet. No character artwork was downloaded
+or copied from a website. The direct URL path only acts on a URL explicitly
+provided by the owner after the owner confirms source permission. No external API
+credential or image asset authorization was present in this task.
 
 The next content batch needs either (a) assets accompanied by permission that
 covers the intended public bundle, or (b) owner-supplied images for the Private
-Family collection, which can be imported through Picture Library without code
-changes. Until images are installed, selecting an empty fictional category must
-not start a match or count as playable content.
+Family collection. The catalog and bulk import UI are ready to map, preview and
+install those images without editing code or JSON. Until images are installed,
+selecting an empty fictional category must not start a match or count as
+playable content.

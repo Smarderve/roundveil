@@ -91,6 +91,83 @@ void main() {
   });
 
   test(
+    'reviewed image batches install privately and deduplicate identities',
+    () async {
+      final temporary = await Directory.systemTemp.createTemp(
+        'rv-bulk-import-',
+      );
+      addTearDown(() => temporary.delete(recursive: true));
+      final repository = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+        includeBundledImages: false,
+      );
+      final image = await _testPng();
+      final candidate = PrivateCharacterImageImport(
+        filename: 'Spider-Man.png',
+        bytes: image,
+        name: 'Spider-Man',
+        category: 'Marvel Characters',
+        franchise: 'Marvel',
+        series: 'Spider-Man',
+        aliases: const <String>['Peter Parker'],
+        hint: 'Swings between buildings on web-lines.',
+        difficulty: 'Easy',
+        description: 'Metadata reference retained with local record.',
+      );
+
+      final first = await repository.importPrivateImageBatch([candidate]);
+      expect(first.imported, 1);
+      final installed = (await repository.loadPrivate()).single;
+      expect(installed.name, 'Spider-Man');
+      expect(installed.category, 'Marvel Characters');
+      expect(installed.collection, 'private');
+      expect(File(installed.path).existsSync(), isTrue);
+
+      final repeated = await repository.importPrivateImageBatch([candidate]);
+      expect(repeated.imported, 0);
+      expect(repeated.duplicates, 1);
+      expect(await repository.loadPrivate(), hasLength(1));
+    },
+  );
+
+  test(
+    'URL import requires explicit private-use confirmation and HTTPS',
+    () async {
+      final repository = CharacterPictureRepository(
+        includeBundledImages: false,
+      );
+      await expectLater(
+        repository.importPrivateImageUrl(
+          uri: Uri.parse('http://images.example.test/spider-man.png'),
+          name: 'Spider-Man',
+          category: 'Marvel Characters',
+          franchise: 'Marvel',
+          hint: 'A clue',
+          aliases: const <String>[],
+          difficulty: 'Easy',
+          attribution: '',
+          permissionConfirmed: true,
+        ),
+        throwsFormatException,
+      );
+      await expectLater(
+        repository.importPrivateImageUrl(
+          uri: Uri.parse('https://images.example.test/spider-man.png'),
+          name: 'Spider-Man',
+          category: 'Marvel Characters',
+          franchise: 'Marvel',
+          hint: 'A clue',
+          aliases: const <String>[],
+          difficulty: 'Easy',
+          attribution: '',
+          permissionConfirmed: false,
+        ),
+        throwsFormatException,
+      );
+    },
+  );
+
+  test(
     'private collection package imports, deduplicates and exports metadata',
     () async {
       final temporary = await Directory.systemTemp.createTemp('rv-package-');
