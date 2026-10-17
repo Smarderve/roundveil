@@ -20,6 +20,7 @@ class OfflineChallenge {
     this.formatAnswers = const <String, String>{},
     this.category,
     this.franchise,
+    this.subjectType,
   });
 
   final String id;
@@ -36,6 +37,8 @@ class OfflineChallenge {
 
   final String? category;
   final String? franchise;
+  final String? subjectType;
+
   String promptForFormat(String formatId) {
     final specified = formatPrompts[formatId];
     if (specified != null) return specified;
@@ -293,60 +296,90 @@ const characterChallenges = <OfflineChallenge>[
     prompt: 'A consulting detective who lives at 221B Baker Street.',
     answer: 'Sherlock Holmes',
     hint: 'Created by Arthur Conan Doyle.',
+    category: 'Fictional detective',
+    franchise: 'Sherlock Holmes stories',
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-002',
     prompt: 'A curious girl who follows a White Rabbit into a strange world.',
     answer: 'Alice',
     hint: 'Created by Lewis Carroll.',
+    category: 'Fictional character',
+    franchise: "Alice's Adventures in Wonderland",
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-003',
     prompt: 'A wooden puppet whose nose grows when he lies.',
     answer: 'Pinocchio',
     hint: 'Created by Carlo Collodi.',
+    category: 'Fictional character',
+    franchise: 'The Adventures of Pinocchio',
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-004',
     prompt: 'A young Kansas girl carried by a cyclone to the Land of Oz.',
     answer: 'Dorothy Gale',
     hint: 'Created by L. Frank Baum.',
+    category: 'Fictional character',
+    franchise: 'The Wonderful Wizard of Oz',
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-005',
     prompt: 'A clever archer associated with Sherwood Forest.',
     answer: 'Robin Hood',
     hint: 'A figure of English folklore.',
+    category: 'Folklore hero',
+    franchise: 'English folklore',
+    subjectType: 'Folklore character',
   ),
   OfflineChallenge(
     id: 'character-006',
     prompt: 'A boy who never grows up and lives in Neverland.',
     answer: 'Peter Pan',
     hint: 'Created by J. M. Barrie.',
+    category: 'Fictional character',
+    franchise: 'Peter and Wendy',
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-007',
     prompt: 'A young sailor who travels with Jim Hawkins in Treasure Island.',
     answer: 'Jim Hawkins',
     hint: 'Created by Robert Louis Stevenson.',
+    category: 'Fictional character',
+    franchise: 'Treasure Island',
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-008',
     prompt: 'A small girl who visits a family of bears in the forest.',
     answer: 'Goldilocks',
     hint: 'A character from a traditional fairy tale.',
+    category: 'Fairy-tale character',
+    franchise: 'Goldilocks and the Three Bears',
+    subjectType: 'Folklore character',
   ),
   OfflineChallenge(
     id: 'character-009',
     prompt: 'A boy who escapes to the Mississippi River with Huckleberry Finn.',
     answer: 'Tom Sawyer',
     hint: 'Created by Mark Twain.',
+    category: 'Fictional character',
+    franchise: 'The Adventures of Tom Sawyer',
+    subjectType: 'Literary character',
   ),
   OfflineChallenge(
     id: 'character-010',
     prompt: 'A clever cat who tricks an ogre and helps his master.',
     answer: 'Puss in Boots',
     hint: 'A European fairy-tale character.',
+    category: 'Fairy-tale character',
+    franchise: 'Puss in Boots',
+    subjectType: 'Folklore character',
   ),
 ];
 

@@ -8,6 +8,7 @@ import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_draft.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/features/active_match/presentation/active_match_page.dart';
+import 'package:roundveil/features/active_match/application/active_match_content.dart';
 import 'package:roundveil/features/guess_character/presentation/character_picture_library_page.dart';
 import 'package:roundveil/features/guess_country/presentation/player_avatar_figure.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dart';
@@ -327,11 +328,13 @@ class _RoundveilShellState extends State<RoundveilShell> {
       setState(() => _lobbyPlayers = chosen);
     }
 
-    var characterPicturesAvailable = false;
+    String? selectedGuessingFormat;
+    var pictureCategory = 'All Categories';
     if (gameId == 'guessing_games') {
-      final pictures = await CharacterPictureRepository().loadPlayable();
-      characterPicturesAvailable = pictures.length >= players.length;
-      if (!mounted) return;
+      final selection = await _pickGuessingMode(players);
+      if (selection == null || !mounted) return;
+      selectedGuessingFormat = selection.$1;
+      pictureCategory = selection.$2;
     }
 
     final (modules, formats) = switch (gameId) {
@@ -354,13 +357,13 @@ class _RoundveilShellState extends State<RoundveilShell> {
         ],
       ),
       _ => (
-        const <String>['guess_character', 'guess_country_flags'],
         <String>[
-          if (characterPicturesAvailable) 'character_picture',
-          'character_name',
-          'country_name',
-          'country_flag',
+          switch (selectedGuessingFormat) {
+            'character_picture' || 'character_name' => 'guess_character',
+            _ => 'guess_country_flags',
+          },
         ],
+        <String>[selectedGuessingFormat!],
       ),
     };
     final configuration = SessionConfiguration(
@@ -370,6 +373,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
       roundFormatsExplicit: true,
       roundCount: 4,
       isMixed: false,
+      characterPictureCategory: pictureCategory,
     );
     Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
@@ -377,6 +381,152 @@ class _RoundveilShellState extends State<RoundveilShell> {
           configuration: configuration,
           profileRepository: _playerProfiles,
         ),
+      ),
+    );
+  }
+
+  Future<(String, String)?> _pickGuessingMode(
+    List<PlayerConfiguration> players,
+  ) async {
+    final pictures = await CharacterPictureRepository().loadPlayable();
+    if (!mounted) return null;
+    const rounds = 4;
+    final required = players.length * rounds;
+    final categories = <String>[
+      'All Categories',
+      ...pictures.map((picture) => picture.category).toSet().toList()..sort(),
+    ];
+    var selectedCategory = 'All Categories';
+    return showDialog<(String, String)>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          final pictureCount = pictures
+              .where(
+                (picture) =>
+                    selectedCategory == 'All Categories' ||
+                    picture.category == selectedCategory,
+              )
+              .length;
+          final options = <(String, String, String, int, IconData)>[
+            (
+              'character_picture',
+              'CHARACTER PICTURE',
+              'Guess a character from a real image.',
+              pictureCount,
+              Icons.image_search_rounded,
+            ),
+            (
+              'character_name',
+              'CHARACTER NAME',
+              'Guess a character through verbal clues.',
+              characterChallenges.length,
+              Icons.record_voice_over_rounded,
+            ),
+            (
+              'country_flag',
+              'COUNTRY FLAG',
+              'Recognize a real offline country flag.',
+              countryChallenges.length,
+              Icons.flag_rounded,
+            ),
+            (
+              'country_name',
+              'COUNTRY NAME',
+              'Guess a country using geographic clues.',
+              countryChallenges.length,
+              Icons.public_rounded,
+            ),
+            (
+              'object_picture',
+              'OBJECT PICTURE',
+              'Not available yet · object collection is not playable.',
+              0,
+              Icons.category_rounded,
+            ),
+          ];
+          return AlertDialog(
+            title: const Text('GUESSING GAMES'),
+            content: SizedBox(
+              width: (MediaQuery.sizeOf(context).width - 56).clamp(
+                300.0,
+                560.0,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text('Choose one game mode for this match.'),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      initialValue: selectedCategory,
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Picture category',
+                        helperText: 'Applies to Character Picture only.',
+                      ),
+                      items: categories
+                          .map(
+                            (category) => DropdownMenuItem(
+                              value: category,
+                              child: Text(category),
+                            ),
+                          )
+                          .toList(growable: false),
+                      onChanged: (value) => setDialogState(
+                        () => selectedCategory = value ?? 'All Categories',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final option in options)
+                      Builder(
+                        builder: (context) {
+                          final available =
+                              option.$1 != 'object_picture' &&
+                              option.$4 >= required;
+                          final status = option.$1 == 'object_picture'
+                              ? 'Not implemented'
+                              : '${option.$4} available · $required needed for $rounds rounds';
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 4,
+                            ),
+                            leading: Icon(
+                              option.$5,
+                              color: available
+                                  ? const Color(0xFFFF9A3D)
+                                  : Colors.white38,
+                            ),
+                            title: Text(
+                              option.$2,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                            subtitle: Text('${option.$3}  $status'),
+                            enabled: available,
+                            onTap: available
+                                ? () => Navigator.pop(dialogContext, (
+                                    option.$1,
+                                    selectedCategory,
+                                  ))
+                                : null,
+                          );
+                        },
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('CANCEL'),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

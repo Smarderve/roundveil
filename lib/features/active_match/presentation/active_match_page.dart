@@ -66,9 +66,16 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
           .loadRecentIds();
       final needsPictures = widget.configuration.effectiveRoundFormatIds
           .contains('character_picture');
-      final pictures = needsPictures
+      final allPictures = needsPictures
           ? await _pictureRepository.loadPlayable()
           : const <CharacterPicture>[];
+      final selectedPictureCategory =
+          widget.configuration.characterPictureCategory;
+      final pictures = selectedPictureCategory == 'All Categories'
+          ? allPictures
+          : allPictures
+                .where((picture) => picture.category == selectedPictureCategory)
+                .toList(growable: false);
       if (!mounted) return;
       final match = ActiveMatchController(
         configuration: widget.configuration,
@@ -254,6 +261,19 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     ],
                   ),
                 ),
+                if (match.state.hintVisible)
+                  Positioned(
+                    top: compactLandscape ? 50 : 72,
+                    left: 12,
+                    right: 12,
+                    child: Center(
+                      child: _AnswerHintPopup(
+                        key: ValueKey<String>(match.state.challenge.id),
+                        hint: match.state.hintText,
+                        onDismiss: match.dismissHint,
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -732,6 +752,43 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
+                  if (challenge.formatId == 'character_name') ...<Widget>[
+                    const SizedBox(height: 6),
+                    Text(
+                      challenge.content.franchise ?? '',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: tokens.cyan,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    Text(
+                      <String?>[
+                            challenge.content.subjectType,
+                            challenge.content.category,
+                          ]
+                          .whereType<String>()
+                          .where((value) => value.isNotEmpty)
+                          .join(' · '),
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: tokens.muted, fontSize: 12),
+                    ),
+                    const SizedBox(height: 8),
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 620),
+                      child: Text(
+                        'CONTEXT · ${challenge.prompt}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
                   const SizedBox(height: 8),
                   const Text(
                     'Give verbal clues. Keep the character visible until the host judges the spoken guess.',
@@ -894,17 +951,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     children: <Widget>[
       if (widget.configuration.hintsEnabled) ...<Widget>[
         TextButton.icon(
-          onPressed:
-              !_activeMatch.state.hintVisible &&
-                  _activeMatch.state.challenge.hint.trim().isNotEmpty &&
-                  (_activeMatch
-                              .state
-                              .profiles[_activeMatch.state.activePlayer.id]
-                              ?.hintCredits ??
-                          0) >
-                      0 &&
-                  (_activeMatch.state.phase == MatchPhase.challenge ||
-                      _activeMatch.state.phase == MatchPhase.awaitingJudgement)
+          onPressed: _activeMatch.canRevealHint
               ? _activeMatch.revealHint
               : null,
           icon: const Icon(Icons.lightbulb_outline),
@@ -1178,6 +1225,141 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
         RoundGameFamily.guessingGames => 'GUESSING GAMES',
         null => 'ROUNDVEIL',
       };
+}
+
+class _AnswerHintPopup extends StatefulWidget {
+  const _AnswerHintPopup({
+    required this.hint,
+    required this.onDismiss,
+    super.key,
+  });
+
+  final String hint;
+  final VoidCallback onDismiss;
+
+  @override
+  State<_AnswerHintPopup> createState() => _AnswerHintPopupState();
+}
+
+class _AnswerHintPopupState extends State<_AnswerHintPopup> {
+  static const _duration = Duration(seconds: 6);
+  Timer? _timer;
+  Timer? _exitTimer;
+  int _remainingTenths = 60;
+  bool _exiting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(
+      Duration(milliseconds: _duration.inMilliseconds ~/ 60),
+      (timer) {
+        if (!mounted || _remainingTenths <= 1) {
+          timer.cancel();
+          _close();
+        } else {
+          setState(() => _remainingTenths--);
+        }
+      },
+    );
+  }
+
+  void _close() {
+    if (_exiting) return;
+    setState(() => _exiting = true);
+    _timer?.cancel();
+    _exitTimer = Timer(const Duration(milliseconds: 190), widget.onDismiss);
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    _exitTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedSlide(
+    offset: _exiting ? const Offset(0, -0.08) : Offset.zero,
+    duration: const Duration(milliseconds: 180),
+    child: AnimatedOpacity(
+      opacity: _exiting ? 0 : 1,
+      duration: const Duration(milliseconds: 180),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 460),
+        child: Material(
+          color: const Color(0xFF111D33),
+          elevation: 18,
+          shadowColor: Colors.black54,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+            side: const BorderSide(color: Color(0xFF4EB9F5), width: 1.2),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Padding(
+                padding: const EdgeInsets.fromLTRB(14, 10, 6, 8),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(
+                      Icons.lightbulb_rounded,
+                      color: Color(0xFFFFB34D),
+                      size: 20,
+                    ),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'ANSWER HINT',
+                      style: TextStyle(
+                        color: Colors.white70,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.4,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '${(_remainingTenths / 10).ceil()}s',
+                      style: const TextStyle(color: Colors.white60),
+                    ),
+                    IconButton(
+                      tooltip: 'Close hint',
+                      visualDensity: VisualDensity.compact,
+                      onPressed: _close,
+                      icon: const Icon(Icons.close_rounded, size: 18),
+                      color: Colors.white70,
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(18, 0, 18, 12),
+                child: Text(
+                  widget.hint,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 2,
+                  ),
+                ),
+              ),
+              LinearProgressIndicator(
+                value: _remainingTenths / 60,
+                minHeight: 3,
+                backgroundColor: Colors.white12,
+                valueColor: const AlwaysStoppedAnimation<Color>(
+                  Color(0xFF4EB9F5),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  );
 }
 
 class _ChallengeTimerPainter extends CustomPainter {

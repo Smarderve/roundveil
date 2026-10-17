@@ -8,6 +8,7 @@ import 'package:roundveil/domain/player/player_profile.dart';
 import 'package:roundveil/domain/session/session_configuration.dart';
 import 'package:roundveil/domain/session/round_game_format.dart';
 import 'package:roundveil/features/active_match/application/active_match_content.dart';
+import 'package:roundveil/features/active_match/application/answer_letter_hint.dart';
 
 enum MatchPhase {
   playerIntro,
@@ -75,6 +76,7 @@ class ActiveMatchState {
     this.rankings = const <PlayerRankingRow>[],
     this.answerVisible = false,
     this.hintVisible = false,
+    this.hintText = '',
     this.pointsAwarded = 0,
     this.feedback,
   });
@@ -94,6 +96,7 @@ class ActiveMatchState {
   final List<PlayerRankingRow> rankings;
   final bool answerVisible;
   final bool hintVisible;
+  final String hintText;
   final int pointsAwarded;
   final String? feedback;
 }
@@ -202,12 +205,20 @@ class ActiveMatchController extends ChangeNotifier {
   Map<String, int> _wrong = <String, int>{};
   Map<String, int> _timeouts = <String, int>{};
   bool _started = false;
+  bool _hintPurchaseInProgress = false;
 
   ActiveMatchState get state => _state;
   Stream<GameAudioCue> get effects => _effects.stream;
   List<String> get moduleSchedule => List<String>.unmodifiable(_moduleSchedule);
   List<String> get formatSchedule =>
       List<String>.unmodifiable(_roundSchedule.map((format) => format.id));
+  bool get canRevealHint =>
+      _configuration.hintsEnabled &&
+      !_state.hintVisible &&
+      (_state.phase == MatchPhase.challenge ||
+          _state.phase == MatchPhase.awaitingJudgement) &&
+      (_redeemedChallenges.contains(_state.challenge.id) ||
+          ((_profiles[_state.activePlayer.id]?.hintCredits ?? 0) > 0));
 
   void start() {
     if (_started) return;
@@ -395,38 +406,68 @@ class ActiveMatchController extends ChangeNotifier {
         _state.phase == MatchPhase.awaitingJudgement;
     if (!_configuration.hintsEnabled ||
         !phaseAllowsHint ||
-        _state.hintVisible ||
-        _state.challenge.hint.trim().isEmpty ||
-        _redeemedChallenges.contains(_state.challenge.id)) {
+        _state.hintVisible) {
       return false;
     }
+    final existingHint = _hintTextByChallenge[_state.challenge.id];
+    if (existingHint != null) {
+      _set(_copy(hintVisible: true, hintText: existingHint));
+      return true;
+    }
+    if (_hintPurchaseInProgress) return false;
+    final generatedHint = _buildHintForCurrentAnswer();
+    if (generatedHint == null) return false;
     final playerId = _state.activePlayer.id;
     final profile = _profiles[playerId];
     if (profile == null || profile.hintCredits < 1) return false;
     final repository = profileRepository;
-    if (repository != null) {
-      final spent = await repository.spendHintCredit(
-        matchId: matchId,
-        playerId: playerId,
-        challengeId: _state.challenge.id,
-      );
-      if (!spent) {
-        final latest = await repository.loadAll();
-        _profiles = <String, PlayerProfile>{
-          for (final value in latest) value.id: value,
-        };
-        _set(_copy());
-        return false;
+    _hintPurchaseInProgress = true;
+    try {
+      if (repository != null) {
+        final spent = await repository.spendHintCredit(
+          matchId: matchId,
+          playerId: playerId,
+          challengeId: _state.challenge.id,
+        );
+        if (!spent) {
+          final latest = await repository.loadAll();
+          _profiles = <String, PlayerProfile>{
+            for (final value in latest) value.id: value,
+          };
+          _set(_copy());
+          return false;
+        }
       }
+    } finally {
+      _hintPurchaseInProgress = false;
     }
     _redeemedChallenges.add(_state.challenge.id);
+    _hintTextByChallenge[_state.challenge.id] = generatedHint;
     _profiles = <String, PlayerProfile>{
       ..._profiles,
       playerId: profile.copyWith(hintCredits: profile.hintCredits - 1),
     };
-    _set(_copy(hintVisible: true));
+    _set(_copy(hintVisible: true, hintText: generatedHint));
     _emit(GameAudioCue.hintPurchased);
     return true;
+  }
+
+  final Map<String, String> _hintTextByChallenge = <String, String>{};
+
+  String? _buildHintForCurrentAnswer() {
+    final letterHint = buildAnswerLetterHint(_state.challenge.answer);
+    if (letterHint != null) return letterHint;
+    final descriptive = _state.challenge.hint.trim();
+    if (descriptive.isEmpty ||
+        descriptive.toLowerCase() ==
+            _state.challenge.answer.trim().toLowerCase()) {
+      return null;
+    }
+    return descriptive;
+  }
+
+  void dismissHint() {
+    if (_state.hintVisible) _set(_copy(hintVisible: false));
   }
 
   void judge({required bool correct}) {
@@ -739,6 +780,7 @@ class ActiveMatchController extends ChangeNotifier {
     int? secondsRemaining,
     bool? answerVisible,
     bool? hintVisible,
+    String? hintText,
     String? feedback,
     Map<String, int>? scores,
     List<PlayerRankingRow>? rankings,
@@ -759,6 +801,7 @@ class ActiveMatchController extends ChangeNotifier {
     rankings: rankings ?? _state.rankings,
     answerVisible: answerVisible ?? _state.answerVisible,
     hintVisible: hintVisible ?? _state.hintVisible,
+    hintText: hintText ?? _state.hintText,
     pointsAwarded: pointsAwarded ?? _state.pointsAwarded,
     feedback: feedback ?? _state.feedback,
   );

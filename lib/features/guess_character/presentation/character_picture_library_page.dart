@@ -39,6 +39,374 @@ class _CharacterPictureLibraryPageState
   bool _showHidden = false;
   bool _busy = false;
 
+  Future<void> _addCharacter() async {
+    final name = TextEditingController();
+    final hint = TextEditingController();
+    final aliases = TextEditingController();
+    final franchise = TextEditingController();
+    final source = TextEditingController();
+    final license = TextEditingController();
+    final attribution = TextEditingController();
+    Uint8List? imageBytes;
+    String? filename;
+    String? category;
+    var difficulty = 'Mixed';
+    CharacterPictureCatalogEntry? matched;
+
+    final draft = await showDialog<_SingleCharacterDraft>(
+      context: context,
+      builder: (dialogContext) => StatefulBuilder(
+        builder: (context, setDialogState) {
+          Future<void> selectImage() async {
+            final selection = await FilePicker.pickFiles(
+              dialogTitle: 'Choose one character image',
+              type: FileType.image,
+            );
+            if (selection.isEmpty) return;
+            final file = selection.single;
+            try {
+              final bytes = await file.readAsBytes();
+              setDialogState(() {
+                imageBytes = Uint8List.fromList(bytes);
+                filename = file.name;
+              });
+            } on Object catch (error) {
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Could not read this image: $error')),
+                );
+              }
+            }
+          }
+
+          return AlertDialog(
+            title: const Text('ADD CHARACTER'),
+            content: SizedBox(
+              width: (MediaQuery.sizeOf(context).width - 56).clamp(
+                300.0,
+                520.0,
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: <Widget>[
+                    const Text('CHARACTER PICTURE'),
+                    const SizedBox(height: 8),
+                    Material(
+                      color: const Color(0xFF111D2D),
+                      borderRadius: BorderRadius.circular(12),
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(12),
+                        onTap: selectImage,
+                        child: SizedBox(
+                          height: 160,
+                          child: imageBytes == null
+                              ? const Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: <Widget>[
+                                    Icon(
+                                      Icons.add_photo_alternate_outlined,
+                                      size: 38,
+                                    ),
+                                    SizedBox(height: 8),
+                                    Text('Choose one image'),
+                                    Text(
+                                      'PNG, JPEG or WebP',
+                                      style: TextStyle(color: Colors.white60),
+                                    ),
+                                  ],
+                                )
+                              : ClipRRect(
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Image.memory(
+                                    imageBytes!,
+                                    fit: BoxFit.contain,
+                                    errorBuilder: (_, _, _) => const Center(
+                                      child: Text('Preview unavailable'),
+                                    ),
+                                  ),
+                                ),
+                        ),
+                      ),
+                    ),
+                    if (filename != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          filename!,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: name,
+                      autofocus: true,
+                      textCapitalization: TextCapitalization.words,
+                      decoration: const InputDecoration(
+                        labelText: 'CHARACTER NAME',
+                        hintText: 'For example, Spider-Man',
+                      ),
+                      onChanged: (value) => setDialogState(() {
+                        matched = matchCharacterPictureCatalogFilename(value);
+                        if (matched != null) {
+                          category = matched!.category;
+                          difficulty = matched!.difficulty;
+                          if (franchise.text.isEmpty) {
+                            franchise.text = matched!.series;
+                          }
+                          if (hint.text.isEmpty) hint.text = matched!.hint;
+                          if (aliases.text.isEmpty) {
+                            aliases.text = matched!.aliases.join(', ');
+                          }
+                        }
+                      }),
+                    ),
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<String?>(
+                      initialValue: category,
+                      isExpanded: true,
+                      decoration: InputDecoration(
+                        labelText: matched == null
+                            ? 'CATEGORY (OPTIONAL)'
+                            : 'CATEGORY',
+                        helperText: matched == null
+                            ? 'Choose only if you want to set a category.'
+                            : 'Matched from the character catalog.',
+                      ),
+                      items: <DropdownMenuItem<String?>>[
+                        const DropdownMenuItem<String?>(
+                          value: null,
+                          child: Text('Uncategorized'),
+                        ),
+                        ...characterPictureCategories.map(
+                          (value) => DropdownMenuItem<String?>(
+                            value: value,
+                            child: Text(value),
+                          ),
+                        ),
+                      ],
+                      onChanged: (value) =>
+                          setDialogState(() => category = value),
+                    ),
+                    ExpansionTile(
+                      tilePadding: EdgeInsets.zero,
+                      title: const Text('MORE DETAILS'),
+                      children: <Widget>[
+                        TextField(
+                          controller: franchise,
+                          decoration: const InputDecoration(
+                            labelText: 'Film / series / franchise',
+                          ),
+                        ),
+                        TextField(
+                          controller: hint,
+                          decoration: const InputDecoration(
+                            labelText: 'Optional clue for the host',
+                          ),
+                        ),
+                        TextField(
+                          controller: aliases,
+                          decoration: const InputDecoration(
+                            labelText: 'Alternative names, separated by commas',
+                          ),
+                        ),
+                        TextField(
+                          controller: source,
+                          decoration: const InputDecoration(
+                            labelText: 'Image source (optional)',
+                          ),
+                        ),
+                        TextField(
+                          controller: license,
+                          decoration: const InputDecoration(
+                            labelText: 'Image use note (optional)',
+                          ),
+                        ),
+                        TextField(
+                          controller: attribution,
+                          decoration: const InputDecoration(
+                            labelText: 'Attribution (optional)',
+                          ),
+                        ),
+                        DropdownButtonFormField<String>(
+                          initialValue: difficulty,
+                          decoration: const InputDecoration(
+                            labelText: 'Difficulty',
+                          ),
+                          items:
+                              const <String>[
+                                    'Easy',
+                                    'Medium',
+                                    'Hard',
+                                    'Expert',
+                                    'Mixed',
+                                  ]
+                                  .map(
+                                    (value) => DropdownMenuItem(
+                                      value: value,
+                                      child: Text(value),
+                                    ),
+                                  )
+                                  .toList(growable: false),
+                          onChanged: (value) => setDialogState(
+                            () => difficulty = value ?? 'Mixed',
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton.icon(
+                onPressed: imageBytes == null || name.text.trim().isEmpty
+                    ? null
+                    : () => Navigator.pop(
+                        dialogContext,
+                        _SingleCharacterDraft(
+                          bytes: imageBytes!,
+                          filename: filename!,
+                          name: name.text.trim(),
+                          category: category ?? 'Uncategorized',
+                          hint: hint.text,
+                          aliases: aliases.text
+                              .split(',')
+                              .map((value) => value.trim())
+                              .where((value) => value.isNotEmpty)
+                              .toList(growable: false),
+                          franchise: franchise.text,
+                          source: source.text,
+                          license: license.text,
+                          attribution: attribution.text,
+                          difficulty: difficulty,
+                        ),
+                      ),
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('ADD CHARACTER'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+    name.dispose();
+    hint.dispose();
+    aliases.dispose();
+    franchise.dispose();
+    source.dispose();
+    license.dispose();
+    attribution.dispose();
+    if (draft == null || !mounted) return;
+
+    setState(() => _busy = true);
+    try {
+      Future<CharacterPicture?> add({bool restoreRemoved = false}) =>
+          _repository.addImageBytes(
+            name: draft.name,
+            extension: draft.filename.split('.').last,
+            bytes: draft.bytes,
+            category: draft.category,
+            hint: draft.hint,
+            aliases: draft.aliases,
+            franchise: draft.franchise,
+            sourceTitle: draft.source,
+            license: draft.license,
+            attribution: draft.attribution,
+            subjectType: switch (draft.category) {
+              'Hollywood Actors' ||
+              'Indian Actors and Actresses' => 'Actor or actress',
+              'Footballers' => 'Footballer',
+              'Historical Presidents' => 'Historical figure',
+              'Uncategorized' => 'Person or fictional character',
+              _ => 'Fictional character',
+            },
+            difficulty: draft.difficulty,
+            restoreRemoved: restoreRemoved,
+          );
+      var added = await add();
+      if (added == null) {
+        if (!mounted) return;
+        final restore = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Image already used'),
+            content: const Text(
+              'This image is already in the collection or was previously removed. Restore the removed entry?',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('CANCEL'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('RESTORE'),
+              ),
+            ],
+          ),
+        );
+        if (restore == true) added = await add(restoreRemoved: true);
+      }
+      if (!mounted) return;
+      if (added == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('That image is already installed.')),
+        );
+        return;
+      }
+      final updated = await _repository.loadAll();
+      if (!mounted) return;
+      setState(() => _items = Future<List<CharacterPicture>>.value(updated));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${draft.name} added to Picture Mode.')),
+      );
+    } on Object catch (error) {
+      if (mounted) _showImportError(error);
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  Future<void> _showBulkImportOptions() => showDialog<void>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('IMPORT MULTIPLE CHARACTERS'),
+      content: const Text(
+        'Choose a local folder or ZIP. You can review every image-to-character match before installation.',
+      ),
+      actions: <Widget>[
+        TextButton(
+          onPressed: () => Navigator.pop(dialogContext),
+          child: const Text('CANCEL'),
+        ),
+        OutlinedButton.icon(
+          onPressed: () {
+            Navigator.pop(dialogContext);
+            _importFolder();
+          },
+          icon: const Icon(Icons.folder_open_rounded),
+          label: const Text('CHOOSE FOLDER'),
+        ),
+        FilledButton.icon(
+          onPressed: () {
+            Navigator.pop(dialogContext);
+            _importImageZip();
+          },
+          icon: const Icon(Icons.archive_rounded),
+          label: const Text('CHOOSE ZIP'),
+        ),
+      ],
+    ),
+  );
+
   @override
   void dispose() {
     _name.dispose();
@@ -950,9 +1318,30 @@ class _CharacterPictureLibraryPageState
                             ],
                           ),
                           const SizedBox(height: 10),
+                          Wrap(
+                            spacing: 10,
+                            runSpacing: 8,
+                            children: <Widget>[
+                              FilledButton.icon(
+                                onPressed: _busy ? null : _addCharacter,
+                                icon: const Icon(
+                                  Icons.person_add_alt_1_rounded,
+                                ),
+                                label: const Text('ADD CHARACTER'),
+                              ),
+                              OutlinedButton.icon(
+                                onPressed: _busy
+                                    ? null
+                                    : _showBulkImportOptions,
+                                icon: const Icon(Icons.library_add_rounded),
+                                label: const Text('IMPORT MULTIPLE CHARACTERS'),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
                           ExpansionTile(
                             tilePadding: EdgeInsets.zero,
-                            title: const Text('ADD OR IMPORT CHARACTERS'),
+                            title: const Text('ADVANCED COLLECTION TOOLS'),
                             children: <Widget>[
                               Wrap(
                                 spacing: 10,
@@ -1363,6 +1752,34 @@ class _CharacterPictureLibraryPageState
       ),
     ),
   );
+}
+
+class _SingleCharacterDraft {
+  const _SingleCharacterDraft({
+    required this.bytes,
+    required this.filename,
+    required this.name,
+    required this.category,
+    required this.hint,
+    required this.aliases,
+    required this.franchise,
+    required this.source,
+    required this.license,
+    required this.attribution,
+    required this.difficulty,
+  });
+
+  final Uint8List bytes;
+  final String filename;
+  final String name;
+  final String category;
+  final String hint;
+  final List<String> aliases;
+  final String franchise;
+  final String source;
+  final String license;
+  final String attribution;
+  final String difficulty;
 }
 
 class _BulkPictureImage {
