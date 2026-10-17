@@ -502,8 +502,19 @@ class CharacterPictureRepository {
         asset.offsetInBytes,
         asset.lengthInBytes,
       );
-      final dimensions = await _validatedDimensions(extension, bytes);
+      // Bundled media has already been inspected when its manifest was
+      // generated. Verify its actual header, dimensions, and SHA-256 here; do
+      // not initialize a native image decoder for every 5K portrait during
+      // first-run seeding. User-imported images still go through a bounded
+      // decode in _validatedDimensions below.
+      final dimensions = _readImageDimensions(extension, bytes);
       if (dimensions == null) continue;
+      final (assetWidth, assetHeight) = dimensions;
+      if (assetWidth < 400 ||
+          assetHeight < 400 ||
+          (assetWidth < 640 && assetHeight < 640)) {
+        continue;
+      }
       final digest = sha256.convert(bytes).toString();
       if (removedImageHashes.contains(digest)) continue;
       final expectedDigest = raw['sha256'] as String?;
@@ -1307,17 +1318,114 @@ class CharacterPictureRepository {
         bytes.length < 1024) {
       return null;
     }
-    final codec = await ui.instantiateImageCodec(Uint8List.fromList(bytes));
-    final frame = await codec.getNextFrame();
-    final dimensions = (frame.image.width, frame.image.height);
-    frame.image.dispose();
-    codec.dispose();
+    final dimensions = _readImageDimensions(extension, bytes);
+    if (dimensions == null) return null;
     final (width, height) = dimensions;
     if (width < 400 || height < 400 || (width < 640 && height < 640)) {
       return null;
     }
+
+    // Image validation only needs to prove the file decodes. Decoding original
+    // 5K-7K portraits at full size can allocate hundreds of megabytes per image
+    // and made first-run seeding exceed Flutter's 30-second test timeout. Read
+    // intrinsic dimensions from the image header, then decode a small sample.
+    final codec = await ui.instantiateImageCodec(
+      bytes is Uint8List ? bytes : Uint8List.fromList(bytes),
+      targetWidth: width.clamp(1, 128),
+      allowUpscaling: false,
+    );
+    final frame = await codec.getNextFrame();
+    final decoded = (frame.image.width, frame.image.height);
+    frame.image.dispose();
+    codec.dispose();
+    if (decoded.$1 < 1 || decoded.$2 < 1) return null;
     return dimensions;
   }
+
+  static (int, int)? _readImageDimensions(String extension, List<int> bytes) {
+    if (extension == 'png') {
+      if (bytes.length < 24) return null;
+      return (_uint32BigEndian(bytes, 16), _uint32BigEndian(bytes, 20));
+    }
+    if (extension == 'jpg' || extension == 'jpeg') {
+      var offset = 2;
+      while (offset + 3 < bytes.length) {
+        if (bytes[offset] != 0xff) {
+          offset++;
+          continue;
+        }
+        while (offset < bytes.length && bytes[offset] == 0xff) {
+          offset++;
+        }
+        if (offset >= bytes.length) return null;
+        final marker = bytes[offset++];
+        if (marker == 0xd8 ||
+            marker == 0xd9 ||
+            (marker >= 0xd0 && marker <= 0xd7) ||
+            marker == 0x01) {
+          continue;
+        }
+        if (offset + 1 >= bytes.length) return null;
+        final segmentLength = (bytes[offset] << 8) | bytes[offset + 1];
+        if (segmentLength < 2 || offset + segmentLength > bytes.length) {
+          return null;
+        }
+        if (_isJpegStartOfFrame(marker)) {
+          if (segmentLength < 7) return null;
+          final height = (bytes[offset + 3] << 8) | bytes[offset + 4];
+          final width = (bytes[offset + 5] << 8) | bytes[offset + 6];
+          return (width, height);
+        }
+        offset += segmentLength;
+      }
+      return null;
+    }
+    if (extension == 'webp' && bytes.length >= 30) {
+      final chunk = String.fromCharCodes(bytes.sublist(12, 16));
+      if (chunk == 'VP8X') {
+        final width = 1 + bytes[24] + (bytes[25] << 8) + (bytes[26] << 16);
+        final height = 1 + bytes[27] + (bytes[28] << 8) + (bytes[29] << 16);
+        return (width, height);
+      }
+      if (chunk == 'VP8 ' &&
+          bytes[23] == 0x9d &&
+          bytes[24] == 0x01 &&
+          bytes[25] == 0x2a) {
+        final width = (bytes[26] | (bytes[27] << 8)) & 0x3fff;
+        final height = (bytes[28] | (bytes[29] << 8)) & 0x3fff;
+        return (width, height);
+      }
+      if (chunk == 'VP8L' && bytes.length >= 25 && bytes[20] == 0x2f) {
+        final width = 1 + bytes[21] + ((bytes[22] & 0x3f) << 8);
+        final height =
+            1 +
+            ((bytes[22] >> 6) | (bytes[23] << 2) | ((bytes[24] & 0x0f) << 10));
+        return (width, height);
+      }
+    }
+    return null;
+  }
+
+  static int _uint32BigEndian(List<int> bytes, int offset) =>
+      (bytes[offset] << 24) |
+      (bytes[offset + 1] << 16) |
+      (bytes[offset + 2] << 8) |
+      bytes[offset + 3];
+
+  static bool _isJpegStartOfFrame(int marker) =>
+      marker == 0xc0 ||
+      marker == 0xc1 ||
+      marker == 0xc2 ||
+      marker == 0xc3 ||
+      marker == 0xc5 ||
+      marker == 0xc6 ||
+      marker == 0xc7 ||
+      marker == 0xc9 ||
+      marker == 0xca ||
+      marker == 0xcb ||
+      marker == 0xcd ||
+      marker == 0xce ||
+      marker == 0xcf;
 
   static bool _looksLikeSupportedImage(List<int> bytes) =>
       (bytes.length >= 8 &&

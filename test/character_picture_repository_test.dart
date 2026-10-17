@@ -46,6 +46,7 @@ void main() {
       );
       expect(first, isNotNull);
       expect(File(first!.path).existsSync(), isTrue);
+      expect((first.width, first.height), (800, 600));
 
       final recreated = CharacterPictureRepository(
         directoryProvider: () async => temporary,

@@ -15,6 +15,7 @@ import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dar
 import 'package:roundveil/features/platform_shell/presentation/create_player_dialog.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
+import 'package:roundveil/features/platform_shell/application/guessing_mode_capacity.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
@@ -330,11 +331,13 @@ class _RoundveilShellState extends State<RoundveilShell> {
 
     String? selectedGuessingFormat;
     var pictureCategory = 'All Categories';
+    var guessingRoundCount = 4;
     if (gameId == 'guessing_games') {
       final selection = await _pickGuessingMode(players);
       if (selection == null || !mounted) return;
       selectedGuessingFormat = selection.$1;
       pictureCategory = selection.$2;
+      guessingRoundCount = selection.$3;
     }
 
     final (modules, formats) = switch (gameId) {
@@ -371,7 +374,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
       selectedModuleIds: modules,
       roundFormatIds: formats,
       roundFormatsExplicit: true,
-      roundCount: 4,
+      roundCount: guessingRoundCount,
       isMixed: false,
       characterPictureCategory: pictureCategory,
     );
@@ -385,19 +388,20 @@ class _RoundveilShellState extends State<RoundveilShell> {
     );
   }
 
-  Future<(String, String)?> _pickGuessingMode(
+  Future<(String, String, int)?> _pickGuessingMode(
     List<PlayerConfiguration> players,
   ) async {
     final pictures = await CharacterPictureRepository().loadPlayable();
     if (!mounted) return null;
     const rounds = 4;
     final required = players.length * rounds;
-    final categories = <String>[
+    final categories = <String>{
       'All Categories',
-      ...pictures.map((picture) => picture.category).toSet().toList()..sort(),
-    ];
+      ...characterPictureCategories,
+      ...pictures.map((picture) => picture.category),
+    }.toList(growable: false);
     var selectedCategory = 'All Categories';
-    return showDialog<(String, String)>(
+    return showDialog<(String, String, int)>(
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) {
@@ -408,11 +412,16 @@ class _RoundveilShellState extends State<RoundveilShell> {
                     picture.category == selectedCategory,
               )
               .length;
-          final options = <(String, String, String, int, IconData)>[
+          final pictureRounds = pictureModeRoundCapacity(
+            imageCount: pictureCount,
+            playerCount: players.length,
+          );
+          final options = <(String, String, String, int, int, IconData)>[
             (
               'character_picture',
               'CHARACTER PICTURE',
               'Guess a character from a real image.',
+              pictureRounds,
               pictureCount,
               Icons.image_search_rounded,
             ),
@@ -420,6 +429,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
               'character_name',
               'CHARACTER NAME',
               'Guess a character through verbal clues.',
+              4,
               characterChallenges.length,
               Icons.record_voice_over_rounded,
             ),
@@ -427,6 +437,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
               'country_flag',
               'COUNTRY FLAG',
               'Recognize a real offline country flag.',
+              4,
               countryChallenges.length,
               Icons.flag_rounded,
             ),
@@ -434,6 +445,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
               'country_name',
               'COUNTRY NAME',
               'Guess a country using geographic clues.',
+              4,
               countryChallenges.length,
               Icons.public_rounded,
             ),
@@ -441,6 +453,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
               'object_picture',
               'OBJECT PICTURE',
               'Not available yet · object collection is not playable.',
+              0,
               0,
               Icons.category_rounded,
             ),
@@ -484,16 +497,20 @@ class _RoundveilShellState extends State<RoundveilShell> {
                         builder: (context) {
                           final available =
                               option.$1 != 'object_picture' &&
-                              option.$4 >= required;
+                              option.$4 > 0 &&
+                              (option.$1 == 'character_picture' ||
+                                  option.$5 >= required);
                           final status = option.$1 == 'object_picture'
                               ? 'Not implemented'
-                              : '${option.$4} available · $required needed for $rounds rounds';
+                              : option.$1 == 'character_picture'
+                              ? '${option.$5} images · ${option.$4} ${option.$4 == 1 ? 'round' : 'rounds'} for ${players.length} players'
+                              : '${option.$5} items · $rounds rounds for ${players.length} players';
                           return ListTile(
                             contentPadding: const EdgeInsets.symmetric(
                               horizontal: 4,
                             ),
                             leading: Icon(
-                              option.$5,
+                              option.$6,
                               color: available
                                   ? const Color(0xFFFF9A3D)
                                   : Colors.white38,
@@ -510,6 +527,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
                                 ? () => Navigator.pop(dialogContext, (
                                     option.$1,
                                     selectedCategory,
+                                    option.$4,
                                   ))
                                 : null,
                           );
