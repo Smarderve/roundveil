@@ -40,6 +40,7 @@ class SessionConfiguration {
     this.pointsPerCorrectAnswer = 1,
     this.countryRegion = 'worldwide',
     this.countryDifficulty = 'mixed',
+    this.characterPictureCategory = 'All Categories',
   });
 
   final List<PlayerConfiguration> players;
@@ -61,6 +62,7 @@ class SessionConfiguration {
   final int pointsPerCorrectAnswer;
   final String countryRegion;
   final String countryDifficulty;
+  final String characterPictureCategory;
 
   SessionConfiguration copyWith({
     List<PlayerConfiguration>? players,
@@ -76,6 +78,7 @@ class SessionConfiguration {
     int? pointsPerCorrectAnswer,
     String? countryRegion,
     String? countryDifficulty,
+    String? characterPictureCategory,
   }) => SessionConfiguration(
     players: players ?? this.players,
     selectedModuleIds: selectedModuleIds ?? this.selectedModuleIds,
@@ -93,6 +96,8 @@ class SessionConfiguration {
         pointsPerCorrectAnswer ?? this.pointsPerCorrectAnswer,
     countryRegion: countryRegion ?? this.countryRegion,
     countryDifficulty: countryDifficulty ?? this.countryDifficulty,
+    characterPictureCategory:
+        characterPictureCategory ?? this.characterPictureCategory,
   );
 
   List<String> get effectiveRoundFormatIds =>
@@ -152,6 +157,7 @@ class SessionConfiguration {
     'pointsPerCorrectAnswer': pointsPerCorrectAnswer,
     'countryRegion': countryRegion,
     'countryDifficulty': countryDifficulty,
+    'characterPictureCategory': characterPictureCategory,
   };
 
   factory SessionConfiguration.fromJson(Map<String, Object?> json) =>
@@ -182,5 +188,7 @@ class SessionConfiguration {
         pointsPerCorrectAnswer: json['pointsPerCorrectAnswer'] as int? ?? 1,
         countryRegion: json['countryRegion'] as String? ?? 'worldwide',
         countryDifficulty: json['countryDifficulty'] as String? ?? 'mixed',
+        characterPictureCategory:
+            json['characterPictureCategory'] as String? ?? 'All Categories',
       );
 }

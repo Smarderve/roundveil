@@ -18,6 +18,8 @@ class OfflineChallenge {
     this.imageSource,
     this.formatPrompts = const <String, String>{},
     this.formatAnswers = const <String, String>{},
+    this.category,
+    this.franchise,
   });
 
   final String id;
@@ -32,6 +34,8 @@ class OfflineChallenge {
   final Map<String, String> formatPrompts;
   final Map<String, String> formatAnswers;
 
+  final String? category;
+  final String? franchise;
   String promptForFormat(String formatId) {
     final specified = formatPrompts[formatId];
     if (specified != null) return specified;
@@ -401,7 +405,16 @@ List<OfflineChallenge> challengesForFormat(
 }) => switch (roundGameFormatById(formatId)?.moduleId) {
   'quiz' => quizChallenges,
   'word_play' => wordChallenges,
-  'guess_character' when formatId == 'character_picture' => pictureChallenges,
+  'guess_character' when formatId == 'character_picture' =>
+    configuration == null ||
+            configuration.characterPictureCategory == 'All Categories'
+        ? pictureChallenges
+        : pictureChallenges
+              .where(
+                (challenge) =>
+                    challenge.category ==
+                    configuration.characterPictureCategory,
+              )
   'guess_character' => characterChallenges,
   'guess_country_flags' => challengesForModule(
     'guess_country_flags',

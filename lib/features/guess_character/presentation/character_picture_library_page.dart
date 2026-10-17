@@ -21,7 +21,14 @@ class _CharacterPictureLibraryPageState
   final TextEditingController _hint = TextEditingController();
   final TextEditingController _source = TextEditingController();
   final TextEditingController _license = TextEditingController();
+  final TextEditingController _franchise = TextEditingController();
+  final TextEditingController _aliases = TextEditingController();
+  final TextEditingController _description = TextEditingController();
+  final TextEditingController _attribution = TextEditingController();
   late Future<List<CharacterPicture>> _items = _repository.loadAll();
+  String _category = 'Marvel Characters';
+  String _difficulty = 'Mixed';
+  String _collectionFilter = 'all';
   bool _busy = false;
 
   @override
@@ -30,6 +37,10 @@ class _CharacterPictureLibraryPageState
     _hint.dispose();
     _source.dispose();
     _license.dispose();
+    _franchise.dispose();
+    _aliases.dispose();
+    _description.dispose();
+    _attribution.dispose();
     super.dispose();
   }
 
@@ -44,18 +55,39 @@ class _CharacterPictureLibraryPageState
     try {
       final items = await _repository.importImages(
         subjectName: _name.text,
+        category: _category,
+        aliases: _aliases.text
+            .split(',')
+            .map((value) => value.trim())
+            .where((value) => value.isNotEmpty)
+            .toList(growable: false),
         hint: _hint.text,
+        franchise: _franchise.text,
+        description: _description.text,
         sourceTitle: _source.text.trim(),
         sourceUrl: _source.text.trim().startsWith('http')
             ? _source.text.trim()
             : '',
         license: _license.text,
+        attribution: _attribution.text,
+        subjectType:
+            _category.endsWith('Actors and Actresses') ||
+                _category == 'Hollywood Actors' ||
+                _category == 'Footballers' ||
+                _category == 'Historical Presidents' ||
+                _category == 'Other People'
+            ? 'Person'
+            : 'Fictional character',
+        difficulty: _difficulty,
+        collection: 'private',
       );
       if (!mounted) return;
       setState(() {
         _items = Future<List<CharacterPicture>>.value(items);
         _name.clear();
         _hint.clear();
+        _aliases.clear();
+        _description.clear();
       });
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Picture collection updated offline.')),
@@ -166,10 +198,24 @@ class _CharacterPictureLibraryPageState
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: <Widget>[
                   const Text(
-                    'Images stay on this device. Import a clear PNG, JPEG or WebP; add a source link and license note when you have them. ROUNDVEIL does not download or upload images.',
+                    'PRIVATE FAMILY COLLECTION · Choose a local image, enter its character details and category, then play offline. Nothing is uploaded. Keep privately imported images out of public builds unless you have redistribution permission.',
                     style: TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 12),
+                  SegmentedButton<String>(
+                    segments: const <ButtonSegment<String>>[
+                      ButtonSegment(value: 'all', label: Text('ALL LOCAL')),
+                      ButtonSegment(value: 'bundled', label: Text('BUNDLED')),
+                      ButtonSegment(
+                        value: 'private',
+                        label: Text('PRIVATE FAMILY'),
+                      ),
+                    ],
+                    selected: <String>{_collectionFilter},
+                    onSelectionChanged: (value) =>
+                        setState(() => _collectionFilter = value.first),
+                  ),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 10,
                     runSpacing: 8,
@@ -215,6 +261,99 @@ class _CharacterPictureLibraryPageState
                           ),
                         ),
                       ),
+                      SizedBox(
+                        width: 220,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _category,
+                          decoration: const InputDecoration(
+                            labelText: 'Character category',
+                            isDense: true,
+                          ),
+                          items: characterPictureCategories
+                              .map(
+                                (value) => DropdownMenuItem<String>(
+                                  value: value,
+                                  child: Text(value),
+                                ),
+                              )
+                              .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _category = value);
+                            }
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: 190,
+                        child: TextField(
+                          controller: _franchise,
+                          decoration: const InputDecoration(
+                            labelText: 'Film / series / franchise',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 220,
+                        child: TextField(
+                          controller: _aliases,
+                          decoration: const InputDecoration(
+                            labelText: 'Accepted names (comma-separated)',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 220,
+                        child: TextField(
+                          controller: _description,
+                          decoration: const InputDecoration(
+                            labelText: 'Identity/context note',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 200,
+                        child: TextField(
+                          controller: _attribution,
+                          decoration: const InputDecoration(
+                            labelText: 'Creator / attribution',
+                            isDense: true,
+                          ),
+                        ),
+                      ),
+                      SizedBox(
+                        width: 150,
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _difficulty,
+                          decoration: const InputDecoration(
+                            labelText: 'Difficulty',
+                            isDense: true,
+                          ),
+                          items:
+                              const <String>[
+                                    'Easy',
+                                    'Medium',
+                                    'Hard',
+                                    'Expert',
+                                    'Mixed',
+                                  ]
+                                  .map(
+                                    (value) => DropdownMenuItem<String>(
+                                      value: value,
+                                      child: Text(value),
+                                    ),
+                                  )
+                                  .toList(),
+                          onChanged: (value) {
+                            if (value != null) {
+                              setState(() => _difficulty = value);
+                            }
+                          },
+                        ),
+                      ),
                       FilledButton.icon(
                         onPressed: _busy ? null : _import,
                         icon: const Icon(Icons.add_photo_alternate_outlined),
@@ -250,11 +389,18 @@ class _CharacterPictureLibraryPageState
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
                   }
-                  final items = snapshot.data!;
+                  final allItems = snapshot.data!;
+                  final items = allItems
+                      .where(
+                        (item) =>
+                            _collectionFilter == 'all' ||
+                            item.collection == _collectionFilter,
+                      )
+                      .toList(growable: false);
                   if (items.isEmpty) {
                     return const Center(
                       child: Text(
-                        'No pictures yet. Import photos or character artwork you are permitted to use.',
+                        'No pictures in this collection yet. Import a local image with its name, category and useful clue. Images stay on this device.',
                         textAlign: TextAlign.center,
                         style: TextStyle(color: Colors.white70),
                       ),

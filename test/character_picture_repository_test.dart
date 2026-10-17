@@ -54,6 +54,9 @@ void main() {
       expect(loaded.single.sourceTitle, 'Family archive');
       expect(loaded.single.license, 'Owner supplied');
       expect(loaded.single.hint, 'A clue kept with this imported image.');
+      expect(loaded.single.collection, 'private');
+      expect(await recreated.loadPrivate(), hasLength(1));
+      expect(await recreated.loadBundled(), isEmpty);
       expect(
         await recreated.addImageBytes(
           name: 'Duplicate',
@@ -119,6 +122,7 @@ void main() {
       expect(loaded.franchise, 'Example series');
       expect(loaded.description, 'A sample description');
       expect(loaded.attribution, 'Example artist');
+      expect(loaded.collection, 'private');
 
       final repeated = await repository.importPackageBytes(packageBytes);
       expect(repeated.imported, 0);
@@ -164,6 +168,9 @@ void main() {
 
     final items = await repository.loadAll();
     expect(items, hasLength(50));
+    expect(items.every((item) => item.collection == 'bundled'), isTrue);
+    expect(await repository.loadBundled(), hasLength(50));
+    expect(await repository.loadPrivate(), isEmpty);
     expect(
       items.map((item) => item.name),
       containsAll([

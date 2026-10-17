@@ -441,6 +441,11 @@ class SessionBuilderController extends ChangeNotifier {
     notifyListeners();
   }
 
+  void setCharacterPictureCategory(String value) {
+    _configuration = _configuration.copyWith(characterPictureCategory: value);
+    notifyListeners();
+  }
+
   Future<SessionDraft?> saveDraft() async {
     if (validationMessage != null || _busy) return null;
     _busy = true;

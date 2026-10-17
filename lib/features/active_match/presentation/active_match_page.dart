@@ -87,6 +87,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                 hint: picture.hint,
                 imageFilePath: picture.path,
                 imageSource: picture.sourceTitle,
+                category: picture.category,
+                franchise: picture.franchise,
               ),
             )
             .toList(growable: false),
@@ -705,6 +707,22 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                       )
                     else
                       const Text('The local picture file is missing.'),
+                    if ((challenge.content.franchise ?? '').isNotEmpty ||
+                        (challenge.content.category?.isNotEmpty ?? false))
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(
+                          <String?>[
+                                challenge.content.franchise,
+                                challenge.content.category,
+                              ]
+                              .whereType<String>()
+                              .where((value) => value.isNotEmpty)
+                              .join(' · '),
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: tokens.muted, fontSize: 12),
+                        ),
+                      ),
                   ] else
                     Text(
                       challenge.answer,

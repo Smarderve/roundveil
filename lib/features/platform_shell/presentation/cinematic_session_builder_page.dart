@@ -55,11 +55,56 @@ class _CinematicSessionBuilderPageState
     text: widget.initialName,
   );
   List<PlayerProfile> _savedProfiles = const <PlayerProfile>[];
+  List<OfflineChallenge> _pictureChallenges = const <OfflineChallenge>[];
+  bool _pictureLibraryLoaded = false;
 
   @override
   void initState() {
     super.initState();
     _loadProfiles();
+    _loadPictureLibrary();
+  }
+
+  Future<void> _loadPictureLibrary() async {
+    try {
+      final pictures = await CharacterPictureRepository().loadAll();
+      if (mounted) {
+        setState(() {
+          _pictureChallenges = _pictureChallengesFrom(pictures);
+          _pictureLibraryLoaded = true;
+        });
+      }
+    } on Object {
+      if (mounted) setState(() => _pictureLibraryLoaded = true);
+    }
+  }
+
+  List<OfflineChallenge> _pictureChallengesFrom(
+    Iterable<CharacterPicture> pictures,
+  ) => pictures
+      .map(
+        (picture) => OfflineChallenge(
+          id: picture.id,
+          prompt: 'Identify the person or character shown.',
+          answer: picture.name,
+          hint: picture.hint,
+          imageFilePath: picture.path,
+          imageSource: picture.sourceTitle,
+          category: picture.category,
+          franchise: picture.franchise,
+        ),
+      )
+      .toList(growable: false);
+
+  String? _pictureConfigurationIssue(SessionConfiguration configuration) {
+    if (!configuration.effectiveRoundFormatIds.contains('character_picture')) {
+      return null;
+    }
+    if (!_pictureLibraryLoaded) return 'CHECKING LOCAL PICTURE COLLECTION…';
+    return ActiveMatchController.validateConfiguration(
+      configuration,
+      pictureChallenges: _pictureChallenges,
+    );
   }
 
   Future<void> _loadProfiles() async {
@@ -114,7 +159,8 @@ class _CinematicSessionBuilderPageState
     final config = _controller.configuration;
     final compact = size.height < 580 || size.width < 820;
     final canBuild = _controller.canCreate;
-    final canStart = _controller.canStartMatch;
+    final pictureIssue = _pictureConfigurationIssue(config);
+    final canStart = _controller.canStartMatch && pictureIssue == null;
     final gameChoice = _choiceFor(config);
     final selectedNames = config.selectedModuleIds.map((id) {
       final game = gameCatalog.firstWhere((item) => item.id == id);
@@ -356,6 +402,8 @@ class _CinematicSessionBuilderPageState
                                   onCountryRegion: _controller.setCountryRegion,
                                   onCountryDifficulty:
                                       _controller.setCountryDifficulty,
+                                  onCharacterPictureCategory:
+                                      _controller.setCharacterPictureCategory,
                                 ),
                               ],
                             ),
@@ -373,7 +421,8 @@ class _CinematicSessionBuilderPageState
                     child: Text(
                       canStart
                           ? 'MATCH READY'
-                          : (_controller.startValidationMessage ??
+                          : (pictureIssue ??
+                                _controller.startValidationMessage ??
                                 'CHOOSE A GAME, PLAYERS AND ROUNDS'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -554,22 +603,9 @@ class _CinematicSessionBuilderPageState
     final configuration = await _controller.startMatch();
     if (!mounted || configuration == null) return;
     if (configuration.effectiveRoundFormatIds.contains('character_picture')) {
-      final pictures = await CharacterPictureRepository().loadAll();
-      if (!mounted) return;
       final issue = ActiveMatchController.validateConfiguration(
         configuration,
-        pictureChallenges: pictures
-            .map(
-              (picture) => OfflineChallenge(
-                id: picture.id,
-                prompt: 'Identify the person or character shown.',
-                answer: picture.name,
-                hint: picture.hint,
-                imageFilePath: picture.path,
-                imageSource: picture.sourceTitle,
-              ),
-            )
-            .toList(growable: false),
+        pictureChallenges: _pictureChallenges,
       );
       if (issue != null) {
         ScaffoldMessenger.of(context)
@@ -1130,6 +1166,7 @@ class _MatchRulesRail extends StatelessWidget {
     required this.onPointsPerCorrect,
     required this.onCountryRegion,
     required this.onCountryDifficulty,
+    required this.onCharacterPictureCategory,
   });
   final SessionConfiguration config;
   final List<String> selectedNames;
@@ -1140,6 +1177,7 @@ class _MatchRulesRail extends StatelessWidget {
   final ValueChanged<int> onPointsPerCorrect;
   final ValueChanged<String> onCountryRegion;
   final ValueChanged<String> onCountryDifficulty;
+  final ValueChanged<String> onCharacterPictureCategory;
   @override
   Widget build(BuildContext context) {
     final tokens = Theme.of(context).extension<RoundveilBrandTokens>()!;
@@ -1363,16 +1401,52 @@ class _MatchRulesRail extends StatelessWidget {
               ],
             ),
           ],
-          if (config.selectedModuleIds.contains('guess_character'))
+          if (config.effectiveRoundFormatIds.contains('character_picture'))
             Padding(
               padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                'CHARACTER MODE · NAME ONLY  |  PICTURE MODE NOT IN VERIFIED OFFLINE PACK',
-                style: TextStyle(
-                  color: tokens.muted,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w800,
-                ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: <Widget>[
+                  const Text(
+                    'PICTURE COLLECTION',
+                    style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900),
+                  ),
+                  DropdownButton<String>(
+                    key: const ValueKey<String>('character-picture-category'),
+                    isExpanded: true,
+                    value: config.characterPictureCategory,
+                    items:
+                        const <String>[
+                              'All Categories',
+                              'Marvel Characters',
+                              'DC Characters',
+                              'Anime Characters',
+                              'Cartoon Characters',
+                              'Disney Characters',
+                              'DreamWorks Characters',
+                              'Other Fictional Characters',
+                              'Indian Actors and Actresses',
+                              'Hollywood Actors',
+                              'Footballers',
+                              'Historical Presidents',
+                              'Other People',
+                            ]
+                            .map(
+                              (category) => DropdownMenuItem<String>(
+                                value: category,
+                                child: Text(category.toUpperCase()),
+                              ),
+                            )
+                            .toList(),
+                    onChanged: (value) {
+                      if (value != null) onCharacterPictureCategory(value);
+                    },
+                  ),
+                  Text(
+                    'Only matching, locally installed images are used. An empty category cannot start a Picture Mode match.',
+                    style: TextStyle(color: tokens.muted, fontSize: 9),
+                  ),
+                ],
               ),
             ),
         ],

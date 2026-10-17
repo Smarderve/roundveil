@@ -38,11 +38,20 @@ merge with existing entries and do not erase unrelated records. Export creates
 the same portable ZIP so a collection can be transferred offline between the
 Windows library and Android.
 
-Picture Mode automatically draws from all valid imported records for the
-selected session format. The active player turns away before the image appears;
+Picture Mode draws from all valid local records or the host-selected character
+category. The match is blocked if that selected pool lacks enough distinct
+images. The active player turns away before the image appears;
 the image stays visible for the clue/guess phases, the subject name remains
 hidden until host judgement, and the existing Correct/Wrong flow decides
 whether Win Countdown starts.
+
+The bundled and private-family collection boundary, source API usage limits,
+category filtering behavior and current fictional-character inventory are
+recorded in [`PICTURE_MODE_CONTENT_SOURCES.md`](PICTURE_MODE_CONTENT_SOURCES.md).
+The Picture Library supports category-tagged local imports without requiring a
+hand-authored JSON manifest. Imported private images remain outside public app
+assets. No fictional artwork is counted until real images are installed and
+visually verified.
 
 ## Verified inventory — 2026-10-17
 

@@ -52,6 +52,7 @@
 - [`docs/gameplay/SETTINGS_AND_PRESETS.md`](gameplay/SETTINGS_AND_PRESETS.md)
 - [`docs/gameplay/TIMERS_AND_WIN_COUNTDOWN.md`](gameplay/TIMERS_AND_WIN_COUNTDOWN.md)
 - [`docs/gameplay/games/GUESS_THE_CHARACTER.md`](gameplay/games/GUESS_THE_CHARACTER.md)
+- [`docs/gameplay/PICTURE_MODE_CONTENT_SOURCES.md`](gameplay/PICTURE_MODE_CONTENT_SOURCES.md) — bundled versus private collections, API/source boundaries and verified fictional-image inventory.
 - [`docs/gameplay/games/GUESS_THE_COUNTRY.md`](gameplay/games/GUESS_THE_COUNTRY.md)
 - [`docs/gameplay/games/QUIZ.md`](gameplay/games/QUIZ.md)
 - [`docs/gameplay/games/README.md`](gameplay/games/README.md)

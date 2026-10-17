@@ -8,6 +8,21 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
+const characterPictureCategories = <String>[
+  'Marvel Characters',
+  'DC Characters',
+  'Anime Characters',
+  'Cartoon Characters',
+  'Disney Characters',
+  'DreamWorks Characters',
+  'Other Fictional Characters',
+  'Indian Actors and Actresses',
+  'Hollywood Actors',
+  'Footballers',
+  'Historical Presidents',
+  'Other People',
+];
+
 class CharacterPicture {
   const CharacterPicture({
     required this.id,
@@ -24,6 +39,7 @@ class CharacterPicture {
     this.franchise = '',
     this.description = '',
     this.difficulty = 'Mixed',
+    this.collection = 'private',
     this.width = 0,
     this.height = 0,
     this.sha256 = '',
@@ -43,6 +59,7 @@ class CharacterPicture {
   final String franchise;
   final String description;
   final String difficulty;
+  final String collection;
   final int width;
   final int height;
   final String sha256;
@@ -62,6 +79,7 @@ class CharacterPicture {
     'franchise': franchise,
     'description': description,
     'difficulty': difficulty,
+    'collection': collection,
     'width': width,
     'height': height,
     'sha256': sha256,
@@ -85,10 +103,32 @@ class CharacterPicture {
         franchise: json['franchise'] as String? ?? '',
         description: json['description'] as String? ?? '',
         difficulty: json['difficulty'] as String? ?? 'Mixed',
+        collection: json['collection'] as String? ?? 'private',
         width: json['width'] as int? ?? 0,
         height: json['height'] as int? ?? 0,
         sha256: json['sha256'] as String? ?? '',
       );
+
+  CharacterPicture copyWith({String? collection}) => CharacterPicture(
+    id: id,
+    name: name,
+    path: path,
+    category: category,
+    aliases: aliases,
+    hint: hint,
+    sourceTitle: sourceTitle,
+    sourceUrl: sourceUrl,
+    license: license,
+    attribution: attribution,
+    subjectType: subjectType,
+    franchise: franchise,
+    description: description,
+    difficulty: difficulty,
+    collection: collection ?? this.collection,
+    width: width,
+    height: height,
+    sha256: sha256,
+  );
 }
 
 class PicturePackageImportReport {
@@ -148,6 +188,14 @@ class CharacterPictureRepository {
     return List<CharacterPicture>.unmodifiable(items);
   }
 
+  Future<List<CharacterPicture>> loadBundled() async => (await loadAll())
+      .where((item) => item.collection == 'bundled')
+      .toList(growable: false);
+
+  Future<List<CharacterPicture>> loadPrivate() async => (await loadAll())
+      .where((item) => item.collection == 'private')
+      .toList(growable: false);
+
   Future<List<CharacterPicture>> _installBundledImages(
     List<CharacterPicture> current,
   ) async {
@@ -173,6 +221,7 @@ class CharacterPictureRepository {
     };
     final library = await _libraryDirectory;
     var changed = false;
+    var collectionCorrected = false;
     for (final raw in decoded['items']! as List<Object?>) {
       if (raw is! Map<String, Object?>) continue;
       final id = raw['id'];
@@ -183,8 +232,18 @@ class CharacterPictureRepository {
           name is! String ||
           category is! String ||
           assetPath is! String ||
-          !assetPath.startsWith('assets/brand/character_pictures/') ||
-          knownIds.contains(id)) {
+          !assetPath.startsWith('assets/brand/character_pictures/')) {
+        continue;
+      }
+      if (knownIds.contains(id)) {
+        final existingIndex = result.indexWhere((item) => item.id == id);
+        if (existingIndex >= 0 &&
+            result[existingIndex].collection != 'bundled') {
+          result[existingIndex] = result[existingIndex].copyWith(
+            collection: 'bundled',
+          );
+          collectionCorrected = true;
+        }
         continue;
       }
       final extension = assetPath.split('.').last.toLowerCase();
@@ -230,6 +289,7 @@ class CharacterPictureRepository {
           franchise: raw['franchise'] as String? ?? '',
           description: raw['description'] as String? ?? '',
           difficulty: raw['difficulty'] as String? ?? 'Mixed',
+          collection: 'bundled',
           width: dimensions.$1,
           height: dimensions.$2,
           sha256: digest,
@@ -238,12 +298,14 @@ class CharacterPictureRepository {
       knownIds.add(id);
       changed = true;
     }
-    if (changed) await _writeIndex(result);
+    if (changed || collectionCorrected) await _writeIndex(result);
     return result;
   }
 
   Future<List<CharacterPicture>> importImages({
     required String subjectName,
+    String category = 'Other Fictional Characters',
+    List<String> aliases = const <String>[],
     String hint = '',
     String sourceTitle = '',
     String sourceUrl = '',
@@ -253,6 +315,7 @@ class CharacterPictureRepository {
     String franchise = '',
     String description = '',
     String difficulty = 'Mixed',
+    String collection = 'private',
   }) async {
     final name = subjectName.trim();
     if (name.isEmpty) throw ArgumentError.value(name, 'subjectName');
@@ -282,6 +345,9 @@ class CharacterPictureRepository {
         franchise: franchise,
         description: description,
         difficulty: difficulty,
+        category: category,
+        aliases: aliases,
+        collection: collection,
       );
       if (item != null) imported++;
     }
@@ -308,6 +374,7 @@ class CharacterPictureRepository {
     String difficulty = 'Mixed',
     String category = 'Uncategorized',
     List<String> aliases = const <String>[],
+    String collection = 'private',
   }) async {
     final safeName = name.trim();
     final ext = extension.toLowerCase() == 'jpeg'
@@ -362,6 +429,7 @@ class CharacterPictureRepository {
       franchise: franchise.trim(),
       description: description.trim(),
       difficulty: difficulty.trim(),
+      collection: collection,
       width: width,
       height: height,
       sha256: digest,
@@ -521,6 +589,7 @@ class CharacterPictureRepository {
             franchise: raw['franchise'] as String? ?? '',
             description: raw['description'] as String? ?? '',
             difficulty: raw['difficulty'] as String? ?? 'Mixed',
+            collection: 'private',
             width: dimensions.$1,
             height: dimensions.$2,
             sha256: digest,
@@ -579,7 +648,7 @@ class CharacterPictureRepository {
   Future<Uint8List> exportPackageBytes() async {
     final archive = Archive();
     final items = <Map<String, Object?>>[];
-    for (final item in await loadAll()) {
+    for (final item in await loadPrivate()) {
       final image = File(item.path);
       if (!await image.exists()) continue;
       final bytes = await image.readAsBytes();
