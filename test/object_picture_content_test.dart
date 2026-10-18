@@ -41,9 +41,9 @@ void main() {
     ]);
   });
 
-  test('Object Picture only includes its eight image-backed records', () {
+  test('Object Picture only includes its manifest-backed offline records', () {
     final pictureChallenges = challengesForFormat('object_picture');
-    expect(pictureChallenges, hasLength(8));
+    expect(pictureChallenges, hasLength(23));
     expect(
       pictureChallenges.every(
         (item) => item.imageAssetPath != null || item.imageFilePath != null,
@@ -69,13 +69,19 @@ void main() {
       configuration: kitchen,
     );
 
-    expect(selected.map((item) => item.id), <String>['object-kettle']);
+    expect(selected.map((item) => item.id), <String>[
+      'object-kettle',
+      'object-saucepan',
+      'object-cooking-pot',
+      'object-dinner-plate',
+      'object-microwave-oven',
+    ]);
     expect(
       challengesForFormat(
         'object_picture',
         configuration: kitchen.copyWith(characterPictureCategory: 'Vehicles'),
       ).map((item) => item.id),
-      <String>['object-bicycle'],
+      <String>['object-bicycle', 'object-tuk-tuk'],
     );
   });
 
@@ -109,7 +115,7 @@ void main() {
         (await rootBundle.loadString('assets/app/objects/manifest.json')),
       ) as Map<String, dynamic>;
       final records = manifest['items'] as List<dynamic>;
-      expect(records, hasLength(8));
+      expect(records, hasLength(23));
       final creditedIds = records
           .cast<Map<String, dynamic>>()
           .map((record) => record['id'])
@@ -123,6 +129,7 @@ void main() {
       );
 
       for (final challenge in imageChallenges) {
+        expect(challenge.imageAssetPath, isNotNull, reason: challenge.id);
         final data = await rootBundle.load(challenge.imageAssetPath!);
         final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
         final frame = await codec.getNextFrame();

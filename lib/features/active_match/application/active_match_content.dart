@@ -765,8 +765,10 @@ class _ObjectNameSeed {
     this.usedFor,
     this.hint,
     this.difficulty,
-    this.aliases,
-  );
+    this.aliases, {
+    this.imageAssetPath,
+    this.imageSource,
+  });
 
   final String id;
   final String name;
@@ -775,6 +777,8 @@ class _ObjectNameSeed {
   final String hint;
   final String difficulty;
   final List<String> aliases;
+  final String? imageAssetPath;
+  final String? imageSource;
 }
 
 const _everydayObjectNameSeeds = <_ObjectNameSeed>[
@@ -849,6 +853,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Many have an adjustable arm.',
     'easy',
     ['Table lamp'],
+    imageAssetPath: 'assets/app/objects/desk_lamp.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:A_3M_Desk_Lamp.jpg',
   ),
   _ObjectNameSeed(
     'object-ceiling-fan',
@@ -858,6 +864,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Its blades rotate overhead.',
     'medium',
     ['Overhead fan'],
+    imageAssetPath: 'assets/app/objects/ceiling_fan.JPG',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:01_Rotating_Ceiling_fan_at_640th_of_a_second.JPG',
   ),
   _ObjectNameSeed(
     'object-alarm-clock',
@@ -867,6 +875,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'People set it to wake up.',
     'easy',
     ['Wake-up clock'],
+    imageAssetPath: 'assets/app/objects/alarm_clock.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Classic_alarm_clock_20180513.jpg',
   ),
   _ObjectNameSeed(
     'object-saucepan',
@@ -876,6 +886,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is commonly used for sauces and small portions.',
     'easy',
     ['Small cooking pot'],
+    imageAssetPath: 'assets/app/objects/saucepan.jpg',
+    imageSource:
+        'https://commons.wikimedia.org/wiki/File:Hahn_16cm_Saucepan.jpg',
   ),
   _ObjectNameSeed(
     'object-frying-pan',
@@ -894,6 +907,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It usually has two short side handles.',
     'easy',
     ['Pot'],
+    imageAssetPath: 'assets/app/objects/cooking_pot.jpg',
+    imageSource:
+        'https://commons.wikimedia.org/wiki/File:A_local_cooking_pot.jpg',
   ),
   _ObjectNameSeed(
     'object-dinner-plate',
@@ -903,6 +919,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is larger than a saucer.',
     'easy',
     ['Plate'],
+    imageAssetPath: 'assets/app/objects/dinner_plate.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:1965_-_Dinner_Plate_-_Shankweilers_-_Allentown_PA.jpg',
   ),
   _ObjectNameSeed(
     'object-bowl',
@@ -975,6 +993,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Food is placed in its enclosed chamber.',
     'easy',
     ['Microwave'],
+    imageAssetPath: 'assets/app/objects/microwave_oven.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:AKIRA_Microwave_Oven_in_Singapore_HDB.jpg',
   ),
   _ObjectNameSeed(
     'object-refrigerator',
@@ -1020,6 +1040,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'They connect by cable or wirelessly.',
     'easy',
     ['Earphones'],
+    imageAssetPath: 'assets/app/objects/headphones.JPG',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:AKG_Stereo_headphones_K-66.JPG',
   ),
   _ObjectNameSeed(
     'object-television',
@@ -1029,6 +1051,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is commonly controlled from across the room.',
     'easy',
     ['TV'],
+    imageAssetPath: 'assets/app/objects/television.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:1940s_DuMont_television_set_in_Early_Television_Museum.jpg',
   ),
   _ObjectNameSeed(
     'object-computer-mouse',
@@ -1056,6 +1080,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It commonly sends commands using infrared light.',
     'easy',
     ['Remote'],
+    imageAssetPath: 'assets/app/objects/tv_remote.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:AverMedia_RM-RH_Remote_control_(white_background)_edit.jpg',
   ),
   _ObjectNameSeed(
     'object-loudspeaker',
@@ -1209,6 +1235,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is common in many East African towns.',
     'medium',
     ['Auto rickshaw', 'Three-wheeler'],
+    imageAssetPath: 'assets/app/objects/tuk_tuk.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:(THA-Bangkok)_Tuk-tuk_%E0%B8%AA%E0%B8%815099_2024-02-10.jpg',
   ),
   _ObjectNameSeed(
     'object-exercise-book',
@@ -1227,6 +1255,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Its ink cartridge ends in a tiny ball.',
     'easy',
     ['Pen'],
+    imageAssetPath: 'assets/app/objects/ballpoint_pen.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:A_ballpoint_pen_in_Vietnam_(cropped).jpg',
   ),
   _ObjectNameSeed(
     'object-pencil',
@@ -1263,6 +1293,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Pressing its top drives a small metal fastener through paper.',
     'medium',
     ['Paper stapler'],
+    imageAssetPath: 'assets/app/objects/stapler.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:A_KOKUYO_Stapler.jpg',
   ),
   _ObjectNameSeed(
     'object-scissors',
@@ -1272,6 +1304,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It has two finger loops.',
     'easy',
     ['Shears'],
+    imageAssetPath: 'assets/app/objects/scissors.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Crossed_scissors.jpg',
   ),
   _ObjectNameSeed(
     'object-first-aid-kit',
@@ -1290,6 +1324,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It can help protect a wound or hold a dressing in place.',
     'easy',
     ['Dressing'],
+    imageAssetPath: 'assets/app/objects/bandage.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:(US)_1_BANDAGE,_GAUZE,_COMPRESSED,_2001.201.jpg',
   ),
   _ObjectNameSeed(
     'object-wheelchair',
@@ -1421,6 +1457,8 @@ final objectChallengeCatalog = <OfflineChallenge>[
       category: seed.category,
       difficulty: seed.difficulty,
       acceptedAnswers: seed.aliases,
+      imageAssetPath: seed.imageAssetPath,
+      imageSource: seed.imageSource,
     ),
 ];
 

@@ -45,19 +45,18 @@ individual difficulty is not yet exposed in the Object chooser.
 
 ## Starter content and provenance
 
-The shared starter catalog contains **100 distinct object identities**. Eight
-currently have bundled, offline photographs and are eligible for Object
-Picture: electric drill, kettle, laptop, bicycle, umbrella, pineapple, football
-and hammer. The other 92 are metadata-only and are eligible only for Object
-Name. This is an initial playable slice, not a claim that the 10,000-object
-catalog target is complete: **9,900 distinct metadata entries remain**. Only
-eight identities currently have picture assets; the request does not establish
-a separate 10,000-photo target.
+The shared starter catalog contains **100 distinct object identities**. As of
+2026-10-18, 23 have bundled offline photos and are eligible for Object Picture;
+the remaining 77 identities are metadata-only and are eligible only for Object
+Name. This is a starter corpus, not a claim that the current 500-pair owner
+target is complete. There are 23 complete identity/photo pairs; 477 more pairs
+are needed, including photos for the 77 current name-only identities and 400
+additional distinct identities with photos.
 
 The bundled photos are credited in [`assets/app/objects/CREDITS.md`](../../../assets/app/objects/CREDITS.md),
 with source, creator, license, and modification details in
 [`assets/app/objects/manifest.json`](../../../assets/app/objects/manifest.json).
-All eight images were decoded in the content test. They are offline at runtime.
+All 23 images were decoded in the content test. They are offline at runtime.
 The hammer photo is lower-resolution than the other starter photographs and
 should be replaced only with a verified, better-quality asset.
 
