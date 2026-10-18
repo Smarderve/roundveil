@@ -66,16 +66,15 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
           .loadRecentIds();
       final needsPictures = widget.configuration.effectiveRoundFormatIds
           .contains('character_picture');
-      final allPictures = needsPictures
-          ? await _pictureRepository.loadPlayable()
-          : const <CharacterPicture>[];
       final selectedPictureCategory =
           widget.configuration.characterPictureCategory;
-      final pictures = selectedPictureCategory == 'All Categories'
-          ? allPictures
-          : allPictures
-                .where((picture) => picture.category == selectedPictureCategory)
-                .toList(growable: false);
+      final pictures = needsPictures
+          ? await _pictureRepository.loadRenderablePlayable(
+              category: selectedPictureCategory == 'All Categories'
+                  ? null
+                  : selectedPictureCategory,
+            )
+          : const <CharacterPicture>[];
       if (!mounted) return;
       final match = ActiveMatchController(
         configuration: widget.configuration,
@@ -99,6 +98,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
               ),
             )
             .toList(growable: false),
+        objectChallenges: objectChallengeCatalog,
         onChallengeDrawn: (id) {
           unawaited(_recordChallenge(id));
         },
@@ -453,6 +453,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
     final category = switch (state.challenge.moduleId) {
       'guess_character' => 'CHARACTER',
       'guess_country_flags' => 'COUNTRY',
+      'guess_objects' => 'OBJECT',
       _ => null,
     };
     final icon = switch (state.challenge.moduleId) {
@@ -460,6 +461,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       'word_play' => Icons.abc_rounded,
       'guess_character' => Icons.person_search_rounded,
       'guess_country_flags' => Icons.flag_rounded,
+      'guess_objects' => Icons.inventory_2_rounded,
       _ => Icons.sports_esports_rounded,
     };
     return SingleChildScrollView(
@@ -614,6 +616,10 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
   Widget _challenge(RoundveilBrandTokens tokens) {
     final state = _activeMatch.state;
     final challenge = state.challenge;
+    if (challenge.formatId == 'object_name' ||
+        challenge.formatId == 'object_picture') {
+      return _objectChallenge(tokens, challenge);
+    }
     final color = tokens.cyan;
     final viewportHeight = MediaQuery.sizeOf(context).height;
     final flagHeight = (viewportHeight * (state.answerVisible ? 0.10 : 0.18))
@@ -671,6 +677,8 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                 'character_name',
                 'character_picture',
                 'country_name',
+                'object_name',
+                'object_picture',
               }.contains(challenge.formatId)) ...<Widget>[
                 if (state.phase == MatchPhase.turnAway) ...<Widget>[
                   const Text(
@@ -681,6 +689,9 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   Text(
                     challenge.formatId == 'country_name'
                         ? 'The clue-givers should be ready before revealing the country name.'
+                        : challenge.formatId == 'object_name' ||
+                              challenge.formatId == 'object_picture'
+                        ? 'Clue-givers should be ready before the object is shown.'
                         : 'The clue-givers should be ready before revealing the character.',
                   ),
                   const SizedBox(height: 18),
@@ -689,6 +700,9 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     child: Text(
                       challenge.formatId == 'country_name'
                           ? 'PLAYER IS TURNED AWAY · REVEAL COUNTRY'
+                          : challenge.formatId == 'object_name' ||
+                                challenge.formatId == 'object_picture'
+                          ? 'PLAYER IS TURNED AWAY · REVEAL OBJECT'
                           : 'PLAYER IS TURNED AWAY · REVEAL CHARACTER',
                     ),
                   ),
@@ -696,6 +710,10 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                   Text(
                     challenge.formatId == 'country_name'
                         ? 'COUNTRY NAME MODE · SHOW TO CLUE-GIVERS'
+                        : challenge.formatId == 'object_name'
+                        ? 'OBJECT NAME MODE · SHOW TO CLUE-GIVERS'
+                        : challenge.formatId == 'object_picture'
+                        ? 'OBJECT PICTURE MODE · SHOW TO CLUE-GIVERS'
                         : challenge.formatId == 'character_picture'
                         ? 'PICTURE MODE · SHOW TO CLUE-GIVERS'
                         : 'NAME MODE · SHOW TO CLUE-GIVERS',
@@ -706,29 +724,53 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     ),
                   ),
                   const SizedBox(height: 14),
-                  if (challenge.formatId == 'character_picture') ...<Widget>[
+                  if (challenge.formatId == 'character_picture' ||
+                      challenge.formatId == 'object_picture') ...<Widget>[
                     if (challenge.imageFilePath case final imagePath?)
                       ConstrainedBox(
                         constraints: BoxConstraints(
                           maxWidth: 560,
-                          maxHeight: (viewportHeight * .48)
-                              .clamp(120.0, 360.0)
-                              .toDouble(),
+                          maxHeight:
+                              (viewportHeight *
+                                      (challenge.formatId == 'object_picture'
+                                          ? .34
+                                          : .48))
+                                  .clamp(120.0, 360.0)
+                                  .toDouble(),
                         ),
                         child: Image.file(
                           File(imagePath),
                           fit: BoxFit.contain,
                           filterQuality: FilterQuality.high,
-                          errorBuilder: (context, error, stack) => const Text(
-                            'This local picture is unavailable. Remove it from the picture collection and import it again.',
-                            textAlign: TextAlign.center,
-                          ),
+                          errorBuilder: (context, error, stack) =>
+                              _unavailablePicture(),
+                        ),
+                      )
+                    else if (challenge.imageAssetPath case final assetPath?)
+                      ConstrainedBox(
+                        constraints: BoxConstraints(
+                          maxWidth: 680,
+                          maxHeight:
+                              (viewportHeight *
+                                      (challenge.formatId == 'object_picture'
+                                          ? .34
+                                          : .52))
+                                  .clamp(140.0, 420.0)
+                                  .toDouble(),
+                        ),
+                        child: Image.asset(
+                          assetPath,
+                          fit: BoxFit.contain,
+                          filterQuality: FilterQuality.high,
+                          errorBuilder: (context, error, stack) =>
+                              _unavailablePicture(),
                         ),
                       )
                     else
-                      const Text('The local picture file is missing.'),
+                      _unavailablePicture(),
                     if ((challenge.content.franchise ?? '').isNotEmpty ||
-                        (challenge.content.category?.isNotEmpty ?? false))
+                        (challenge.formatId == 'character_picture' &&
+                            (challenge.content.category?.isNotEmpty ?? false)))
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
                         child: Text(
@@ -752,21 +794,34 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                         fontWeight: FontWeight.w900,
                       ),
                     ),
-                  if (challenge.formatId == 'character_name') ...<Widget>[
+                  if (challenge.formatId == 'character_name' ||
+                      challenge.formatId == 'object_name' ||
+                      challenge.formatId == 'object_picture') ...<Widget>[
                     const SizedBox(height: 6),
-                    Text(
-                      challenge.content.franchise ?? '',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        color: tokens.cyan,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w800,
+                    if (challenge.formatId == 'object_name' ||
+                        challenge.formatId == 'object_picture' ||
+                        ((challenge.content.franchise ?? '').isNotEmpty &&
+                            challenge.content.franchise!.trim().toLowerCase() !=
+                                challenge.answer.trim().toLowerCase()))
+                      Text(
+                        challenge.formatId == 'object_name' ||
+                                challenge.formatId == 'object_picture'
+                            ? challenge.content.category ?? 'OBJECT'
+                            : challenge.content.franchise!,
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: tokens.cyan,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
-                    ),
                     Text(
                       <String?>[
-                            challenge.content.subjectType,
-                            challenge.content.category,
+                            if (challenge.formatId == 'character_name')
+                              challenge.content.subjectType,
+                            if (challenge.formatId != 'object_name' &&
+                                challenge.formatId != 'object_picture')
+                              challenge.content.category,
                           ]
                           .whereType<String>()
                           .where((value) => value.isNotEmpty)
@@ -778,7 +833,7 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     ConstrainedBox(
                       constraints: const BoxConstraints(maxWidth: 620),
                       child: Text(
-                        'CONTEXT · ${challenge.prompt}',
+                        '${challenge.formatId == 'object_name' || challenge.formatId == 'object_picture' ? 'USED FOR' : 'CONTEXT'} · ${challenge.prompt}',
                         textAlign: TextAlign.center,
                         style: const TextStyle(
                           color: Colors.white,
@@ -790,8 +845,12 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
                     ),
                   ],
                   const SizedBox(height: 8),
-                  const Text(
-                    'Give verbal clues. Keep the character visible until the host judges the spoken guess.',
+                  Text(
+                    challenge.formatId == 'object_picture'
+                        ? 'Give verbal clues from the picture. The host judges the spoken guess.'
+                        : challenge.formatId == 'object_name'
+                        ? 'Give verbal clues from the object name and context. The host judges the spoken guess.'
+                        : 'Give verbal clues. Keep the character visible until the host judges the spoken guess.',
                   ),
                   _judgementButtons(tokens),
                 ],
@@ -876,6 +935,194 @@ class _ActiveMatchPageState extends State<ActiveMatchPage> {
       ),
     );
   }
+
+  Widget _objectChallenge(
+    RoundveilBrandTokens tokens,
+    MatchChallenge challenge,
+  ) {
+    final state = _activeMatch.state;
+    if (state.phase == MatchPhase.turnAway) {
+      return Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 760),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              const Text(
+                'PLAYER — TURN AWAY',
+                style: TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                'Clue-givers should be ready before the object is shown.',
+              ),
+              const SizedBox(height: 18),
+              FilledButton(
+                onPressed: _activeMatch.revealCharacterAfterPlayerTurnsAway,
+                child: const Text('PLAYER IS TURNED AWAY · REVEAL OBJECT'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    final isPicture = challenge.formatId == 'object_picture';
+    final compact = MediaQuery.sizeOf(context).height < 500;
+    final imageMaxHeight = (MediaQuery.sizeOf(context).height * .34)
+        .clamp(96.0, 300.0)
+        .toDouble();
+    return LayoutBuilder(
+      builder: (context, constraints) => Column(
+        children: <Widget>[
+          Expanded(
+            child: SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  minHeight: constraints.maxHeight - 62,
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      Text(
+                        isPicture
+                            ? 'OBJECT PICTURE MODE · SHOW TO CLUE-GIVERS'
+                            : 'OBJECT NAME MODE · SHOW TO CLUE-GIVERS',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: tokens.cyan,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: compact ? 1 : 1.4,
+                          fontSize: compact ? 12 : 14,
+                        ),
+                      ),
+                      SizedBox(height: compact ? 6 : 14),
+                      if (isPicture)
+                        if (challenge.content.imageFilePath
+                            case final imagePath?)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: 560,
+                              maxHeight: imageMaxHeight,
+                            ),
+                            child: Image.file(
+                              File(imagePath),
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                              errorBuilder: (context, error, stack) =>
+                                  _unavailablePicture(),
+                            ),
+                          )
+                        else if (challenge.content.imageAssetPath
+                            case final assetPath?)
+                          ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: 680,
+                              maxHeight: imageMaxHeight,
+                            ),
+                            child: Image.asset(
+                              assetPath,
+                              fit: BoxFit.contain,
+                              filterQuality: FilterQuality.high,
+                              errorBuilder: (context, error, stack) =>
+                                  _unavailablePicture(),
+                            ),
+                          )
+                        else
+                          _unavailablePicture()
+                      else
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 12),
+                          child: FittedBox(
+                            fit: BoxFit.scaleDown,
+                            child: Text(
+                              challenge.content.answer,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: compact ? 32 : 42,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      SizedBox(height: compact ? 4 : 8),
+                      Text(
+                        challenge.content.category ?? 'OBJECT',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: tokens.cyan,
+                          fontSize: compact ? 13 : 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      SizedBox(height: compact ? 4 : 8),
+                      ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 620),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            'USED FOR · ${challenge.content.prompt}',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: compact ? 13 : 16,
+                              height: 1.25,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: compact ? 4 : 8),
+                      Text(
+                        isPicture
+                            ? 'Give verbal clues from the picture. The host judges the spoken guess.'
+                            : 'Give verbal clues from the object name and context. The host judges the spoken guess.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          color: tokens.muted,
+                          fontSize: compact ? 11 : 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+          _judgementButtons(tokens),
+        ],
+      ),
+    );
+  }
+
+  Widget _unavailablePicture() => Container(
+    constraints: const BoxConstraints(minHeight: 160, minWidth: 240),
+    padding: const EdgeInsets.all(20),
+    decoration: BoxDecoration(
+      color: const Color(0xFF101A28),
+      border: Border.all(color: const Color(0xFFFFA23A)),
+    ),
+    child: const Column(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Icon(Icons.broken_image_outlined, size: 40, color: Color(0xFFFFA23A)),
+        SizedBox(height: 10),
+        Text(
+          'PICTURE UNAVAILABLE',
+          textAlign: TextAlign.center,
+          style: TextStyle(fontWeight: FontWeight.w900),
+        ),
+        SizedBox(height: 4),
+        Text(
+          'This file could not be opened. Remove it from the library and import a valid image.',
+          textAlign: TextAlign.center,
+        ),
+      ],
+    ),
+  );
 
   Widget _circularChallengeTimer({
     required int secondsRemaining,

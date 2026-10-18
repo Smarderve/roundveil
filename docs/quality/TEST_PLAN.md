@@ -50,6 +50,16 @@
 | T-033 | Word Play-only schedules stay within Word formats; only Mixed Games crosses game families |
 | T-034 | Unknown/unavailable draft formats are preserved and flagged; host can remove the unsupported entry and choose a valid format |
 | T-035 | Hint debit uses the active saved player's stable ID and does not affect other players' balances |
+| T-036 | A complete 3-player × 4-round Mixed session keeps module and format common within each round, draws distinct player challenges, applies correct/wrong outcomes, persists hint rewards, and produces deterministic rankings |
+| T-037 | All four Word Play formats accept typed answers; Guess the Word's optional hint is distinct from its visible clue; scramble contents match the answer letters |
+| T-038 | A duplicate callsign create/rename is rejected case/whitespace-insensitively, existing profiles remain unchanged, and the serialized repository accepts a later valid operation |
+| T-039 | Pause exposes Resume, Restart and Leave Match; restarting reuses the same configuration; results expose Play Again and Home; Windows additionally exposes Quit Game |
+| T-040 | Android alpha debug runtime installs over the existing app, reaches a visible landscape home, accepts a real Word Play answer, and shows the configured correct-answer countdown |
+| T-041 | Guessing Games exposes Character Name/Picture, Country Name/Flag and Object Name/Picture as distinct formats without adding a top-level game family |
+| T-042 | Object Name turns the active player away, shows clue-givers the name/category/use context, uses the shared hint and judgement flow, and starts countdown only after Correct |
+| T-043 | Object Picture only selects valid bundled/private offline images, filters by selected category, never falls back to metadata-only records, and displays image before host judgement |
+| T-044 | Object Name and Picture use distinct object IDs without repeats; insufficient selected-category capacity is explained; both quick templates and Create Game can start their explicit format |
+| T-045 | Metadata-only summary used by the Guessing Games picker does not copy or seed the full bundled photo library; full image validation remains part of match setup |
 
 ## Tool commands when Flutter scaffold exists
 ```bash

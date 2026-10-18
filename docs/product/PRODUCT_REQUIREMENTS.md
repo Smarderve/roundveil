@@ -48,6 +48,8 @@
 - **PR-042 MUST:** Text/contrast scaling and mouse/keyboard/touch paths; clear pause/resume.
 - **PR-043 MUST:** No Mystery module or physical reward/eating tracking.
 - **PR-044 MUST:** The active catalog contains exactly Quiz, Word Play / Guess the Word, Guess the Character, and Guess the Country. Riddles and Memory are not selectable, routable, templated or included in content packs. Mixed sessions may select any two or more of the four active modules.
+- **PR-045 MUST:** Guessing Games exposes six distinct formats: Character Name, Character Picture, Country Name, Country Flag, Object Name and Object Picture. Object Name and Object Picture use one shared object catalog under the existing Guessing Games family; they are not a fifth top-level game.
+- **PR-046 MUST:** Object Name uses unique object identities with accurate category, use-description, aliases and difficulty. Object Picture includes only valid offline images mapped to the correct object; category selection, no-repeat pool capacity and the existing turn-away, host judgement, hint, scoring and Win Countdown flow apply. The 10,000 distinct-object content target remains open and counts must distinguish metadata identities from image-backed challenges.
 
 ## Explicitly unapproved
 Old HTML prototype navigation, builder stages, game-mode placement, game HUD positions, example question timings, animations, scoring defaults and player-judgement controls are **not** accepted UX specs. Track these in `docs/design/UX_OPEN_QUESTIONS.md`.

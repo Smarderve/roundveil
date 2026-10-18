@@ -15,7 +15,7 @@ import 'package:roundveil/features/platform_shell/presentation/v5_lobby_page.dar
 import 'package:roundveil/features/platform_shell/presentation/create_player_dialog.dart';
 import 'package:roundveil/features/platform_shell/presentation/cinematic_session_builder_page.dart';
 import 'package:roundveil/features/platform_shell/presentation/v5_quick_games_page.dart';
-import 'package:roundveil/features/platform_shell/application/guessing_mode_capacity.dart';
+import 'package:roundveil/features/platform_shell/presentation/guessing_mode_selection_page.dart';
 import 'package:roundveil/features/session_builder/application/session_builder_controller.dart';
 import 'package:roundveil/l10n/generated/app_localizations.dart';
 
@@ -303,6 +303,40 @@ class _RoundveilShellState extends State<RoundveilShell> {
 
   Future<void> _openConfiguredGame(String gameId) async {
     var players = List<PlayerConfiguration>.of(_lobbyPlayers);
+    String? selectedGuessingFormat;
+    var pictureCategory = 'All Categories';
+    var selectedModeContentCount = 0;
+    if (gameId == 'guessing_games') {
+      final selection = await _pickGuessingMode(players);
+      if (selection == null || !mounted) return;
+      selectedGuessingFormat = selection.formatId;
+      pictureCategory = selection.category;
+      selectedModeContentCount = selection.contentCount;
+      if (_profiles.isEmpty) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('NO SAVED PLAYERS'),
+            content: const Text(
+              'Create a player profile before starting a Guessing Games match.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        if (mounted) _select(_ShellDestination.avatars);
+        return;
+      }
+      final chosen = await _pickSavedPlayers(initialPlayers: players);
+      if (chosen == null || chosen.isEmpty || !mounted) return;
+      players = chosen;
+      setState(() => _lobbyPlayers = chosen);
+    }
+
     if (players.isEmpty) {
       if (_profiles.isEmpty) {
         await showDialog<void>(
@@ -329,15 +363,41 @@ class _RoundveilShellState extends State<RoundveilShell> {
       setState(() => _lobbyPlayers = chosen);
     }
 
-    String? selectedGuessingFormat;
-    var pictureCategory = 'All Categories';
     var guessingRoundCount = 4;
-    if (gameId == 'guessing_games') {
-      final selection = await _pickGuessingMode(players);
-      if (selection == null || !mounted) return;
-      selectedGuessingFormat = selection.$1;
-      pictureCategory = selection.$2;
-      guessingRoundCount = selection.$3;
+    if (selectedGuessingFormat != null) {
+      var contentCount = selectedModeContentCount;
+      if (selectedGuessingFormat == 'character_picture') {
+        final pictures = await CharacterPictureRepository()
+            .loadPlayableSummary();
+        if (!mounted) return;
+        contentCount = pictures
+            .where(
+              (picture) =>
+                  pictureCategory == 'All Categories' ||
+                  picture.category == pictureCategory,
+            )
+            .length;
+      }
+      final capacity = contentCount ~/ players.length;
+      if (capacity < 1) {
+        await showDialog<void>(
+          context: context,
+          builder: (dialogContext) => AlertDialog(
+            title: const Text('NOT ENOUGH DISTINCT CHALLENGES'),
+            content: Text(
+              '$selectedGuessingFormat has $contentCount eligible items for ${players.length} selected players. Add content or select fewer players.',
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext),
+                child: const Text('OK'),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      guessingRoundCount = capacity.clamp(1, 4);
     }
 
     final (modules, formats) = switch (gameId) {
@@ -363,6 +423,7 @@ class _RoundveilShellState extends State<RoundveilShell> {
         <String>[
           switch (selectedGuessingFormat) {
             'character_picture' || 'character_name' => 'guess_character',
+            'object_name' || 'object_picture' => 'guess_objects',
             _ => 'guess_country_flags',
           },
         ],
@@ -388,171 +449,126 @@ class _RoundveilShellState extends State<RoundveilShell> {
     );
   }
 
-  Future<(String, String, int)?> _pickGuessingMode(
+  Future<GuessingModeSelection?> _pickGuessingMode(
     List<PlayerConfiguration> players,
   ) async {
-    final pictures = await CharacterPictureRepository().loadPlayable();
+    final pictures = await CharacterPictureRepository().loadPlayableSummary();
     if (!mounted) return null;
-    const rounds = 4;
-    final required = players.length * rounds;
+    final playerCountForPreview = players.isEmpty ? 1 : players.length;
     final categories = <String>{
       'All Categories',
       ...characterPictureCategories,
       ...pictures.map((picture) => picture.category),
+      ...objectChallengeCatalog
+          .where(
+            (challenge) =>
+                challenge.imageAssetPath != null ||
+                challenge.imageFilePath != null,
+          )
+          .map((challenge) => challenge.category)
+          .whereType<String>(),
     }.toList(growable: false);
-    var selectedCategory = 'All Categories';
-    return showDialog<(String, String, int)>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (context, setDialogState) {
-          final pictureCount = pictures
-              .where(
-                (picture) =>
-                    selectedCategory == 'All Categories' ||
-                    picture.category == selectedCategory,
-              )
-              .length;
-          final pictureRounds = pictureModeRoundCapacity(
-            imageCount: pictureCount,
-            playerCount: players.length,
-          );
-          final options = <(String, String, String, int, int, IconData)>[
-            (
-              'character_picture',
-              'CHARACTER PICTURE',
-              'Guess a character from a real image.',
-              pictureRounds,
-              pictureCount,
-              Icons.image_search_rounded,
-            ),
-            (
-              'character_name',
-              'CHARACTER NAME',
-              'Guess a character through verbal clues.',
-              4,
-              characterChallenges.length,
-              Icons.record_voice_over_rounded,
-            ),
-            (
-              'country_flag',
-              'COUNTRY FLAG',
-              'Recognize a real offline country flag.',
-              4,
-              countryChallenges.length,
-              Icons.flag_rounded,
-            ),
-            (
-              'country_name',
-              'COUNTRY NAME',
-              'Guess a country using geographic clues.',
-              4,
-              countryChallenges.length,
-              Icons.public_rounded,
-            ),
-            (
-              'object_picture',
-              'OBJECT PICTURE',
-              'Not available yet · object collection is not playable.',
-              0,
-              0,
-              Icons.category_rounded,
-            ),
-          ];
-          return AlertDialog(
-            title: const Text('GUESSING GAMES'),
-            content: SizedBox(
-              width: (MediaQuery.sizeOf(context).width - 56).clamp(
-                300.0,
-                560.0,
-              ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: <Widget>[
-                    const Text('Choose one game mode for this match.'),
-                    const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      initialValue: selectedCategory,
-                      isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Picture category',
-                        helperText: 'Applies to Character Picture only.',
-                      ),
-                      items: categories
-                          .map(
-                            (category) => DropdownMenuItem(
-                              value: category,
-                              child: Text(category),
-                            ),
-                          )
-                          .toList(growable: false),
-                      onChanged: (value) => setDialogState(
-                        () => selectedCategory = value ?? 'All Categories',
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    for (final option in options)
-                      Builder(
-                        builder: (context) {
-                          final available =
-                              option.$1 != 'object_picture' &&
-                              option.$4 > 0 &&
-                              (option.$1 == 'character_picture' ||
-                                  option.$5 >= required);
-                          final status = option.$1 == 'object_picture'
-                              ? 'Not implemented'
-                              : option.$1 == 'character_picture'
-                              ? '${option.$5} images · ${option.$4} ${option.$4 == 1 ? 'round' : 'rounds'} for ${players.length} players'
-                              : '${option.$5} items · $rounds rounds for ${players.length} players';
-                          return ListTile(
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 4,
-                            ),
-                            leading: Icon(
-                              option.$6,
-                              color: available
-                                  ? const Color(0xFFFF9A3D)
-                                  : Colors.white38,
-                            ),
-                            title: Text(
-                              option.$2,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                            subtitle: Text('${option.$3}  $status'),
-                            enabled: available,
-                            onTap: available
-                                ? () => Navigator.pop(dialogContext, (
-                                    option.$1,
-                                    selectedCategory,
-                                    option.$4,
-                                  ))
-                                : null,
-                          );
-                        },
-                      ),
-                  ],
-                ),
-              ),
-            ),
-            actions: <Widget>[
-              TextButton(
-                onPressed: () => Navigator.pop(dialogContext),
-                child: const Text('CANCEL'),
-              ),
-            ],
-          );
-        },
+    final characterPictureCounts = <String, int>{
+      for (final category in categories)
+        category: pictures
+            .where(
+              (picture) =>
+                  category == 'All Categories' || picture.category == category,
+            )
+            .length,
+    };
+    final objectPictureCounts = <String, int>{
+      for (final category in categories)
+        category: objectChallengeCatalog
+            .where(
+              (challenge) =>
+                  (category == 'All Categories' ||
+                      challenge.category == category) &&
+                  challenge.imageAssetPath != null,
+            )
+            .length,
+    };
+    final options = <GuessingModeOption>[
+      GuessingModeOption(
+        id: 'character_name',
+        title: 'CHARACTER NAME',
+        description: 'Guess a character through verbal clues.',
+        contentCount: characterChallenges.length,
+        roundCount: 4,
+        icon: Icons.record_voice_over_rounded,
+        isPictureMode: false,
+      ),
+      GuessingModeOption(
+        id: 'character_picture',
+        title: 'CHARACTER PICTURE',
+        description: 'Guess a character from a real image.',
+        contentCount: pictures.length,
+        categoryCounts: characterPictureCounts,
+        roundCount: 4,
+        icon: Icons.image_search_rounded,
+        isPictureMode: true,
+      ),
+      GuessingModeOption(
+        id: 'country_name',
+        title: 'COUNTRY NAME',
+        description: 'Guess a country using geographic clues.',
+        contentCount: countryChallenges.length,
+        roundCount: 4,
+        icon: Icons.public_rounded,
+        isPictureMode: false,
+      ),
+      GuessingModeOption(
+        id: 'country_flag',
+        title: 'COUNTRY FLAG',
+        description: 'Recognize a real offline country flag.',
+        contentCount: countryChallenges.length,
+        roundCount: 4,
+        icon: Icons.flag_rounded,
+        isPictureMode: false,
+      ),
+      GuessingModeOption(
+        id: 'object_name',
+        title: 'OBJECT NAME',
+        description: 'Clue-givers see the object name and useful context.',
+        contentCount: objectChallengeCatalog.length,
+        roundCount: 4,
+        icon: Icons.inventory_2_rounded,
+        isPictureMode: false,
+      ),
+      GuessingModeOption(
+        id: 'object_picture',
+        title: 'OBJECT PICTURE',
+        description: 'Describe a real, offline photograph of an object.',
+        contentCount: objectChallengeCatalog
+            .where((item) => item.imageAssetPath != null)
+            .length,
+        categoryCounts: objectPictureCounts,
+        roundCount: 4,
+        icon: Icons.category_rounded,
+        isPictureMode: true,
+      ),
+    ];
+    return Navigator.of(context).push<GuessingModeSelection>(
+      MaterialPageRoute<GuessingModeSelection>(
+        builder: (_) => GuessingModeSelectionPage(
+          options: options,
+          categories: categories,
+          playersForPreview: playerCountForPreview,
+        ),
       ),
     );
   }
 
-  Future<List<PlayerConfiguration>?> _pickSavedPlayers() => showDialog(
+  Future<List<PlayerConfiguration>?> _pickSavedPlayers({
+    List<PlayerConfiguration> initialPlayers = const <PlayerConfiguration>[],
+  }) => showDialog(
     context: context,
     builder: (dialogContext) {
-      final selected = <String>{};
+      final availableIds = _profiles.map((profile) => profile.id).toSet();
+      final selected = initialPlayers
+          .map((player) => player.id)
+          .where(availableIds.contains)
+          .toSet();
       return StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('SELECT PLAYERS'),
@@ -2124,6 +2140,7 @@ class _GameModesPage extends StatelessWidget {
               Material(
                 color: const Color(0xCC0A1A2E),
                 child: InkWell(
+                  key: ValueKey<String>('game-mode-${game.$1}'),
                   onTap: () => onPlay(game.$1),
                   child: SizedBox(
                     height: 78,
@@ -2303,5 +2320,6 @@ IconData _iconFor(String id) => switch (id) {
   'word_play' => Icons.text_fields_rounded,
   'guess_character' => Icons.person_search_outlined,
   'guess_country_flags' => Icons.flag_outlined,
+  'guess_objects' => Icons.inventory_2_outlined,
   _ => Icons.sports_esports_outlined,
 };

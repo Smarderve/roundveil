@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "collection": "ROUNDVEIL Object Picture starter set",
+  "usage": "Bundled offline media under each listed Creative Commons license",
+  "items": [
+    {"id":"object-electric-drill","asset":"electric_drill.jpg","source":"https://commons.wikimedia.org/wiki/File:Close_up_of_electric_drill.jpg","creator":"Shixart1985","license":"CC BY 2.0","licenseUrl":"https://creativecommons.org/licenses/by/2.0/","changes":"1280px Wikimedia Commons thumbnail; no cropping"},
+    {"id":"object-kettle","asset":"kettle.jpg","source":"https://commons.wikimedia.org/wiki/File:Boilingkettle.jpg","creator":"Plorpy2","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","changes":"1280px Wikimedia Commons thumbnail; no cropping"},
+    {"id":"object-laptop","asset":"laptop.jpg","source":"https://commons.wikimedia.org/wiki/File:Laptop_computer.jpg","creator":"KK IN HK","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","changes":"1280px Wikimedia Commons thumbnail; no cropping"},
+    {"id":"object-bicycle","asset":"bicycle.jpg","source":"https://commons.wikimedia.org/wiki/File:Green_bicycle.jpg","creator":"Richard Masoner / Cyclelicious","license":"CC BY-SA 2.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/2.0/","changes":"1280px Wikimedia Commons thumbnail; no cropping"},
+    {"id":"object-umbrella","asset":"umbrella.jpg","source":"https://commons.wikimedia.org/wiki/File:Umbrella_01.jpg","creator":"C.Suthorn","license":"CC BY-SA 4.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/4.0/","changes":"1280px Wikimedia Commons thumbnail; no cropping"},
+    {"id":"object-pineapple","asset":"pineapple.jpg","source":"https://commons.wikimedia.org/wiki/File:Ripe_Pineapple.jpg","creator":"Dr. Chinchu C.","license":"CC BY 4.0","licenseUrl":"https://creativecommons.org/licenses/by/4.0/","changes":"1280px Wikimedia Commons thumbnail; no cropping"},
+    {"id":"object-football","asset":"football.jpg","source":"https://commons.wikimedia.org/wiki/File:Soccer_ball_on_ground_-2_(48451893476).jpg","creator":"rok1966","license":"CC BY-SA 2.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/2.0/","changes":"Original resolution retained; no cropping"},
+    {"id":"object-hammer","asset":"hammer.jpg","source":"https://commons.wikimedia.org/wiki/File:Hammer.jpg","creator":"Michael Jastremski","license":"CC BY-SA 2.0","licenseUrl":"https://creativecommons.org/licenses/by-sa/2.0/","changes":"Original resolution retained; no cropping"}
+  ]
+}

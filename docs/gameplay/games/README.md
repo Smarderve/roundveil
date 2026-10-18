@@ -10,6 +10,7 @@
 - [`WORD_PLAY.md`](WORD_PLAY.md) — word games family; Word Scramble first reference.
 - [`GUESS_THE_CHARACTER.md`](GUESS_THE_CHARACTER.md) — correct physical turn-away reveal mechanics.
 - [`GUESS_THE_COUNTRY.md`](GUESS_THE_COUNTRY.md) — offline flag-only, spoken answer with host reveal/judgement under the current rebuild directive.
+- [`GUESS_THE_ITEM.md`](GUESS_THE_ITEM.md) — Object Name and Object Picture as separate formats within Guessing Games; 100 metadata records, 8 bundled photo challenges, 10,000-object target incomplete.
 
 Riddles and Memory were removed from the active product by ADR 0005. Their prior specs are retained as superseded historical records only; their 2,000-screen archive references are obsolete and excluded from implementation.
 

@@ -91,6 +91,18 @@ const roundGameFormats = <RoundGameFormat>[
     moduleId: 'guess_country_flags',
     title: 'Country Flag Mode',
   ),
+  RoundGameFormat(
+    id: 'object_name',
+    family: RoundGameFamily.guessingGames,
+    moduleId: 'guess_objects',
+    title: 'Object Name Mode',
+  ),
+  RoundGameFormat(
+    id: 'object_picture',
+    family: RoundGameFamily.guessingGames,
+    moduleId: 'guess_objects',
+    title: 'Object Picture Mode',
+  ),
 ];
 
 RoundGameFormat? roundGameFormatById(String id) {
@@ -103,7 +115,9 @@ RoundGameFormat? roundGameFormatById(String id) {
 RoundGameFamily? familyForModule(String moduleId) => switch (moduleId) {
   'quiz' => RoundGameFamily.quiz,
   'word_play' => RoundGameFamily.wordPlay,
-  'guess_character' || 'guess_country_flags' => RoundGameFamily.guessingGames,
+  'guess_character' ||
+  'guess_country_flags' ||
+  'guess_objects' => RoundGameFamily.guessingGames,
   _ => null,
 };
 
@@ -112,6 +126,7 @@ String defaultFormatIdForModule(String moduleId) => switch (moduleId) {
   'word_play' => 'word_scramble',
   'guess_character' => 'character_name',
   'guess_country_flags' => 'country_flag',
+  'guess_objects' => 'object_name',
   _ => '',
 };
 

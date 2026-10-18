@@ -53,10 +53,11 @@ class MatchChallenge {
   String get prompt => content.promptForFormat(formatId);
   String get answer => content.answerForFormat(formatId);
   List<String> get choices => content.choicesForFormat(formatId);
-  String get hint => content.hint;
+  String get hint => content.hintForFormat(formatId);
   String? get flagAssetPath => content.flagAssetPath;
   double? get flagAspectRatio => content.flagAspectRatio;
   String? get imageFilePath => content.imageFilePath;
+  String? get imageAssetPath => content.imageAssetPath;
 }
 
 class ActiveMatchState {
@@ -114,6 +115,7 @@ class ActiveMatchController extends ChangeNotifier {
     Random? random,
     Iterable<String> recentChallengeIds = const <String>[],
     List<OfflineChallenge> pictureChallenges = const <OfflineChallenge>[],
+    List<OfflineChallenge>? objectChallenges,
     this.onChallengeDrawn,
     this.introductionDuration = const Duration(milliseconds: 1800),
   }) : _configuration = configuration,
@@ -129,6 +131,9 @@ class ActiveMatchController extends ChangeNotifier {
        _recentChallengeIds = Set<String>.from(recentChallengeIds),
        _pictureChallenges = List<OfflineChallenge>.unmodifiable(
          pictureChallenges,
+       ),
+       _objectChallenges = List<OfflineChallenge>.unmodifiable(
+         objectChallenges ?? objectChallengeCatalog,
        ),
        challengeSeconds = challengeSeconds ?? configuration.challengeSeconds,
        winCountdownSeconds =
@@ -154,6 +159,7 @@ class ActiveMatchController extends ChangeNotifier {
       configuration,
       requiredByPool,
       _pictureChallenges,
+      _objectChallenges,
     );
     if (issue != null) {
       throw ArgumentError.value(configuration, 'configuration', issue);
@@ -167,6 +173,7 @@ class ActiveMatchController extends ChangeNotifier {
                 .id,
             configuration: configuration,
             pictureChallenges: _pictureChallenges,
+            objectChallenges: _objectChallenges,
           ),
           _recentChallengeIds,
           _random,
@@ -181,6 +188,7 @@ class ActiveMatchController extends ChangeNotifier {
   final Random _random;
   final Set<String> _recentChallengeIds;
   final List<OfflineChallenge> _pictureChallenges;
+  final List<OfflineChallenge> _objectChallenges;
   final void Function(String challengeId)? onChallengeDrawn;
   late final List<String> _moduleSchedule;
   late final List<RoundGameFormat> _roundSchedule;
@@ -239,6 +247,7 @@ class ActiveMatchController extends ChangeNotifier {
   static String? validateConfiguration(
     SessionConfiguration configuration, {
     List<OfflineChallenge> pictureChallenges = const <OfflineChallenge>[],
+    List<OfflineChallenge>? objectChallenges,
   }) {
     final baseIssue = _validateBaseConfiguration(configuration);
     if (baseIssue != null) return baseIssue;
@@ -247,24 +256,30 @@ class ActiveMatchController extends ChangeNotifier {
         .map(roundGameFormatById)
         .whereType<RoundGameFormat>()
         .toList();
-    return validateConfigurationWithCounts(configuration, <String, int>{
-      for (final moduleId in configuration.selectedModuleIds)
-        moduleId:
-            ((configuration.roundCount *
-                        formats
-                            .where((format) => format.moduleId == moduleId)
-                            .length +
-                    formats.length -
-                    1) ~/
-                formats.length) *
-            players,
-    }, pictureChallenges: pictureChallenges);
+    return validateConfigurationWithCounts(
+      configuration,
+      <String, int>{
+        for (final moduleId in configuration.selectedModuleIds)
+          moduleId:
+              ((configuration.roundCount *
+                          formats
+                              .where((format) => format.moduleId == moduleId)
+                              .length +
+                      formats.length -
+                      1) ~/
+                  formats.length) *
+              players,
+      },
+      pictureChallenges: pictureChallenges,
+      objectChallenges: objectChallenges,
+    );
   }
 
   static String? validateConfigurationWithCounts(
     SessionConfiguration configuration,
     Map<String, int> requiredByModule, {
     List<OfflineChallenge> pictureChallenges = const <OfflineChallenge>[],
+    List<OfflineChallenge>? objectChallenges,
   }) {
     final baseIssue = _validateBaseConfiguration(configuration);
     if (baseIssue != null) return baseIssue;
@@ -288,6 +303,7 @@ class ActiveMatchController extends ChangeNotifier {
       configuration,
       requiredByPool,
       pictureChallenges,
+      objectChallenges ?? objectChallengeCatalog,
     );
   }
 
@@ -295,6 +311,7 @@ class ActiveMatchController extends ChangeNotifier {
     SessionConfiguration configuration,
     Map<String, int> requiredByPool,
     List<OfflineChallenge> pictureChallenges,
+    List<OfflineChallenge> objectChallenges,
   ) {
     final formats = configuration.effectiveRoundFormatIds
         .map(roundGameFormatById)
@@ -307,11 +324,15 @@ class ActiveMatchController extends ChangeNotifier {
         format.id,
         configuration: configuration,
         pictureChallenges: pictureChallenges,
+        objectChallenges: objectChallenges,
       );
       final required = expected;
       if (content.length < required) {
         if (format.id == 'character_picture') {
           return 'Character Picture Mode needs $required distinct local images; only ${content.length} are installed. Import more pictures or reduce players and rounds.';
+        }
+        if (format.id == 'object_picture') {
+          return 'Object Picture Mode needs $required distinct offline object images; only ${content.length} are installed. Add images or reduce players and rounds.';
         }
         return '${format.title} has ${content.length} unique offline challenges; $required are required for this session. Reduce rounds or players.';
       }
@@ -348,7 +369,9 @@ class ActiveMatchController extends ChangeNotifier {
     final phase = switch (formatId) {
       'character_name' ||
       'character_picture' ||
-      'country_name' => MatchPhase.turnAway,
+      'country_name' ||
+      'object_name' ||
+      'object_picture' => MatchPhase.turnAway,
       'country_flag' => MatchPhase.awaitingJudgement,
       _ => MatchPhase.challenge,
     };
@@ -368,7 +391,13 @@ class ActiveMatchController extends ChangeNotifier {
 
   void answer(String value) {
     if (_state.phase != MatchPhase.challenge) return;
-    final isCorrect = _normalize(value) == _normalize(_state.challenge.answer);
+    final acceptedAnswers = <String>[
+      _state.challenge.answer,
+      ..._state.challenge.content.acceptedAnswers,
+    ];
+    final isCorrect = acceptedAnswers.any(
+      (answer) => _normalize(value) == _normalize(answer),
+    );
     _resolve(isCorrect);
   }
 
@@ -378,6 +407,8 @@ class ActiveMatchController extends ChangeNotifier {
           'character_name',
           'character_picture',
           'country_name',
+          'object_name',
+          'object_picture',
         }.contains(_state.challenge.formatId)) {
       return;
     }
@@ -773,7 +804,9 @@ class ActiveMatchController extends ChangeNotifier {
   }
 
   static String _poolKey(RoundGameFormat format) =>
-      format.id == 'character_picture' ? format.id : format.moduleId;
+      format.moduleId == 'guess_objects' || format.id == 'character_picture'
+      ? format.id
+      : format.moduleId;
 
   ActiveMatchState _copy({
     MatchPhase? phase,

@@ -5,6 +5,7 @@ const activeGameModuleIds = <String>{
   'word_play',
   'guess_character',
   'guess_country_flags',
+  'guess_objects',
 };
 
 class PlayerConfiguration {
