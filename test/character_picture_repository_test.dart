@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'dart:typed_data';
 import 'dart:ui' as ui;
@@ -121,6 +122,90 @@ void main() {
     expect((await recreated.loadPlayable()).map((item) => item.name), [
       'Unrelated Character',
     ]);
+  });
+
+  test('library reset hides existing private images but preserves files and new imports', () async {
+    final temporary = await Directory.systemTemp.createTemp(
+      'rv-picture-cosplay-migration-',
+    );
+    addTearDown(() => temporary.delete(recursive: true));
+    final repository = CharacterPictureRepository(
+      directoryProvider: () async => temporary,
+      includeBundledImages: false,
+    );
+    await repository.loadAll(); // Writes the one-time migration sentinel.
+    final legacy = await repository.addImageBytes(
+      name: 'Naruto Uzumaki',
+      category: 'Anime Characters',
+      extension: 'png',
+      bytes: await _testPng(),
+      sourceTitle: 'Owner-supplied private local image',
+    );
+    expect(legacy, isNotNull);
+    final legacyItem = legacy!;
+
+    final indexFile = File(
+      '${temporary.path}${Platform.pathSeparator}character_picture_library${Platform.pathSeparator}index.json',
+    );
+    final index =
+        jsonDecode(await indexFile.readAsString()) as Map<String, Object?>;
+    final hiddenIds = (index['hiddenIds']! as List<Object?>).cast<String>();
+    final missingRecord = Map<String, Object?>.from(legacyItem.toJson())
+      ..['id'] = 'legacy-missing-image'
+      ..['name'] = 'Unresolved legacy record'
+      ..['path'] = '${temporary.path}${Platform.pathSeparator}missing.png';
+    (index['items']! as List<Object?>).add(missingRecord);
+    hiddenIds.remove('migration:character-library-reset-20261018');
+    index['hiddenIds'] = hiddenIds;
+    await indexFile.writeAsString(jsonEncode(index));
+
+    final migrated = await repository.loadAll();
+    expect(
+      migrated.singleWhere((item) => item.id == legacyItem.id).hidden,
+      isTrue,
+    );
+    final migratedIndex =
+        jsonDecode(await indexFile.readAsString()) as Map<String, Object?>;
+    expect(
+      (migratedIndex['items']! as List<Object?>)
+          .whereType<Map<String, Object?>>()
+          .any((item) => item['id'] == 'legacy-missing-image'),
+      isTrue,
+    );
+    expect(
+      (migratedIndex['hiddenIds']! as List<Object?>).contains(
+        'legacy-missing-image',
+      ),
+      isTrue,
+    );
+    expect(File(legacyItem.path).existsSync(), isTrue);
+
+    final newlyImported = await repository.addImageBytes(
+      name: 'New authentic artwork',
+      category: 'Anime Characters',
+      extension: 'png',
+      bytes: await _testPng(color: const ui.Color(0xFF751A43)),
+      sourceTitle: 'Owner-supplied private local image',
+    );
+    expect(newlyImported, isNotNull);
+    final newItem = newlyImported!;
+    final afterNewImport = await repository.loadAll();
+    expect(
+      afterNewImport.singleWhere((item) => item.id == newItem.id).hidden,
+      isFalse,
+    );
+    expect(await repository.loadPlayable(), hasLength(1));
+
+    final restarted = CharacterPictureRepository(
+      directoryProvider: () async => temporary,
+      includeBundledImages: false,
+    );
+    expect(
+      (await restarted.loadAll())
+          .singleWhere((item) => item.id == legacyItem.id)
+          .hidden,
+      isTrue,
+    );
   });
 
   test(
@@ -363,116 +448,30 @@ void main() {
       directoryProvider: () async => temporary,
     );
 
-    final items = await repository.loadAll();
-    expect(items, hasLength(50));
-    expect(items.every((item) => item.collection == 'bundled'), isTrue);
-    expect(await repository.loadBundled(), hasLength(50));
-    expect(await repository.loadPrivate(), isEmpty);
-    expect(
-      items.map((item) => item.name),
-      containsAll([
-        'George Washington',
-        'Abraham Lincoln',
-        'Sylvester Stallone',
-        'Bruce Willis',
-        'Tina Fey',
-        'Charlie Hunnam',
-        'Stone Cold Steve Austin',
-        'Garrett Hedlund',
-        'Charlie Day',
-        'Andy Whitfield',
-        'Zoe Saldana',
-        'Karen Gillan',
-        'Aamir Khan',
-        'Amitabh Bachchan',
-        'Aishwarya Rai Bachchan',
-        'Deepika Padukone',
-        'Katrina Kaif',
-        'Rajinikanth',
-        'Ranveer Singh',
-        'Vidya Balan',
-        'Rani Mukerji',
-        'Anya Singh',
-        'Mammootty',
-        'Kareena Kapoor Khan',
-        'Kamal Haasan',
-        'Akshay Kumar',
-        'Kajol',
-        'Sonam Kapoor',
-        'Sushmita Sen',
-        'Lionel Messi',
-        'Cristiano Ronaldo',
-        'Neymar',
-        'Kylian Mbappé',
-        'Alex Morgan',
-        'Mohamed Salah',
-        'Pelé',
-        'David Villa',
-        'Marta',
-        'Zinedine Zidane',
-        'Tom Hanks',
-        'Dwayne Johnson',
-        'Emma Watson',
-        'Meryl Streep',
-        'Robert Downey Jr.',
-        'Jimmy Carter',
-        'George W. Bush',
-        'Donald Trump',
-        'Joe Biden',
-        'Lyndon B. Johnson',
-        'Gerald Ford',
-      ]),
-    );
-    expect(items.every((item) => File(item.path).existsSync()), isTrue);
-    expect(
-      items.every(
-        (item) =>
-            item.width >= 400 &&
-            item.height >= 400 &&
-            (item.width >= 640 || item.height >= 640),
-      ),
-      isTrue,
-    );
-    expect(items.every((item) => item.license.isNotEmpty), isTrue);
-    expect(
-      items.every((item) => item.sourceUrl.startsWith('https://')),
-      isTrue,
-    );
+  test(
+    'fresh installation keeps rejected bundled portraits out of gameplay',
+    () async {
+      final temporary = await Directory.systemTemp.createTemp('rv-builtin-');
+      addTearDown(() => temporary.delete(recursive: true));
+      final repository = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+      );
 
-    final reloaded = await repository.loadAll();
-    expect(reloaded, hasLength(50));
-    expect(reloaded.map((item) => item.sha256).toSet(), hasLength(50));
-    expect(
-      reloaded.where((item) => item.category == 'Indian Actors and Actresses'),
-      hasLength(17),
-    );
-    expect(
-      reloaded.where((item) => item.category == 'Footballers'),
-      hasLength(10),
-    );
-    expect(
-      reloaded.where((item) => item.category == 'Hollywood Actors'),
-      hasLength(14),
-    );
-    expect(
-      reloaded.where((item) => item.category == 'Historical Presidents'),
-      hasLength(8),
-    );
-    expect(
-      reloaded.where((item) => item.category == 'Athletes and Entertainers'),
-      hasLength(1),
-    );
-    expect(
-      reloaded.every(
-        (item) =>
-            item.sourceUrl.startsWith('https://') && item.license.isNotEmpty,
-      ),
-      isTrue,
-    );
-  });
+      final items = await repository.loadPlayable();
+      expect(items, isEmpty);
+      expect(await repository.loadBundled(), isEmpty);
+      expect(await repository.loadExcludedBundled(), hasLength(50));
+      expect(await repository.loadPrivate(), isEmpty);
+      final restarted = CharacterPictureRepository(
+        directoryProvider: () async => temporary,
+      );
+      expect(await restarted.loadPlayable(), isEmpty);
+      expect(await restarted.loadExcludedBundled(), hasLength(50));
+    },
+  );
 
   test(
-    'bundled removal is an exclusion that survives reseeding and restart',
+    'rejected bundled portraits stay excluded across restart and reseeding',
     () async {
       final temporary = await Directory.systemTemp.createTemp(
         'rv-builtin-exclude-',
@@ -481,17 +480,15 @@ void main() {
       final repository = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
-      final initial = await repository.loadAll();
-      final target = initial.first;
-      final managedCopy = File(target.path);
-      await repository.remove(target.id);
-      expect(await managedCopy.exists(), isFalse);
+      expect(await repository.loadPlayable(), isEmpty);
+      final excluded = await repository.loadExcludedBundled();
+      expect(excluded, hasLength(50));
       final afterRestart = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
       final loaded = await afterRestart.loadAll();
-      expect(loaded.length, initial.length - 1);
-      expect(loaded.any((item) => item.id == target.id), isFalse);
+      expect(loaded, isEmpty);
+      expect(await afterRestart.loadExcludedBundled(), hasLength(50));
     },
   );
 }

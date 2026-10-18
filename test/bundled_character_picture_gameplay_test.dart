@@ -10,74 +10,42 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'bundled offline portraits run as distinct Picture Mode turns',
+    'rejected bundled portraits cannot enter a new Picture Mode match',
     () async {
       final temporary = await Directory.systemTemp.createTemp(
         'rv-pictures-game-',
       );
       addTearDown(() => temporary.delete(recursive: true));
-      final pictures = await CharacterPictureRepository(
+      final repository = CharacterPictureRepository(
         directoryProvider: () async => temporary,
-      ).loadAll();
+      );
+      final pictures = await repository.loadPlayable();
+      expect(pictures, isEmpty);
+      expect(await repository.loadExcludedBundled(), hasLength(50));
       final configuration = SessionConfiguration(
         players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
         selectedModuleIds: const <String>['guess_character'],
         roundFormatIds: const <String>['character_picture'],
-        roundCount: pictures.length,
+        roundCount: 1,
       );
-      final challenges = pictures
-          .map(
-            (picture) => OfflineChallenge(
-              id: picture.id,
-              prompt: 'Identify the person shown.',
-              answer: picture.name,
-              hint: picture.hint,
-              imageFilePath: picture.path,
-              imageSource: picture.sourceTitle,
-            ),
-          )
-          .toList(growable: false);
-      final match = ActiveMatchController(
-        configuration: configuration,
-        enableTimers: false,
-        pictureChallenges: challenges,
-      );
-      addTearDown(match.dispose);
-
       expect(
         ActiveMatchController.validateConfiguration(
           configuration,
-          pictureChallenges: challenges,
+          pictureChallenges: pictures
+              .map(
+                (picture) => OfflineChallenge(
+                  id: picture.id,
+                  prompt: 'Identify the person shown.',
+                  answer: picture.name,
+                  hint: picture.hint,
+                  imageFilePath: picture.path,
+                  imageSource: picture.sourceTitle,
+                ),
+              )
+              .toList(growable: false),
         ),
-        isNull,
+        contains('distinct local images'),
       );
-      match.start();
-      final seenIds = <String>{};
-      for (var turn = 0; turn < pictures.length; turn++) {
-        if (match.state.phase == MatchPhase.roundIntro) match.beginRound();
-        match.beginChallenge();
-        expect(match.state.phase, MatchPhase.turnAway);
-        final challenge = match.state.challenge;
-        expect(seenIds.add(challenge.id), isTrue);
-        expect(File(challenge.imageFilePath!).existsSync(), isTrue);
-        match.revealCharacterAfterPlayerTurnsAway();
-        expect(match.state.phase, MatchPhase.awaitingJudgement);
-        expect(match.state.challenge.imageFilePath, isNotNull);
-        final correct = turn.isEven;
-        match.judge(correct: correct);
-        if (correct) {
-          expect(match.state.phase, MatchPhase.winCountdown);
-          match.completeCountdown();
-        } else {
-          expect(match.state.phase, isNot(MatchPhase.winCountdown));
-        }
-      }
-      expect(seenIds, hasLength(pictures.length));
-      expect(match.state.correctAnswers.values.single, pictures.length ~/ 2);
-      expect(match.state.wrongAnswers.values.single, pictures.length ~/ 2);
-      expect(match.state.phase, MatchPhase.complete);
-      expect(match.state.rankings.single.correctAnswers, pictures.length ~/ 2);
-      expect(match.state.rankings.single.wrongAnswers, pictures.length ~/ 2);
     },
   );
 }

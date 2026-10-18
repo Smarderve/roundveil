@@ -24,6 +24,9 @@ const characterPictureCategories = <String>[
   'Other People',
 ];
 
+const _characterLibraryResetMigration =
+    'migration:character-library-reset-20261018';
+
 class CharacterPicture {
   const CharacterPicture({
     required this.id,
@@ -211,6 +214,7 @@ class CharacterPictureRepository {
   Future<List<CharacterPicture>> loadAll() async {
     final file = await _indexFile;
     var items = <CharacterPicture>[];
+    var indexItems = <CharacterPicture>[];
     var excludedBundledIds = <String>{};
     var hiddenIds = <String>{};
     var removedIds = <String>{};
@@ -224,12 +228,50 @@ class CharacterPictureRepository {
       hiddenIds = _readStringSet(decoded['hiddenIds']);
       removedIds = _readStringSet(decoded['removedIds']);
       removedImageHashes = _readStringSet(decoded['removedImageHashes']);
-      items = (decoded['items']! as List<Object?>)
+      indexItems = (decoded['items']! as List<Object?>)
           .map(
             (item) => CharacterPicture.fromJson(item! as Map<String, Object?>),
           )
-          .where((item) => File(item.path).existsSync())
           .toList();
+      items = indexItems.where((item) => File(item.path).existsSync()).toList();
+    }
+    if (!hiddenIds.contains(_characterLibraryResetMigration)) {
+      // The owner rejected the current Picture Mode library and asked to
+      // rebuild it. Retain every managed private image and record for possible
+      // review/restoration, but hide it from gameplay. Bundled entries are
+      // persistently excluded so first-run seeding cannot silently restore
+      // them. This migration touches only the character-picture index; player
+      // profiles, hints, scores, object content and image files are untouched.
+      for (final item in indexItems) {
+        if (item.collection == 'bundled') {
+          excludedBundledIds.add(item.id);
+        }
+        hiddenIds.add(item.id);
+      }
+      if (includeBundledImages) {
+        try {
+          final manifest = jsonDecode(
+            await rootBundle.loadString(
+              'assets/brand/character_pictures/manifest.json',
+            ),
+          );
+          if (manifest is Map<String, Object?> && manifest['items'] is List) {
+            for (final raw in manifest['items']! as List<Object?>) {
+              if (raw is Map<String, Object?> && raw['id'] is String) {
+                excludedBundledIds.add(raw['id']! as String);
+              }
+            }
+          }
+        } on FlutterError {
+          // Unit tests and alternate builds may intentionally omit bundled media.
+        }
+      }
+      hiddenIds.add(_characterLibraryResetMigration);
+      await _writeIndex(
+        indexItems,
+        excludedBundledIds: excludedBundledIds,
+        hiddenIds: hiddenIds,
+      );
     }
     if (includeBundledImages) {
       items = await _installBundledImages(
