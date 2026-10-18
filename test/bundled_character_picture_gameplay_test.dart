@@ -10,7 +10,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test(
-    'rejected bundled portraits cannot enter a new Picture Mode match',
+    'newly approved portraits play while rejected portraits stay excluded',
     () async {
       final temporary = await Directory.systemTemp.createTemp(
         'rv-pictures-game-',
@@ -20,7 +20,16 @@ void main() {
         directoryProvider: () async => temporary,
       );
       final pictures = await repository.loadPlayable();
-      expect(pictures, isEmpty);
+      expect(
+        pictures.map((picture) => picture.id),
+        containsAll(<String>[
+          'commons-chinese-jackie-chan',
+          'commons-chinese-jet-li',
+          'commons-chinese-donnie-yen',
+          'commons-chinese-chow-yun-fat',
+        ]),
+      );
+      expect(pictures, hasLength(4));
       expect(await repository.loadExcludedBundled(), hasLength(50));
       final configuration = SessionConfiguration(
         players: <PlayerConfiguration>[PlayerConfiguration.placeholder(1)],
@@ -44,7 +53,7 @@ void main() {
               )
               .toList(growable: false),
         ),
-        contains('distinct local images'),
+        isNull,
       );
     },
   );

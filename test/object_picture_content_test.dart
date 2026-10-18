@@ -12,7 +12,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('object catalog has distinct, described identities and aliases', () {
-    expect(objectChallengeCatalog.length, 100);
+    expect(objectChallengeCatalog.length, 108);
     expect(
       objectChallengeCatalog.map((item) => item.id).toSet(),
       hasLength(objectChallengeCatalog.length),
@@ -43,14 +43,14 @@ void main() {
 
   test('Object Picture only includes its manifest-backed offline records', () {
     final pictureChallenges = challengesForFormat('object_picture');
-    expect(pictureChallenges, hasLength(78));
+    expect(pictureChallenges, hasLength(86));
     expect(
       pictureChallenges.every(
         (item) => item.imageAssetPath != null || item.imageFilePath != null,
       ),
       isTrue,
     );
-    expect(challengesForFormat('object_name'), hasLength(100));
+    expect(challengesForFormat('object_name'), hasLength(108));
   });
 
   test('Object Picture category selection never substitutes other items', () {
@@ -116,8 +116,36 @@ void main() {
 
       final summary = await repository.loadPlayableSummary();
 
-      expect(summary, hasLength(50));
+      expect(summary, hasLength(54));
       expect(summary.every((item) => item.collection == 'bundled'), isTrue);
+      final chineseActors = summary
+          .where((item) => item.category == 'Chinese Actors')
+          .toList();
+      expect(chineseActors, hasLength(4));
+      expect(
+        chineseActors.map((item) => item.name).toSet(),
+        containsAll(<String>{
+          'Jackie Chan',
+          'Jet Li',
+          'Donnie Yen',
+          'Chow Yun-fat',
+        }),
+      );
+      for (final item in chineseActors) {
+        expect(item.sourceUrl, startsWith('https://commons.wikimedia.org/'));
+        expect(item.license, contains('CC BY'));
+        final data = await rootBundle.load(item.path);
+        final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+        final frame = await codec.getNextFrame();
+        expect(frame.image.width, greaterThanOrEqualTo(500), reason: item.name);
+        expect(
+          frame.image.height,
+          greaterThanOrEqualTo(500),
+          reason: item.name,
+        );
+        codec.dispose();
+        frame.image.dispose();
+      }
       expect(
         Directory(
           '${temp.path}${Platform.pathSeparator}character_picture_library',
@@ -135,20 +163,20 @@ void main() {
         (await rootBundle.loadString('assets/app/objects/manifest.json')),
       ) as Map<String, dynamic>;
       final records = manifest['items'] as List<dynamic>;
-      expect(records, hasLength(78));
+      expect(records, hasLength(86));
       final manifestRecords = records.cast<Map<String, dynamic>>();
       final creditedIds = manifestRecords.map((record) => record['id']).toSet();
       final openImagesRecords = manifestRecords
           .where((record) => record['dataset'] == 'Open Images validation')
           .toList();
-      expect(openImagesRecords, hasLength(50));
+      expect(openImagesRecords, hasLength(58));
       expect(
         openImagesRecords.map((record) => record['datasetImageId']).toSet(),
-        hasLength(50),
+        hasLength(58),
       );
       expect(
         openImagesRecords.map((record) => record['sha256']).toSet(),
-        hasLength(50),
+        hasLength(58),
       );
       for (final record in openImagesRecords) {
         expect(record['license'], 'CC BY 2.0', reason: record['id'] as String);

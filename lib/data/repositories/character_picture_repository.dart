@@ -18,6 +18,7 @@ const characterPictureCategories = <String>[
   'DreamWorks Characters',
   'Other Fictional Characters',
   'Indian Actors and Actresses',
+  'Chinese Actors',
   'Hollywood Actors',
   'Footballers',
   'Historical Presidents',

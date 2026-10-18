@@ -458,14 +458,17 @@ void main() {
       );
 
       final items = await repository.loadPlayable();
-      expect(items, isEmpty);
-      expect(await repository.loadBundled(), isEmpty);
+      expect(items, hasLength(4));
+      expect(items.map((item) => item.category).toSet(), <String>{
+        'Chinese Actors',
+      });
+      expect(await repository.loadBundled(), hasLength(4));
       expect(await repository.loadExcludedBundled(), hasLength(50));
       expect(await repository.loadPrivate(), isEmpty);
       final restarted = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
-      expect(await restarted.loadPlayable(), isEmpty);
+      expect(await restarted.loadPlayable(), hasLength(4));
       expect(await restarted.loadExcludedBundled(), hasLength(50));
     },
   );
@@ -480,14 +483,14 @@ void main() {
       final repository = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
-      expect(await repository.loadPlayable(), isEmpty);
+      expect(await repository.loadPlayable(), hasLength(4));
       final excluded = await repository.loadExcludedBundled();
       expect(excluded, hasLength(50));
       final afterRestart = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
       final loaded = await afterRestart.loadAll();
-      expect(loaded, isEmpty);
+      expect(loaded, hasLength(4));
       expect(await afterRestart.loadExcludedBundled(), hasLength(50));
     },
   );

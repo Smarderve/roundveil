@@ -60,7 +60,7 @@ void main() {
       find.text('Choose one format. Next, select the players for your match.'),
       findsOneWidget,
     );
-    expect(find.textContaining('100 challenges · 4 rounds'), findsWidgets);
+    expect(find.textContaining('108 challenges · 4 rounds'), findsWidgets);
     expect(
       find.textContaining("Instance of 'GuessingModeOption'"),
       findsNothing,
@@ -72,7 +72,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(result?.formatId, 'object_name');
     expect(result?.category, 'All Categories');
-    expect(result?.contentCount, 100);
+    expect(result?.contentCount, 108);
   });
 
   testWidgets(
@@ -173,7 +173,7 @@ const _options = <GuessingModeOption>[
     id: 'object_name',
     title: 'OBJECT NAME',
     description: 'Object clues.',
-    contentCount: 100,
+    contentCount: 108,
     roundCount: 4,
     icon: Icons.category,
     isPictureMode: false,

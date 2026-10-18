@@ -45,21 +45,27 @@ individual difficulty is not yet exposed in the Object chooser.
 
 ## Starter content and provenance
 
-The shared starter catalog contains **100 distinct object identities**. As of
-2026-10-18, 78 have bundled offline photos and are eligible for Object Picture;
+The shared starter catalog contains **108 distinct object identities**. As of
+2026-10-18, 86 have bundled offline photos and are eligible for Object Picture;
 the remaining 22 identities are metadata-only and are eligible only for Object
 Name. This is a starter corpus, not a claim that the current 500-pair owner
-target is complete. There are 78 complete identity/photo pairs; 422 more pairs
-are needed, including photos for the 22 current name-only identities and 400
+target is complete. There are 86 complete identity/photo pairs; 414 more pairs
+are needed, including photos for the 22 current name-only identities and 392
 additional distinct identities with photos.
 
 The bundled photos are credited in [`assets/app/objects/CREDITS.md`](../../../assets/app/objects/CREDITS.md),
 with source, creator, license, and modification details in
 [`assets/app/objects/manifest.json`](../../../assets/app/objects/manifest.json).
-All 78 images are decoded in the content test. They are bundled for offline
-runtime use. The 50-image Open Images acquisition batch has an individually
-attributed manifest and human-readable credits; actual-pixel review sheets and
-the Android runtime capture are in
+All 86 images are decoded in the content test. They are bundled for offline
+runtime use. The Open Images V7 validation photos include per-image source,
+creator, title, license, dataset ID, dimensions and checksum records. This
+follow-up integrates eight visually reviewed items (apple, candle, light bulb,
+suitcase, sunglasses, door, coin and watermelon), excluding a candidate that
+read primarily as a wheel instead of the proposed tire identity. Open Images
+metadata is discovery data rather than the image copyright grant; each source
+record and CC BY 2.0 attribution travels with its image. The existing 50-image
+acquisition batch has an individually attributed manifest and human-readable
+credits; actual-pixel review sheets and the Android runtime capture are in
 [`docs/evidence/open_images_object_batch_2026-10-18/`](../../evidence/open_images_object_batch_2026-10-18/).
 The hammer photo is lower-resolution than the other starter photographs and
 should be replaced only with a verified, better-quality asset.
