@@ -562,6 +562,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Medical & Science',
     difficulty: 'medium',
     acceptedAnswers: <String>['Temperature gauge'],
+
+    imageAssetPath: 'assets/app/objects/openimages_thermometer.jpg',
+    imageSource: 'https://www.flickr.com/photos/affinity23/5043750123/',
   ),
   OfflineChallenge(
     id: 'object-blender',
@@ -572,6 +575,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Kitchen',
     difficulty: 'easy',
     acceptedAnswers: <String>['Food blender', 'Liquidizer'],
+
+    imageAssetPath: 'assets/app/objects/openimages_blender.jpg',
+    imageSource: 'https://www.flickr.com/photos/yourcastlesdecor/12317651403',
   ),
   OfflineChallenge(
     id: 'object-camera',
@@ -581,6 +587,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Electronics',
     difficulty: 'easy',
     acceptedAnswers: <String>['Digital camera', 'Photo camera'],
+
+    imageAssetPath: 'assets/app/objects/openimages_camera.jpg',
+    imageSource: 'https://www.flickr.com/photos/croco/252716102',
   ),
   OfflineChallenge(
     id: 'object-guitar',
@@ -590,6 +599,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Musical Instruments',
     difficulty: 'medium',
     acceptedAnswers: <String>['Acoustic guitar', 'Electric guitar'],
+
+    imageAssetPath: 'assets/app/objects/openimages_guitar.jpg',
+    imageSource: 'https://www.flickr.com/photos/rinzewind/29084731',
   ),
   OfflineChallenge(
     id: 'object-sofa',
@@ -599,6 +611,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Household',
     difficulty: 'easy',
     acceptedAnswers: <String>['Couch', 'Settee'],
+
+    imageAssetPath: 'assets/app/objects/openimages_sofa.jpg',
+    imageSource: 'https://www.flickr.com/photos/dachis/7696012010',
   ),
   OfflineChallenge(
     id: 'object-bed',
@@ -608,6 +623,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Household',
     difficulty: 'easy',
     acceptedAnswers: <String>['Bedstead'],
+
+    imageAssetPath: 'assets/app/objects/openimages_bed.jpg',
+    imageSource: 'https://www.flickr.com/photos/anniemole/5046985461',
   ),
   OfflineChallenge(
     id: 'object-curtain',
@@ -617,6 +635,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Household',
     difficulty: 'medium',
     acceptedAnswers: <String>['Drape'],
+
+    imageAssetPath: 'assets/app/objects/openimages_curtain.jpg',
+    imageSource: 'https://www.flickr.com/photos/monochrome/9264832733',
   ),
   OfflineChallenge(
     id: 'object-clothes-iron',
@@ -636,6 +657,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Kitchen',
     difficulty: 'medium',
     acceptedAnswers: <String>['Turner'],
+
+    imageAssetPath: 'assets/app/objects/openimages_spatula.jpg',
+    imageSource: 'https://www.flickr.com/photos/miran/14797258247',
   ),
   OfflineChallenge(
     id: 'object-toaster',
@@ -645,6 +669,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Kitchen',
     difficulty: 'easy',
     acceptedAnswers: <String>['Bread toaster'],
+
+    imageAssetPath: 'assets/app/objects/openimages_toaster.jpg',
+    imageSource: 'https://www.flickr.com/photos/27620885@N02/2648334881',
   ),
   OfflineChallenge(
     id: 'object-router',
@@ -655,6 +682,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Electronics',
     difficulty: 'hard',
     acceptedAnswers: <String>['Wi-Fi router', 'Wireless router'],
+
+    imageAssetPath: 'assets/app/objects/openimages_router.jpg',
+    imageSource: 'https://www.flickr.com/photos/audioreservoir/14764070934',
   ),
   OfflineChallenge(
     id: 'object-projector',
@@ -664,6 +694,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Electronics',
     difficulty: 'medium',
     acceptedAnswers: <String>['Video projector'],
+
+    imageAssetPath: 'assets/app/objects/openimages_projector.jpg',
+    imageSource: 'https://www.flickr.com/photos/grand_canyon_nps/6728176471',
   ),
   OfflineChallenge(
     id: 'object-printer',
@@ -673,6 +706,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'School & Office',
     difficulty: 'easy',
     acceptedAnswers: <String>['Computer printer'],
+
+    imageAssetPath: 'assets/app/objects/openimages_printer.jpg',
+    imageSource: 'https://www.flickr.com/photos/digitaldrew/4930418632',
   ),
   OfflineChallenge(
     id: 'object-wrench',
@@ -682,6 +718,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Tools',
     difficulty: 'medium',
     acceptedAnswers: <String>['Spanner'],
+
+    imageAssetPath: 'assets/app/objects/openimages_wrench.jpg',
+    imageSource: 'https://www.flickr.com/photos/free-stock/4904993670',
   ),
   OfflineChallenge(
     id: 'object-pliers',
@@ -700,6 +739,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Vehicles',
     difficulty: 'medium',
     acceptedAnswers: <String>['Motorbike'],
+
+    imageAssetPath: 'assets/app/objects/openimages_motorcycle.jpg',
+    imageSource: 'https://www.flickr.com/photos/diaper/3725089974',
   ),
   OfflineChallenge(
     id: 'object-bus',
@@ -720,6 +762,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Vehicles',
     difficulty: 'hard',
     acceptedAnswers: <String>['Chopper'],
+
+    imageAssetPath: 'assets/app/objects/openimages_helicopter.jpg',
+    imageSource: 'https://www.flickr.com/photos/rdecom/8268969055',
   ),
   OfflineChallenge(
     id: 'object-tractor',
@@ -729,6 +774,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Vehicles',
     difficulty: 'medium',
     acceptedAnswers: <String>['Farm tractor'],
+
+    imageAssetPath: 'assets/app/objects/openimages_tractor.jpg',
+    imageSource: 'https://www.flickr.com/photos/dwilliss/8001783802/',
   ),
   OfflineChallenge(
     id: 'object-compass',
@@ -747,6 +795,9 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'School & Office',
     difficulty: 'easy',
     acceptedAnswers: <String>['Handheld calculator'],
+
+    imageAssetPath: 'assets/app/objects/openimages_calculator.jpg',
+    imageSource: 'https://www.flickr.com/photos/horiavarlan/4273218725',
   ),
   OfflineChallenge(
     id: 'object-stethoscope',
@@ -792,6 +843,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is often surrounded by chairs at mealtimes.',
     'easy',
     ['Dining table'],
+    imageAssetPath: 'assets/app/objects/openimages_table.jpg',
+    imageSource: 'https://www.flickr.com/photos/pollarduk/15063590348',
   ),
   _ObjectNameSeed(
     'object-dining-chair',
@@ -801,6 +854,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It usually has a back and four legs.',
     'easy',
     ['Chair'],
+
+    imageAssetPath: 'assets/app/objects/openimages_dining_chair.jpg',
+    imageSource: 'https://www.flickr.com/photos/andybutkaj/402173682',
   ),
   _ObjectNameSeed(
     'object-cupboard',
@@ -810,6 +866,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Kitchen dishes are often kept inside one.',
     'easy',
     ['Cabinet'],
+
+    imageAssetPath: 'assets/app/objects/openimages_cupboard.jpg',
+    imageSource: 'http://www.flickr.com/91087519@N00/181472989/',
   ),
   _ObjectNameSeed(
     'object-wardrobe',
@@ -819,6 +878,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It may have shelves and a hanging rail.',
     'easy',
     ['Clothes closet'],
+
+    imageAssetPath: 'assets/app/objects/openimages_wardrobe.jpg',
+    imageSource: 'https://www.flickr.com/photos/ufv/8631917839',
   ),
   _ObjectNameSeed(
     'object-mirror',
@@ -837,6 +899,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is usually covered with a pillowcase.',
     'easy',
     ['Head pillow'],
+
+    imageAssetPath: 'assets/app/objects/openimages_pillow.jpg',
+    imageSource: 'https://www.flickr.com/photos/13777424@N04/5573730601',
   ),
   _ObjectNameSeed(
     'object-blanket',
@@ -934,6 +999,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Soup is commonly served in one.',
     'easy',
     ['Serving bowl'],
+
+    imageAssetPath: 'assets/app/objects/openimages_bowl.jpg',
+    imageSource: 'https://www.flickr.com/photos/norisa/16863771543',
   ),
   _ObjectNameSeed(
     'object-spoon',
@@ -943,6 +1011,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is useful for soup and porridge.',
     'easy',
     ['Eating spoon'],
+
+    imageAssetPath: 'assets/app/objects/openimages_spoon.jpg',
+    imageSource: 'https://www.flickr.com/photos/mauroescritor/13096150384',
   ),
   _ObjectNameSeed(
     'object-fork',
@@ -952,6 +1023,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is often used together with a knife.',
     'easy',
     ['Eating fork'],
+
+    imageAssetPath: 'assets/app/objects/openimages_fork.jpg',
+    imageSource: 'https://www.flickr.com/photos/dindut/3746804404',
   ),
   _ObjectNameSeed(
     'object-kitchen-knife',
@@ -961,6 +1035,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It should be handled carefully and stored safely.',
     'medium',
     ['Cooking knife'],
+
+    imageAssetPath: 'assets/app/objects/openimages_kitchen_knife.jpg',
+    imageSource: 'https://www.flickr.com/photos/capcase/4969434689',
   ),
   _ObjectNameSeed(
     'object-chopping-board',
@@ -1008,6 +1085,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It has insulated shelves and a chilled interior.',
     'easy',
     ['Fridge'],
+
+    imageAssetPath: 'assets/app/objects/openimages_refrigerator.jpg',
+    imageSource: 'https://www.flickr.com/photos/wwworks/9233825265',
   ),
   _ObjectNameSeed(
     'object-washing-machine',
@@ -1017,6 +1097,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'A drum rotates during its wash cycle.',
     'easy',
     ['Clothes washer'],
+
+    imageAssetPath: 'assets/app/objects/openimages_washing_machine.jpg',
+    imageSource: 'https://www.flickr.com/photos/jwalsh_/2547917821',
   ),
   _ObjectNameSeed(
     'object-mobile-phone',
@@ -1026,6 +1109,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It connects to cellular networks.',
     'easy',
     ['Cellphone', 'Mobile telephone'],
+
+    imageAssetPath: 'assets/app/objects/openimages_mobile_phone.jpg',
+    imageSource: 'https://www.flickr.com/photos/edans/8430496082',
   ),
   _ObjectNameSeed(
     'object-tablet-computer',
@@ -1035,6 +1121,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is usually operated directly with fingers.',
     'easy',
     ['Tablet'],
+
+    imageAssetPath: 'assets/app/objects/openimages_tablet_computer.jpg',
+    imageSource: 'https://www.flickr.com/photos/mac_ivan/4679802421',
   ),
   _ObjectNameSeed(
     'object-headphones',
@@ -1066,6 +1155,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It often has buttons and a scroll wheel.',
     'easy',
     ['Mouse'],
+
+    imageAssetPath: 'assets/app/objects/openimages_computer_mouse.jpg',
+    imageSource: 'https://www.flickr.com/photos/fuzzcat/8291741616',
   ),
   _ObjectNameSeed(
     'object-computer-monitor',
@@ -1075,6 +1167,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is separate from a laptop’s built-in display.',
     'easy',
     ['Display screen'],
+
+    imageAssetPath: 'assets/app/objects/openimages_computer_monitor.jpg',
+    imageSource: 'https://www.flickr.com/photos/lllnorikolll-300er/15502140378',
   ),
   _ObjectNameSeed(
     'object-remote-control',
@@ -1095,6 +1190,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It may be built into a radio or used separately.',
     'medium',
     ['Speaker'],
+
+    imageAssetPath: 'assets/app/objects/openimages_loudspeaker.jpg',
+    imageSource: 'https://www.flickr.com/photos/robertnelson/2435879529',
   ),
   _ObjectNameSeed(
     'object-power-bank',
@@ -1122,6 +1220,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Common tips are flat and cross-shaped.',
     'easy',
     ['Driver'],
+
+    imageAssetPath: 'assets/app/objects/openimages_screwdriver.jpg',
+    imageSource: 'https://www.flickr.com/photos/mauroescritor/8271389606',
   ),
   _ObjectNameSeed(
     'object-handsaw',
@@ -1149,6 +1250,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It must be set on stable ground before climbing.',
     'easy',
     ['Step ladder'],
+
+    imageAssetPath: 'assets/app/objects/openimages_ladder.jpg',
+    imageSource: 'https://www.flickr.com/photos/94474582@N00/4032405238',
   ),
   _ObjectNameSeed(
     'object-axe',
@@ -1185,6 +1289,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'A removable U-shaped shackle opens with a key or combination.',
     'medium',
     ['Combination lock'],
+
+    imageAssetPath: 'assets/app/objects/openimages_padlock.jpg',
+    imageSource: 'https://www.flickr.com/photos/wheatfields/2497773762',
   ),
   _ObjectNameSeed(
     'object-flashlight',
@@ -1194,6 +1301,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It sends a focused beam from one end.',
     'easy',
     ['Torch'],
+
+    imageAssetPath: 'assets/app/objects/openimages_flashlight.jpg',
+    imageSource: 'https://www.flickr.com/photos/cezaryborysiuk/4497211501',
   ),
   _ObjectNameSeed(
     'object-car',
@@ -1214,6 +1324,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It carries passengers or freight between stations.',
     'easy',
     ['Railway train'],
+
+    imageAssetPath: 'assets/app/objects/openimages_train.jpg',
+    imageSource: 'https://www.flickr.com/photos/swampa/8767423640',
   ),
   _ObjectNameSeed(
     'object-boat',
@@ -1223,6 +1336,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It may be moved by an engine, sail or oars.',
     'easy',
     ['Watercraft'],
+
+    imageAssetPath: 'assets/app/objects/openimages_boat.jpg',
+    imageSource: 'https://www.flickr.com/photos/jocke66/13011324264',
   ),
   _ObjectNameSeed(
     'object-airplane',
@@ -1232,6 +1348,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It takes off and lands at an airport.',
     'easy',
     ['Aeroplane', 'Plane'],
+
+    imageAssetPath: 'assets/app/objects/openimages_airplane.jpg',
+    imageSource: 'https://www.flickr.com/photos/raver_mikey/6033521295',
   ),
   _ObjectNameSeed(
     'object-tuk-tuk',
@@ -1272,6 +1391,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Its marks can usually be erased.',
     'easy',
     ['Graphite pencil'],
+
+    imageAssetPath: 'assets/app/objects/openimages_pencil.jpg',
+    imageSource: 'https://www.flickr.com/photos/paultomlin/2209499274',
   ),
   _ObjectNameSeed(
     'object-eraser',
@@ -1290,6 +1412,10 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It often has centimetre markings.',
     'easy',
     ['Straightedge'],
+
+    imageAssetPath: 'assets/app/objects/openimages_ruler.jpg',
+    imageSource:
+        'https://www.flickr.com/photos/photographingtravis/20794905512',
   ),
   _ObjectNameSeed(
     'object-stapler',
@@ -1341,6 +1467,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It may be pushed by another person or propelled by its user.',
     'medium',
     ['Mobility chair'],
+
+    imageAssetPath: 'assets/app/objects/openimages_wheelchair.jpg',
+    imageSource: 'https://www.flickr.com/photos/departmentofed/11971488336/',
   ),
   _ObjectNameSeed(
     'object-eyeglasses',
@@ -1350,6 +1479,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'They rest on the nose and ears.',
     'easy',
     ['Glasses', 'Spectacles'],
+
+    imageAssetPath: 'assets/app/objects/openimages_eyeglasses.jpg',
+    imageSource: 'https://www.flickr.com/photos/sunatomohisa/6822954238',
   ),
   _ObjectNameSeed(
     'object-basketball',
@@ -1377,6 +1509,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Players use it on a court divided by a net.',
     'easy',
     ['Racquet'],
+
+    imageAssetPath: 'assets/app/objects/openimages_tennis_racket.jpg',
+    imageSource: 'https://www.flickr.com/photos/endlisnis/383317181',
   ),
   _ObjectNameSeed(
     'object-dumbbell',
@@ -1386,6 +1521,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'A pair is often used for strength training.',
     'easy',
     ['Hand weight'],
+    imageAssetPath: 'assets/app/objects/openimages_dumbbell.jpg',
+    imageSource: 'https://www.flickr.com/photos/pistolsdrawn/2450912715',
   ),
   _ObjectNameSeed(
     'object-sports-whistle',
@@ -1404,6 +1541,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is commonly worn with trousers or a skirt.',
     'easy',
     ['Top'],
+
+    imageAssetPath: 'assets/app/objects/openimages_shirt.jpg',
+    imageSource: 'https://www.flickr.com/photos/adnanbangladesh/7818131664',
   ),
   _ObjectNameSeed(
     'object-shoes',
@@ -1424,6 +1564,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It usually opens at the front.',
     'easy',
     ['Coat'],
+
+    imageAssetPath: 'assets/app/objects/openimages_jacket.jpg',
+    imageSource: 'https://www.flickr.com/photos/joebeone/7316300986',
   ),
   _ObjectNameSeed(
     'object-belt',
@@ -1433,6 +1576,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It fastens with a buckle.',
     'easy',
     ['Waist belt'],
+
+    imageAssetPath: 'assets/app/objects/openimages_belt.jpg',
+    imageSource: 'https://www.flickr.com/photos/tynigh/5858109241',
   ),
   _ObjectNameSeed(
     'object-safety-helmet',
@@ -1442,6 +1588,9 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Construction workers and cyclists wear different types.',
     'medium',
     ['Hard hat', 'Helmet'],
+
+    imageAssetPath: 'assets/app/objects/openimages_safety_helmet.jpg',
+    imageSource: 'https://www.flickr.com/photos/moto_club4ag/16396206548',
   ),
   _ObjectNameSeed(
     'object-banana',

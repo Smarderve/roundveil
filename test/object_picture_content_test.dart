@@ -43,7 +43,7 @@ void main() {
 
   test('Object Picture only includes its manifest-backed offline records', () {
     final pictureChallenges = challengesForFormat('object_picture');
-    expect(pictureChallenges, hasLength(28));
+    expect(pictureChallenges, hasLength(78));
     expect(
       pictureChallenges.every(
         (item) => item.imageAssetPath != null || item.imageFilePath != null,
@@ -71,18 +71,37 @@ void main() {
 
     expect(selected.map((item) => item.id), <String>[
       'object-kettle',
+      'object-blender',
+      'object-spatula',
+      'object-toaster',
       'object-saucepan',
       'object-frying-pan',
       'object-cooking-pot',
       'object-dinner-plate',
+      'object-bowl',
+      'object-spoon',
+      'object-fork',
+      'object-kitchen-knife',
       'object-microwave-oven',
+      'object-refrigerator',
     ]);
     expect(
       challengesForFormat(
         'object_picture',
         configuration: kitchen.copyWith(characterPictureCategory: 'Vehicles'),
       ).map((item) => item.id),
-      <String>['object-bicycle', 'object-bus', 'object-car', 'object-tuk-tuk'],
+      <String>[
+        'object-bicycle',
+        'object-motorcycle',
+        'object-bus',
+        'object-helicopter',
+        'object-tractor',
+        'object-car',
+        'object-train',
+        'object-boat',
+        'object-airplane',
+        'object-tuk-tuk',
+      ],
     );
   });
 
@@ -116,11 +135,30 @@ void main() {
         (await rootBundle.loadString('assets/app/objects/manifest.json')),
       ) as Map<String, dynamic>;
       final records = manifest['items'] as List<dynamic>;
-      expect(records, hasLength(28));
-      final creditedIds = records
-          .cast<Map<String, dynamic>>()
-          .map((record) => record['id'])
-          .toSet();
+      expect(records, hasLength(78));
+      final manifestRecords = records.cast<Map<String, dynamic>>();
+      final creditedIds = manifestRecords.map((record) => record['id']).toSet();
+      final openImagesRecords = manifestRecords
+          .where((record) => record['dataset'] == 'Open Images validation')
+          .toList();
+      expect(openImagesRecords, hasLength(50));
+      expect(
+        openImagesRecords.map((record) => record['datasetImageId']).toSet(),
+        hasLength(50),
+      );
+      expect(
+        openImagesRecords.map((record) => record['sha256']).toSet(),
+        hasLength(50),
+      );
+      for (final record in openImagesRecords) {
+        expect(record['license'], 'CC BY 2.0', reason: record['id'] as String);
+        expect(
+          record['source'],
+          startsWith('http'),
+          reason: record['id'] as String,
+        );
+        expect(record['creator'], isNotEmpty, reason: record['id'] as String);
+      }
       final imageChallenges = objectChallengeCatalog.where(
         (challenge) => challenge.imageAssetPath != null,
       );

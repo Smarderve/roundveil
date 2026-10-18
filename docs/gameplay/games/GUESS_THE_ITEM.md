@@ -46,17 +46,21 @@ individual difficulty is not yet exposed in the Object chooser.
 ## Starter content and provenance
 
 The shared starter catalog contains **100 distinct object identities**. As of
-2026-10-18, 23 have bundled offline photos and are eligible for Object Picture;
-the remaining 77 identities are metadata-only and are eligible only for Object
+2026-10-18, 78 have bundled offline photos and are eligible for Object Picture;
+the remaining 22 identities are metadata-only and are eligible only for Object
 Name. This is a starter corpus, not a claim that the current 500-pair owner
-target is complete. There are 23 complete identity/photo pairs; 477 more pairs
-are needed, including photos for the 77 current name-only identities and 400
+target is complete. There are 78 complete identity/photo pairs; 422 more pairs
+are needed, including photos for the 22 current name-only identities and 400
 additional distinct identities with photos.
 
 The bundled photos are credited in [`assets/app/objects/CREDITS.md`](../../../assets/app/objects/CREDITS.md),
 with source, creator, license, and modification details in
 [`assets/app/objects/manifest.json`](../../../assets/app/objects/manifest.json).
-All 23 images were decoded in the content test. They are offline at runtime.
+All 78 images are decoded in the content test. They are bundled for offline
+runtime use. The 50-image Open Images acquisition batch has an individually
+attributed manifest and human-readable credits; actual-pixel review sheets and
+the Android runtime capture are in
+[`docs/evidence/open_images_object_batch_2026-10-18/`](../../evidence/open_images_object_batch_2026-10-18/).
 The hammer photo is lower-resolution than the other starter photographs and
 should be replaced only with a verified, better-quality asset.
 
@@ -70,6 +74,14 @@ and advanced to Player 2 (turn 2 of 8). Screenshots are in
 [`docs/evidence/final_day_content_2026-10-18/`](../../evidence/final_day_content_2026-10-18/).
 This is a partial match-path check, not full-match/results acceptance. Windows
 was build-verified only; no Windows gameplay claim is made.
+
+The Open Images batch was separately installed with `adb install -r` over the
+existing `com.example.roundveil` test installation. The actual Android
+Object Picture challenge rendered the newly bundled tablet-computer photograph
+after the turn-away confirmation; the process remained alive. The screenshot
+is `android_object_revealed.png` in the batch evidence folder. Bundled-image
+decoding and manifest/hash checks passed offline-content tests; the emulator's
+network setting was not explicitly disabled for this runtime capture.
 
 ## Acceptance criteria for future expansion
 
