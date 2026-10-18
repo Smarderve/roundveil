@@ -60,6 +60,17 @@ All 23 images were decoded in the content test. They are offline at runtime.
 The hammer photo is lower-resolution than the other starter photographs and
 should be replaced only with a verified, better-quality asset.
 
+## 2026-10-18 runtime check
+
+On the API 37 x86_64 Android emulator, the current debug APK entered a real
+two-player Object Picture match. The clue-giver view showed the actual remote
+control photo after the player turn-away confirmation; marking it correct
+awarded one point, immediately entered the configured 10-second Win Countdown,
+and advanced to Player 2 (turn 2 of 8). Screenshots are in
+[`docs/evidence/final_day_content_2026-10-18/`](../../evidence/final_day_content_2026-10-18/).
+This is a partial match-path check, not full-match/results acceptance. Windows
+was build-verified only; no Windows gameplay claim is made.
+
 ## Acceptance criteria for future expansion
 
 - A metadata record has a stable unique ID, canonical everyday name, category,
