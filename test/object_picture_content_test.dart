@@ -43,7 +43,7 @@ void main() {
 
   test('Object Picture only includes its manifest-backed offline records', () {
     final pictureChallenges = challengesForFormat('object_picture');
-    expect(pictureChallenges, hasLength(25));
+    expect(pictureChallenges, hasLength(28));
     expect(
       pictureChallenges.every(
         (item) => item.imageAssetPath != null || item.imageFilePath != null,
@@ -82,7 +82,7 @@ void main() {
         'object_picture',
         configuration: kitchen.copyWith(characterPictureCategory: 'Vehicles'),
       ).map((item) => item.id),
-      <String>['object-bicycle', 'object-tuk-tuk'],
+      <String>['object-bicycle', 'object-bus', 'object-car', 'object-tuk-tuk'],
     );
   });
 
@@ -116,7 +116,7 @@ void main() {
         (await rootBundle.loadString('assets/app/objects/manifest.json')),
       ) as Map<String, dynamic>;
       final records = manifest['items'] as List<dynamic>;
-      expect(records, hasLength(25));
+      expect(records, hasLength(28));
       final creditedIds = records
           .cast<Map<String, dynamic>>()
           .map((record) => record['id'])

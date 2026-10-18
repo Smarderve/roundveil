@@ -709,6 +709,8 @@ const _bundledObjectChallengeRecords = <OfflineChallenge>[
     category: 'Vehicles',
     difficulty: 'easy',
     acceptedAnswers: <String>['Coach'],
+    imageAssetPath: 'assets/app/objects/bus.jpg',
+    imageSource: 'https://www.loc.gov/item/2020722343/',
   ),
   OfflineChallenge(
     id: 'object-helicopter',
@@ -1201,6 +1203,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It is steered with a wheel and usually has four wheels.',
     'easy',
     ['Automobile'],
+    imageAssetPath: 'assets/app/objects/car.jpg',
+    imageSource: 'https://www.loc.gov/item/2018702362/',
   ),
   _ObjectNameSeed(
     'object-train',
@@ -1409,6 +1413,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'They usually come as a left-and-right pair.',
     'easy',
     ['Footwear'],
+    imageAssetPath: 'assets/app/objects/shoes.jpg',
+    imageSource: 'https://www.loc.gov/item/2016852995/',
   ),
   _ObjectNameSeed(
     'object-jacket',
