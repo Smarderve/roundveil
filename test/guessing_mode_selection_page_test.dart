@@ -129,6 +129,64 @@ void main() {
       expect(tester.takeException(), isNull);
     },
   );
+
+  testWidgets(
+    'picture availability offers rounds supported by decoded images',
+    (tester) async {
+      tester.view.physicalSize = const Size(1280, 900);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: RoundveilThemeFactory.versionFive(dark: true),
+          home: GuessingModeSelectionPage(
+            options: <GuessingModeOption>[
+              _options[1].copyWithForTest(
+                contentCount: 4,
+                categoryCounts: const <String, int>{'Anime Characters': 4},
+              ),
+            ],
+            categories: const <String>['All Categories', 'Anime Characters'],
+            playersForPreview: 2,
+          ),
+        ),
+      );
+
+      expect(
+        find.textContaining('4 images · up to 2 rounds · 2 players'),
+        findsOneWidget,
+      );
+      expect(
+        tester
+            .widget<InkWell>(
+              find.byKey(
+                const ValueKey<String>('guessing-mode-character_picture'),
+              ),
+            )
+            .onTap,
+        isNotNull,
+      );
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+extension on GuessingModeOption {
+  GuessingModeOption copyWithForTest({
+    required int contentCount,
+    required Map<String, int> categoryCounts,
+  }) => GuessingModeOption(
+    id: id,
+    title: title,
+    description: description,
+    contentCount: contentCount,
+    roundCount: roundCount,
+    icon: icon,
+    isPictureMode: isPictureMode,
+    categoryCounts: categoryCounts,
+  );
 }
 
 const _options = <GuessingModeOption>[

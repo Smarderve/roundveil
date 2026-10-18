@@ -105,56 +105,53 @@ void main() {
     );
   });
 
-  test(
-    'picture mode summary is fast metadata and does not seed image files',
-    () async {
-      final temp = await Directory.systemTemp.createTemp('roundveil-summary-');
-      addTearDown(() => temp.delete(recursive: true));
-      final repository = CharacterPictureRepository(
-        directoryProvider: () async => temp,
-      );
+  test('character picture availability reports only approved renderable media without seeding files', () async {
+    final temp = await Directory.systemTemp.createTemp('roundveil-summary-');
+    addTearDown(() => temp.delete(recursive: true));
+    final repository = CharacterPictureRepository(
+      directoryProvider: () async => temp,
+    );
 
-      final summary = await repository.loadPlayableSummary();
+    final summary = await repository.loadPlayableSummary();
 
-      expect(summary, hasLength(54));
-      expect(summary.every((item) => item.collection == 'bundled'), isTrue);
-      final chineseActors = summary
-          .where((item) => item.category == 'Chinese Actors')
-          .toList();
-      expect(chineseActors, hasLength(4));
-      expect(
-        chineseActors.map((item) => item.name).toSet(),
-        containsAll(<String>{
-          'Jackie Chan',
-          'Jet Li',
-          'Donnie Yen',
-          'Chow Yun-fat',
-        }),
-      );
-      for (final item in chineseActors) {
-        expect(item.sourceUrl, startsWith('https://commons.wikimedia.org/'));
-        expect(item.license, contains('CC BY'));
-        final data = await rootBundle.load(item.path);
-        final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
-        final frame = await codec.getNextFrame();
-        expect(frame.image.width, greaterThanOrEqualTo(500), reason: item.name);
-        expect(
-          frame.image.height,
-          greaterThanOrEqualTo(500),
-          reason: item.name,
-        );
-        codec.dispose();
-        frame.image.dispose();
-      }
-      expect(
-        Directory(
-          '${temp.path}${Platform.pathSeparator}character_picture_library',
-        ).listSync().whereType<File>(),
-        isEmpty,
-        reason: 'Opening the mode picker must not copy the bundled images.',
-      );
-    },
-  );
+    expect(summary, hasLength(4));
+    expect(summary.every((item) => item.collection == 'bundled'), isTrue);
+    final chineseActors = summary
+        .where((item) => item.category == 'Chinese Actors')
+        .toList();
+    expect(chineseActors, hasLength(4));
+    expect(
+      chineseActors.map((item) => item.name).toSet(),
+      containsAll(<String>{
+        'Jackie Chan',
+        'Jet Li',
+        'Donnie Yen',
+        'Chow Yun-fat',
+      }),
+    );
+    for (final item in chineseActors) {
+      expect(item.sourceUrl, startsWith('https://commons.wikimedia.org/'));
+      expect(item.license, contains('CC BY'));
+      final data = await rootBundle.load(item.path);
+      final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
+      final frame = await codec.getNextFrame();
+      expect(frame.image.width, greaterThanOrEqualTo(500), reason: item.name);
+      expect(frame.image.height, greaterThanOrEqualTo(500), reason: item.name);
+      codec.dispose();
+      frame.image.dispose();
+    }
+    expect(
+      Directory(
+        '${temp.path}${Platform.pathSeparator}character_picture_library',
+      ).listSync().whereType<File>().where(
+        (file) =>
+            file.path.toLowerCase().endsWith('.png') ||
+            file.path.toLowerCase().endsWith('.jpg'),
+      ),
+      isEmpty,
+      reason: 'Opening the mode picker must not copy the bundled images.',
+    );
+  });
 
   test(
     'every bundled object picture decodes and is represented in credits',

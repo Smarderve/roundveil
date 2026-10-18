@@ -153,8 +153,10 @@ class PicturePackageImportReport {
 
   final int imported;
   final int duplicates;
+
   /// Entries matching a persistent removal that were deliberately not added.
   final int removed;
+
   /// Previously removed entries restored from this explicitly selected batch.
   final int restored;
   final List<String> errors;
@@ -212,7 +214,75 @@ class CharacterPictureRepository {
     '${(await _libraryDirectory).path}${Platform.pathSeparator}index.json',
   );
 
+  Future<void> _migrateLegacyLibraryIfNeeded() async {
+    final state = await _readIndexState();
+    if (state.hiddenIds.contains(_characterLibraryResetMigration)) return;
+
+    final file = await _indexFile;
+    var indexItems = <CharacterPicture>[];
+    if (await file.exists()) {
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is! Map<String, Object?> || decoded['items'] is! List) {
+        throw const FormatException('Character picture index is invalid.');
+      }
+      indexItems = (decoded['items']! as List<Object?>)
+          .map(
+            (item) => CharacterPicture.fromJson(item! as Map<String, Object?>),
+          )
+          .toList();
+    }
+
+    final excludedBundledIds = state.excludedBundledIds;
+    final hiddenIds = state.hiddenIds;
+    for (final item in indexItems) {
+      if (item.collection == 'bundled') excludedBundledIds.add(item.id);
+      hiddenIds.add(item.id);
+    }
+    if (includeBundledImages) {
+      try {
+        final manifest = jsonDecode(
+          await rootBundle.loadString(
+            'assets/brand/character_pictures/manifest.json',
+          ),
+        );
+        if (manifest is Map<String, Object?> && manifest['items'] is List) {
+          for (final raw in manifest['items']! as List<Object?>) {
+            if (raw is Map<String, Object?> &&
+                raw['id'] is String &&
+                raw['approvedAfterReset'] != true) {
+              excludedBundledIds.add(raw['id']! as String);
+            }
+          }
+        }
+      } on FlutterError {
+        // Unit tests and alternate builds may intentionally omit bundled media.
+      }
+    }
+    hiddenIds.add(_characterLibraryResetMigration);
+    await _writeIndex(
+      indexItems,
+      excludedBundledIds: excludedBundledIds,
+      hiddenIds: hiddenIds,
+    );
+  }
+
+  Future<bool> _canDecodeImage(List<int> bytes) async {
+    try {
+      final codec = await ui.instantiateImageCodec(Uint8List.fromList(bytes));
+      try {
+        final frame = await codec.getNextFrame();
+        frame.image.dispose();
+      } finally {
+        codec.dispose();
+      }
+      return true;
+    } on Object {
+      return false;
+    }
+  }
+
   Future<List<CharacterPicture>> loadAll() async {
+    await _migrateLegacyLibraryIfNeeded();
     final file = await _indexFile;
     var items = <CharacterPicture>[];
     var indexItems = <CharacterPicture>[];
@@ -236,44 +306,6 @@ class CharacterPictureRepository {
           .toList();
       items = indexItems.where((item) => File(item.path).existsSync()).toList();
     }
-    if (!hiddenIds.contains(_characterLibraryResetMigration)) {
-      // The owner rejected the current Picture Mode library and asked to
-      // rebuild it. Retain every managed private image and record for possible
-      // review/restoration, but hide it from gameplay. Bundled entries are
-      // persistently excluded so first-run seeding cannot silently restore
-      // them. This migration touches only the character-picture index; player
-      // profiles, hints, scores, object content and image files are untouched.
-      for (final item in indexItems) {
-        if (item.collection == 'bundled') {
-          excludedBundledIds.add(item.id);
-        }
-        hiddenIds.add(item.id);
-      }
-      if (includeBundledImages) {
-        try {
-          final manifest = jsonDecode(
-            await rootBundle.loadString(
-              'assets/brand/character_pictures/manifest.json',
-            ),
-          );
-          if (manifest is Map<String, Object?> && manifest['items'] is List) {
-            for (final raw in manifest['items']! as List<Object?>) {
-              if (raw is Map<String, Object?> && raw['id'] is String) {
-                excludedBundledIds.add(raw['id']! as String);
-              }
-            }
-          }
-        } on FlutterError {
-          // Unit tests and alternate builds may intentionally omit bundled media.
-        }
-      }
-      hiddenIds.add(_characterLibraryResetMigration);
-      await _writeIndex(
-        indexItems,
-        excludedBundledIds: excludedBundledIds,
-        hiddenIds: hiddenIds,
-      );
-    }
     if (includeBundledImages) {
       items = await _installBundledImages(
         items,
@@ -290,6 +322,143 @@ class CharacterPictureRepository {
 
   Future<List<CharacterPicture>> loadPlayable() async =>
       (await loadAll()).where((item) => !item.hidden).toList(growable: false);
+
+  /// Returns playable-image metadata without copying every bundled image into
+  /// the UI. Counts must use exactly the same migrated, decoded set as a match
+  /// so stale library rows or corrupt files cannot inflate availability.
+  Future<List<CharacterPicture>> loadPlayableSummary() async {
+    await _migrateLegacyLibraryIfNeeded();
+    final state = await _readIndexState();
+    final byId = <String, CharacterPicture>{};
+    final hashes = <String>{};
+    final file = await _indexFile;
+    if (await file.exists()) {
+      final decoded = jsonDecode(await file.readAsString());
+      if (decoded is Map<String, Object?> && decoded['items'] is List) {
+        for (final raw in decoded['items']! as List<Object?>) {
+          if (raw is! Map<String, Object?>) continue;
+          final item = CharacterPicture.fromJson(raw);
+          if (state.hiddenIds.contains(item.id) ||
+              state.removedIds.contains(item.id) ||
+              state.excludedBundledIds.contains(item.id) ||
+              !await File(item.path).exists()) {
+            continue;
+          }
+          final digest = item.sha256.toLowerCase();
+          if (digest.isNotEmpty &&
+              (state.removedImageHashes.contains(digest) ||
+                  !hashes.add(digest))) {
+            continue;
+          }
+          if (!await _canDecodeImage(await File(item.path).readAsBytes())) {
+            continue;
+          }
+          byId[item.id] = item;
+        }
+      }
+    }
+
+    if (!includeBundledImages) {
+      return List<CharacterPicture>.unmodifiable(byId.values);
+    }
+    try {
+      final manifest = jsonDecode(
+        await rootBundle.loadString(
+          'assets/brand/character_pictures/manifest.json',
+        ),
+      );
+      if (manifest is Map<String, Object?> && manifest['items'] is List) {
+        for (final raw in manifest['items']! as List<Object?>) {
+          if (raw is! Map<String, Object?>) continue;
+          final id = raw['id'];
+          final assetPath = raw['assetPath'];
+          final name = raw['name'];
+          final category = raw['category'];
+          if (id is! String ||
+              assetPath is! String ||
+              name is! String ||
+              category is! String ||
+              byId.containsKey(id) ||
+              raw['approvedAfterReset'] != true ||
+              state.hiddenIds.contains(id) ||
+              state.removedIds.contains(id) ||
+              state.excludedBundledIds.contains(id)) {
+            continue;
+          }
+          final asset = await rootBundle.load(assetPath);
+          final bytes = asset.buffer.asUint8List(
+            asset.offsetInBytes,
+            asset.lengthInBytes,
+          );
+          if (!await _canDecodeImage(bytes)) continue;
+          final digest = (raw['sha256'] as String? ?? '').toLowerCase();
+          if (digest.isNotEmpty &&
+              (state.removedImageHashes.contains(digest) ||
+                  !hashes.add(digest))) {
+            continue;
+          }
+          final source = raw['source'] as Map<String, Object?>? ?? const {};
+          byId[id] = CharacterPicture(
+            id: id,
+            name: name,
+            path: assetPath,
+            category: category,
+            aliases: (raw['aliases'] as List<Object?>? ?? const <Object?>[])
+                .whereType<String>()
+                .toList(growable: false),
+            hint: raw['hint'] as String? ?? '',
+            sourceTitle: source['title'] as String? ?? '',
+            sourceUrl: source['url'] as String? ?? '',
+            license: source['license'] as String? ?? '',
+            attribution: source['attribution'] as String? ?? '',
+            subjectType: raw['subjectType'] as String? ?? '',
+            franchise: raw['franchise'] as String? ?? '',
+            description: raw['description'] as String? ?? '',
+            difficulty: raw['difficulty'] as String? ?? 'Mixed',
+            collection: 'bundled',
+            width: raw['width'] as int? ?? 0,
+            height: raw['height'] as int? ?? 0,
+            sha256: digest,
+          );
+        }
+      }
+    } on FlutterError {
+      // A test or alternate build may intentionally omit bundled media.
+    }
+    return List<CharacterPicture>.unmodifiable(byId.values);
+  }
+
+  /// Returns only challenge-ready images, decoding the file before it can be
+  /// selected into a match. A file can remain in the library index after an
+  /// external cleanup or become unreadable despite having a valid header.
+  /// Keep such records intact for diagnosis, but never put them in a deck.
+  Future<List<CharacterPicture>> loadRenderablePlayable({
+    String? category,
+  }) async {
+    final candidates = (await loadPlayable()).where(
+      (item) => category == null || item.category == category,
+    );
+    final verified = <CharacterPicture>[];
+    for (final item in candidates) {
+      try {
+        final bytes = await File(item.path).readAsBytes();
+        final codec = await ui.instantiateImageCodec(bytes);
+        try {
+          final frame = await codec.getNextFrame();
+          frame.image.dispose();
+        } finally {
+          codec.dispose();
+        }
+        verified.add(item);
+      } on Object catch (error) {
+        debugPrint(
+          'ROUNDVEIL Picture Mode excluded unreadable image '
+          '${item.id} (${item.path}): $error',
+        );
+      }
+    }
+    return List<CharacterPicture>.unmodifiable(verified);
+  }
 
   Future<void> setHidden(String id, {required bool hidden}) async {
     final items = (await loadAll()).toList();
@@ -346,8 +515,9 @@ class CharacterPictureRepository {
       ...state.removedIds,
       ...state.excludedBundledIds,
     };
-    final orphanedHashes = state.removedImageHashes
-        .where((digest) => !state.removedImageOwners.containsKey(digest));
+    final orphanedHashes = state.removedImageHashes.where(
+      (digest) => !state.removedImageOwners.containsKey(digest),
+    );
     return removedIds.length + orphanedHashes.length;
   }
 
@@ -466,14 +636,10 @@ class CharacterPictureRepository {
 
   Map<String, String> _readStringMap(Object? value) =>
       Map<String, String>.fromEntries(
-        (value as Map<Object?, Object?>? ?? const <Object?, Object?>{})
-            .entries
+        (value as Map<Object?, Object?>? ?? const <Object?, Object?>{}).entries
             .where((entry) => entry.key is String && entry.value is String)
             .map(
-              (entry) => MapEntry(
-                entry.key! as String,
-                entry.value! as String,
-              ),
+              (entry) => MapEntry(entry.key! as String, entry.value! as String),
             ),
       );
 
@@ -647,8 +813,7 @@ class CharacterPictureRepository {
       final bytes = await picked.readAsBytes();
       final digest = sha256.convert(bytes).toString();
       final removed = await isImageRemoved(digest);
-      if (removed &&
-          (confirmRestore == null || !await confirmRestore(name))) {
+      if (removed && (confirmRestore == null || !await confirmRestore(name))) {
         continue;
       }
       final item = await addImageBytes(
@@ -776,8 +941,7 @@ class CharacterPictureRepository {
   Future<PicturePackageImportReport> importPrivateImageBatch(
     List<PrivateCharacterImageImport> batch, {
     bool restoreRemoved = false,
-  }
-  ) async {
+  }) async {
     if (batch.length > 500) {
       throw const FormatException('A single import is limited to 500 images.');
     }
@@ -922,8 +1086,7 @@ class CharacterPictureRepository {
       }
       final digest = sha256.convert(bytes).toString();
       final removed = await isImageRemoved(digest);
-      if (removed &&
-          (confirmRestore == null || !await confirmRestore(name))) {
+      if (removed && (confirmRestore == null || !await confirmRestore(name))) {
         return null;
       }
       return await addImageBytes(
@@ -1009,8 +1172,7 @@ class CharacterPictureRepository {
   Future<PicturePackageImportReport> importPackageBytes(
     List<int> packageBytes, {
     bool restoreRemoved = false,
-  }
-  ) async {
+  }) async {
     if (packageBytes.isEmpty || packageBytes.length > 1024 * 1024 * 1024) {
       throw const FormatException('Picture package size is invalid.');
     }
@@ -1335,8 +1497,7 @@ class CharacterPictureRepository {
         'removedImageHashes':
             (removedImageHashes ?? previous.removedImageHashes).toList()
               ..sort(),
-        'removedImageOwners':
-            removedImageOwners ?? previous.removedImageOwners,
+        'removedImageOwners': removedImageOwners ?? previous.removedImageOwners,
       }),
       flush: true,
     );
