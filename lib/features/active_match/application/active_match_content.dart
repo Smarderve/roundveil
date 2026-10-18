@@ -898,6 +898,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'It usually has a long handle.',
     'easy',
     ['Skillet'],
+    imageAssetPath: 'assets/app/objects/frying_pan.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Out_of_the_Frying_Pan_-_Flickr_-_docoverachiever.jpg',
   ),
   _ObjectNameSeed(
     'object-cooking-pot',
@@ -1443,6 +1445,8 @@ const _everydayObjectNameSeeds = <_ObjectNameSeed>[
     'Its yellow peel is removed before eating.',
     'easy',
     ['Plantain'],
+    imageAssetPath: 'assets/app/objects/banana.jpg',
+    imageSource: 'https://commons.wikimedia.org/wiki/File:Banana_Fruit.JPG',
   ),
 ];
 
