@@ -12,7 +12,7 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   test('object catalog has distinct, described identities and aliases', () {
-    expect(objectChallengeCatalog.length, 108);
+    expect(objectChallengeCatalog.length, 157);
     expect(
       objectChallengeCatalog.map((item) => item.id).toSet(),
       hasLength(objectChallengeCatalog.length),
@@ -43,14 +43,14 @@ void main() {
 
   test('Object Picture only includes its manifest-backed offline records', () {
     final pictureChallenges = challengesForFormat('object_picture');
-    expect(pictureChallenges, hasLength(86));
+    expect(pictureChallenges, hasLength(137));
     expect(
       pictureChallenges.every(
         (item) => item.imageAssetPath != null || item.imageFilePath != null,
       ),
       isTrue,
     );
-    expect(challengesForFormat('object_name'), hasLength(108));
+    expect(challengesForFormat('object_name'), hasLength(157));
   });
 
   test('Object Picture category selection never substitutes other items', () {
@@ -84,6 +84,12 @@ void main() {
       'object-kitchen-knife',
       'object-microwave-oven',
       'object-refrigerator',
+      'object-espresso-machine',
+      'object-wok',
+      'object-drinking-glass',
+      'object-saucer',
+      'object-teapot',
+      'object-takeaway-cup',
     ]);
     expect(
       challengesForFormat(
@@ -160,20 +166,20 @@ void main() {
         (await rootBundle.loadString('assets/app/objects/manifest.json')),
       ) as Map<String, dynamic>;
       final records = manifest['items'] as List<dynamic>;
-      expect(records, hasLength(86));
+      expect(records, hasLength(137));
       final manifestRecords = records.cast<Map<String, dynamic>>();
       final creditedIds = manifestRecords.map((record) => record['id']).toSet();
       final openImagesRecords = manifestRecords
           .where((record) => record['dataset'] == 'Open Images validation')
           .toList();
-      expect(openImagesRecords, hasLength(58));
+      expect(openImagesRecords, hasLength(106));
       expect(
         openImagesRecords.map((record) => record['datasetImageId']).toSet(),
-        hasLength(58),
+        hasLength(106),
       );
       expect(
         openImagesRecords.map((record) => record['sha256']).toSet(),
-        hasLength(58),
+        hasLength(106),
       );
       for (final record in openImagesRecords) {
         expect(record['license'], 'CC BY 2.0', reason: record['id'] as String);
