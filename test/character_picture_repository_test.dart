@@ -7,6 +7,20 @@ import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:roundveil/data/repositories/character_picture_repository.dart';
 
+void _expectRequiredFictionalCategories() {
+  expect(
+    characterPictureCategories,
+    containsAll(<String>[
+      'Marvel Characters',
+      'DC Characters',
+      'Disney Characters',
+      'DreamWorks Characters',
+      'Pixar Characters',
+      'Anime Characters',
+    ]),
+  );
+}
+
 Future<Uint8List> _testPng({
   ui.Color color = const ui.Color(0xFF214A76),
 }) async {
@@ -23,6 +37,10 @@ Future<Uint8List> _testPng({
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
+  test('supports every required fictional picture category', () {
+    _expectRequiredFictionalCategories();
+  });
 
   test(
     'local Picture Mode images persist with source notes and deduplicate',

@@ -1424,6 +1424,7 @@ class _MatchRulesRail extends StatelessWidget {
                               'Cartoon Characters',
                               'Disney Characters',
                               'DreamWorks Characters',
+                              'Pixar Characters',
                               'Other Fictional Characters',
                               'Indian Actors and Actresses',
                               'Hollywood Actors',

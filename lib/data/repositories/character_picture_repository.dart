@@ -16,6 +16,7 @@ const characterPictureCategories = <String>[
   'Cartoon Characters',
   'Disney Characters',
   'DreamWorks Characters',
+  'Pixar Characters',
   'Other Fictional Characters',
   'Indian Actors and Actresses',
   'Chinese Actors',

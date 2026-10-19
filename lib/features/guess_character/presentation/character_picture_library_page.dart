@@ -690,6 +690,7 @@ class _CharacterPictureLibraryPageState
       'cartoon': 'Cartoon Characters',
       'disney': 'Disney Characters',
       'dreamworks': 'DreamWorks Characters',
+      'pixar': 'Pixar Characters',
     };
     final found = <String>{};
     for (final segment in segments.take(segments.length - 1)) {
@@ -1096,6 +1097,7 @@ class _CharacterPictureLibraryPageState
                   'Cartoon Characters',
                   'Disney Characters',
                   'DreamWorks Characters',
+                  'Pixar Characters',
                 ])
                   Builder(
                     builder: (context) {
