@@ -93,3 +93,58 @@ Family collection. The catalog and bulk import UI are ready to map, preview and
 install those images without editing code or JSON. Until images are installed,
 selecting an empty fictional category must not start a match or count as
 playable content.
+
+## Rejected cosplay correction — 2026-10-18
+
+The owner rejected convention cosplay as a substitute for original fictional
+characters. A one-time repository migration hides pre-existing private imports
+from the fictional categories when they carry the prior owner-supplied import
+label. It preserves the managed image files and metadata, and does not hide later
+imports after the migration marker is written. Hidden entries are reversible in
+the library. On this Windows profile the migration was exercised: 6 rejected
+imports (Naruto Uzumaki, SpongeBob SquarePants, Batman, Elsa, Toothless and
+Spider-Man) are hidden, all 6 image files remain present, and the profile has 47
+other saved image records across the real-person categories. This does not mean
+any fictional category is approved or playable: the six fictional records are
+all rejected cosplay and the count of approved, authentic fictional-character
+images remains zero. The Android profile migration is not verified because no
+emulator was attached.
+
+The Picture Library cards now reserve more space for the image and full identity,
+show category and installed/hidden status, and offer a large Preview dialog.
+This is a source/build change only; fresh Windows screenshot review was blocked
+by the desktop computer-use helper's unsupported browser URL-policy state.
+
+## Reviewed portrait expansion — 2026-10-19
+
+This batch individually reviewed 16 additional bundled real-person photographs:
+Bruce Lee (1 Chinese actor), Shah Rukh Khan, Priyanka Chopra, Hrithik Roshan,
+and Madhuri Dixit (4 Indian actors), plus Brad Pitt, Johnny Depp, Leonardo
+DiCaprio, Morgan Freeman, Tom Cruise, Julia Roberts, Scarlett Johansson,
+Samuel L. Jackson, Will Smith, Keanu Reeves, and Arnold Schwarzenegger
+(11 Hollywood actors). These are actor portraits, not images of fictional roles.
+The new files are stored offline and linked to manifest records with source,
+license, attribution, dimensions, and SHA-256 metadata. The exact originals and
+their review sheet are retained in the production evidence folder.
+
+The previously rejected candidate portraits were not automatically restored.
+Following visual review, 26 previously unapproved Indian/Hollywood manifest
+records were explicitly approved; five rejected legacy candidates remain
+excluded. The bundled manifest now contains 70 records: 44 approved, playable
+portraits; 26 excluded portraits. Approved counts are Chinese 5, Indian 19,
+and Hollywood 20. Two visually reviewed new files (Hrithik Roshan 388x545 and
+Johnny Depp 400x550) are retained with source credits but deliberately remain
+unapproved because they fail the repository's existing image-dimension gate.
+The catalog still has zero approved fictional
+character pictures in Marvel, DC, Disney, DreamWorks, Pixar, or Anime, and this
+batch does not satisfy the larger production targets.
+
+Wikimedia Commons returned HTTP 429 during the acquisition run. Requests were
+stopped at that point; no alternate Commons host or proxy was used. Two planned
+Indian-actor downloads (Alia Bhatt and Salman Khan) were not obtained and are
+not counted. The current batch therefore adds 14 new playable images (16
+acquired and reviewed files, including two below the runtime quality gate),
+not a 50-image batch. Further bulk acquisition from that source requires its rate
+limit to clear or a separately authorized source/workflow. Contact sheet review
+confirms the actual image pixels, but a manifest entry alone is not runtime
+gameplay evidence.

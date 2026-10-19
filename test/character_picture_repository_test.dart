@@ -530,7 +530,7 @@ void main() {
   );
 
   test(
-    'fresh installation keeps rejected bundled portraits out of gameplay',
+    'fresh installation seeds reviewed portraits and excludes rejected media',
     () async {
       final temporary = await Directory.systemTemp.createTemp('rv-builtin-');
       addTearDown(() => temporary.delete(recursive: true));
@@ -539,18 +539,20 @@ void main() {
       );
 
       final items = await repository.loadPlayable();
-      expect(items, hasLength(4));
+      expect(items, hasLength(44));
       expect(items.map((item) => item.category).toSet(), <String>{
         'Chinese Actors',
+        'Indian Actors and Actresses',
+        'Hollywood Actors',
       });
-      expect(await repository.loadBundled(), hasLength(4));
-      expect(await repository.loadExcludedBundled(), hasLength(50));
+      expect(await repository.loadBundled(), hasLength(44));
+      expect(await repository.loadExcludedBundled(), hasLength(26));
       expect(await repository.loadPrivate(), isEmpty);
       final restarted = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
-      expect(await restarted.loadPlayable(), hasLength(4));
-      expect(await restarted.loadExcludedBundled(), hasLength(50));
+      expect(await restarted.loadPlayable(), hasLength(44));
+      expect(await restarted.loadExcludedBundled(), hasLength(26));
     },
   );
 
@@ -564,15 +566,15 @@ void main() {
       final repository = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
-      expect(await repository.loadPlayable(), hasLength(4));
+      expect(await repository.loadPlayable(), hasLength(44));
       final excluded = await repository.loadExcludedBundled();
-      expect(excluded, hasLength(50));
+      expect(excluded, hasLength(26));
       final afterRestart = CharacterPictureRepository(
         directoryProvider: () async => temporary,
       );
       final loaded = await afterRestart.loadAll();
-      expect(loaded, hasLength(4));
-      expect(await afterRestart.loadExcludedBundled(), hasLength(50));
+      expect(loaded, hasLength(44));
+      expect(await afterRestart.loadExcludedBundled(), hasLength(26));
     },
   );
 }

@@ -120,12 +120,12 @@ void main() {
 
     final summary = await repository.loadPlayableSummary();
 
-    expect(summary, hasLength(4));
+    expect(summary, hasLength(44));
     expect(summary.every((item) => item.collection == 'bundled'), isTrue);
     final chineseActors = summary
         .where((item) => item.category == 'Chinese Actors')
         .toList();
-    expect(chineseActors, hasLength(4));
+    expect(chineseActors, hasLength(5));
     expect(
       chineseActors.map((item) => item.name).toSet(),
       containsAll(<String>{
@@ -133,11 +133,17 @@ void main() {
         'Jet Li',
         'Donnie Yen',
         'Chow Yun-fat',
+        'Bruce Lee',
       }),
     );
     for (final item in chineseActors) {
       expect(item.sourceUrl, startsWith('https://commons.wikimedia.org/'));
-      expect(item.license, contains('CC BY'));
+      expect(
+        item.license.contains('CC BY') ||
+            item.license.toLowerCase().contains('public domain'),
+        isTrue,
+        reason: item.name,
+      );
       final data = await rootBundle.load(item.path);
       final codec = await ui.instantiateImageCodec(data.buffer.asUint8List());
       final frame = await codec.getNextFrame();

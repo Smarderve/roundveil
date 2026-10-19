@@ -1,15 +1,31 @@
 # Character picture image credits
 
-The following four individual portraits are included under the source licenses
-shown below. Original files are retained without additional cropping or
-re-encoding. Keep each portrait and its attribution together when redistributing
-the game. The portraits are subject to applicable personality/publicity rights;
-the copyright license is not a model release or endorsement.
+The following bundled portraits are included under the source licenses shown
+below. Original files are retained without additional cropping or re-encoding.
+Keep each portrait and its attribution together when redistributing the game.
+The portraits are subject to applicable personality/publicity rights; the
+copyright license is not a model release or endorsement.
 
 - `jackie_chan_segolene_liger.jpg` — “Jackie Chan.jpg”, Segolene Liger, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Jackie_Chan.jpg). Original Commons crop retained; no further modifications.
 - `jet_li_natalie_behring.jpg` — “Flickr - World Economic Forum - Jet Li - Annual Meeting of the New Champions Tianjin 2008.jpg”, World Economic Forum / Natalie Behring, [CC BY-SA 2.0](https://creativecommons.org/licenses/by-sa/2.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Flickr_-_World_Economic_Forum_-_Jet_Li_-_Annual_Meeting_of_the_New_Champions_Tianjin_2008.jpg). Original file retained; audience is visible in the foreground.
 - `donnie_yen_brazilian_tiger.jpg` — “Donnie Yen Formal.jpeg”, Brazilian Tiger, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Donnie_Yen_Formal.jpeg). Permission is documented by Wikimedia VRT ticket `2018013010001933`; original file retained.
 - `chow_yun_fat_sliceof.jpg` — “Chow Yun Fat for wiki.jpg”, Sliceof, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Chow_Yun_Fat_for_wiki.jpg). Original file retained.
+- `bruce_lee_fists_of_fury_1973.jpg` — “Bruce Lee 1973.jpg”, National General Pictures; Commons identifies this 1973 film still as public domain in the United States under its pre-1978 publication-without-notice rationale. [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Bruce_Lee_1973.jpg). Original file retained; the public-domain statement is jurisdiction-specific.
+- `shah_rukh_khan_siebbi_berlin_2008.jpg` — “Shah Rukh Khan (Berlin Film Festival 2008) 4.1.jpg”, Siebbi, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Shah_Rukh_Khan_(Berlin_Film_Festival_2008)_4.1.jpg). Original file retained.
+- `priyanka_chopra_fuzheado_gesf_2018.jpg` — “Priyanka-chopra-gesf-2018-7565.jpg”, Fuzheado, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Priyanka-chopra-gesf-2018-7565.jpg). Original file retained.
+- `hrithik_roshan_bollywood_hungama_rado.jpg` — “Hrithik at Rado launch.jpg”, Bollywood Hungama, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Hrithik_at_Rado_launch.jpg). Original file retained.
+- `madhuri_dixit_bollywood_hungama_2022.jpg` — “Madhuri Dixit in November 2022.jpg”, Bollywood Hungama, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Madhuri_Dixit_in_November_2022.jpg). Original file retained.
+- `brad_pitt_harald_krichel_2024.jpg` — “Brad Pitt-69858.jpg”, Harald Krichel, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Brad_Pitt-69858.jpg). Original file retained.
+- `johnny_depp_harald_krichel_2020.jpg` — “Johnny Depp 2020.jpg”, Harald Krichel, [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Johnny_Depp_2020.jpg). Original file retained.
+- `leonardo_dicaprio_raph_ph_bfi_2025.jpg` — “Leonardo DiCaprio - BFI Southbank 3 (crop).jpg”, Raph_PH, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Leonardo_DiCaprio_-_BFI_Southbank_3_(crop).jpg). Original file retained.
+- `morgan_freeman_us_navy_kubitza_2023.jpg` — U.S. Navy photograph by Alexander Kubitza, public domain as a U.S. Department of Defense work. [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Morgan_Freeman_at_The_Pentagon_on_2_August_2023_-_230802-D-PM193-3363_(cropped).jpg). Original file retained.
+- `tom_cruise_kevin_paul_saturn_2026.jpg` — “Tom Cruise at 53rd Saturn Awards 2026-01.jpg”, Kevin Paul, [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Tom_Cruise_at_53rd_Saturn_Awards_2026-01.jpg). Original file retained.
+- `julia_roberts_us_state_department_2022.jpg` — U.S. Department of State photograph by Freddie Everett, public domain as a U.S. government work. [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Julia_Roberts_Delivers_Remarks_at_the_2022_Kennedy_Center_Honors_Dinner_(52542372884)_(cropped).jpg). Original file retained.
+- `scarlett_johansson_harald_krichel_cannes_2025.jpg` — “Scarlett Johansson-8588.jpg”, Harald Krichel, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Scarlett_Johansson-8588.jpg). Original file retained.
+- `samuel_l_jackson_philip_romano_2022.jpg` — “SamuelLJackson.jpg”, Philip Romano, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:SamuelLJackson.jpg). Original file retained.
+- `will_smith_techcrunch_max_morse_2019.jpg` — “TechCrunch Disrupt 2019 (48834434641) (cropped).jpg”, Max Morse / TechCrunch, [CC BY 2.0](https://creativecommons.org/licenses/by/2.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:TechCrunch_Disrupt_2019_(48834434641)_(cropped).jpg). Original file retained.
+- `keanu_reeves_birgit_fostervold_2026.jpg` — “Keanu Reeves – Dogstar – Tons of Rock 2026-3.jpg”, Birgit Fostervold, [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Keanu_Reeves_%E2%80%93_Dogstar_%E2%80%93_Tons_of_Rock_2026-3.jpg). Original file retained.
+- `arnold_schwarzenegger_dhs_mcgee_2025.jpg` — U.S. Department of Homeland Security photograph by Mikaela McGee, public domain as a U.S. government work. [Wikimedia Commons source](https://commons.wikimedia.org/wiki/File:Arnold_Schwarzenegger_2025_(cropped).jpg). Original file retained.
 
 SHA-256 hashes and image dimensions are stored with the corresponding records
 in `manifest.json`.
